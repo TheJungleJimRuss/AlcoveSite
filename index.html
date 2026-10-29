@@ -30,7 +30,7 @@
       
       <nav class="hero-nav" aria-label="Hero Navigation">
         <ul class="nav-links">
-          <li><a href="index.html" class="active" aria-current="page">Home</a></li>
+          <li><a href="index.html">Home</a></li>
           <li><a href="work.html">Work</a></li>
           <li><a href="about.html">About</a></li>
           <li><a href="contact.html">Contact</a></li>
@@ -178,6 +178,14 @@
           ticking = true;
         }
       }, { passive: true });
+
+      // Prevent redundant reload/transition when clicking Home while already on Home
+      const homeLinks = document.querySelectorAll('.hero-nav a[href="index.html"], .site-header .nav-links a[href="index.html"]');
+      homeLinks.forEach(function (link) {
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+        });
+      });
     })();
   </script>
 

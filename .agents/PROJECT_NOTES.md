@@ -58,5 +58,8 @@
   - Added visual audio timeline scrubber (`0:42 / 2:45`) and track duration badges (`2:45`, `3:12`, `1:58`, `3:30`) with compact preview buttons to `work.html` demo sampler.
   - Added dedicated Voice Memo / Audio File dropzone wireframe component on `contact.html` with browse/drag-and-drop affordance for teens and bedroom songwriters.
   - Completely eliminated all remaining inline styles across `about.html` and `contact.html` by creating `.bio-grid` and `.contact-details-mono` classes in `wireframe.css`.
+- [x] Refined Home Page hero viewport to full `100dvh` (resetting container top-padding) to prevent below-the-fold content peeking onto the initial screen, and converted hero navigation links to clean plain text links (removing button box styles).
+- [x] Removed active indicator on the Home Page hero navbar (`.hero-nav`) so all four links remain clean, neutral text until hovered.
+- [x] Suppressed redundant page reload and sliding cross-document view transition when clicking "Home" while already on the Home Page (`index.html`).
 - [x] Re-engaged `.agents/PLAN_LOCK` to gate modifications.
 - [ ] Client Discovery Review with Seth Miller.
