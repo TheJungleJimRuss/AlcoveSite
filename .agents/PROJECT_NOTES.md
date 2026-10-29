@@ -53,5 +53,10 @@
 - [x] Implemented native Cross-Document View Transitions in `wireframe.css` (`@view-transition { navigation: auto }`) with persistent header (`main-header`) and footer (`main-footer`) morphing, custom 0.25s page fade-and-settle curves, and `@media (prefers-reduced-motion: reduce)` accessibility fallback.
 - [x] Upgraded page navigation to smooth horizontal sliding transitions (`page-slide-out` / `page-slide-in`) with locked header/footer anchoring.
 - [x] Centered navigation bar below the Studio Wordmark & subheader in the Home Page initial hero viewport (`.hero-nav`), and implemented a smart scroll reveal for the sticky top navigation (`.site-header--smart` slides in when scrolling up; tucked away when reading down, with full keyboard `:focus-within` accessibility).
+- [x] Implemented approved interactive wireframe fidelity & structural cleanliness improvements:
+  - Upgraded FAQ section on `about.html` to native semantic `<details>` and `<summary>` accordions with smooth CSS rotation indicators (no JS overhead).
+  - Added visual audio timeline scrubber (`0:42 / 2:45`) and track duration badges (`2:45`, `3:12`, `1:58`, `3:30`) with compact preview buttons to `work.html` demo sampler.
+  - Added dedicated Voice Memo / Audio File dropzone wireframe component on `contact.html` with browse/drag-and-drop affordance for teens and bedroom songwriters.
+  - Completely eliminated all remaining inline styles across `about.html` and `contact.html` by creating `.bio-grid` and `.contact-details-mono` classes in `wireframe.css`.
 - [x] Re-engaged `.agents/PLAN_LOCK` to gate modifications.
 - [ ] Client Discovery Review with Seth Miller.
