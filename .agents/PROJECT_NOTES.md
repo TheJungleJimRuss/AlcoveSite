@@ -61,5 +61,6 @@
 - [x] Refined Home Page hero viewport to full `100dvh` (resetting container top-padding) to prevent below-the-fold content peeking onto the initial screen, and converted hero navigation links to clean plain text links (removing button box styles).
 - [x] Removed active indicator on the Home Page hero navbar (`.hero-nav`) so all four links remain clean, neutral text until hovered.
 - [x] Suppressed redundant page reload and sliding cross-document view transition when clicking "Home" while already on the Home Page (`index.html`).
+- [x] Created GitHub repository [`TheJungleJimRuss/AlcoveSite`](https://github.com/TheJungleJimRuss/AlcoveSite) and pushed all committed code to `main`.
 - [x] Re-engaged `.agents/PLAN_LOCK` to gate modifications.
 - [ ] Client Discovery Review with Seth Miller.
