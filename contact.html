@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact - Alcove Recording</title>
+  <link rel="stylesheet" href="wireframe.css">
+</head>
+<body>
+
+  <!-- Global Header & Navigation -->
+  <header class="site-header">
+    <a href="index.html" class="logo-placeholder">Alcove Recording</a>
+    <nav aria-label="Main Navigation">
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="work.html">Work</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="contact.html" class="active" aria-current="page">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+
+    <!-- Open Page Header -->
+    <header class="page-header">
+      <h1>[Contact Main Headline Placeholder]</h1>
+      <p class="page-intro">[Contact Subheadline Placeholder - You don't need a finished track, budget sheet, or studio experience. Tell us what you're working on, send a voice memo, or book a free visit to check out the space. Lorem ipsum dolor sit amet.]</p>
+    </header>
+
+    <!-- Section 1: The Low-Pressure Inquiry Form -->
+    <section class="section-block">
+      <h2>[Session Inquiry Form Placeholder]</h2>
+      <p class="placeholder-text">[Form Helper Subtext Placeholder - Fill out whatever you know right now and Seth will get back to you within 24-48 hours. Lorem ipsum dolor sit amet.]</p>
+      
+      <form action="#" method="post" novalidate class="mt-15">
+        <div class="form-grid">
+          <div class="field-group">
+            <label for="artist-name">Artist or Band Name</label>
+            <span id="name-hint" class="hint">What should we call you or your group?</span>
+            <input type="text" id="artist-name" name="artistName" required aria-describedby="name-hint">
+          </div>
+
+          <div class="field-group">
+            <label for="artist-email">Email Address</label>
+            <span id="email-hint" class="hint">Format: you@example.com</span>
+            <input type="email" id="artist-email" name="artistEmail" required autocomplete="email" aria-describedby="email-hint" aria-errormessage="email-error">
+            <div id="email-error" class="error-msg">Please enter a valid email address.</div>
+          </div>
+
+          <div class="field-group">
+            <label for="artist-contact">Phone or Instagram Handle (Optional)</label>
+            <span id="contact-hint" class="hint">If you prefer text or DM instead of email</span>
+            <input type="text" id="artist-contact" name="artistContact" aria-describedby="contact-hint">
+          </div>
+
+          <div class="field-group">
+            <label for="exp-level">Experience Level</label>
+            <span id="exp-hint" class="hint">Have you recorded in a studio before?</span>
+            <select id="exp-level" name="experienceLevel" required aria-describedby="exp-hint">
+              <option value="">Select experience level</option>
+              <option value="first-time">First time in a real studio</option>
+              <option value="home-recorders">Recorded at home / bedroom before</option>
+              <option value="experienced">Have recorded in studios before</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="project-goal">What Are You Looking To Do?</label>
+            <span id="goal-hint" class="hint">What is your project focus?</span>
+            <select id="project-goal" name="projectGoal" required aria-describedby="goal-hint">
+              <option value="">Select project goal</option>
+              <option value="single">Single Song</option>
+              <option value="ep">EP or Multi-Song Project</option>
+              <option value="vocals">Vocals Over a Beat / Voiceover</option>
+              <option value="tour">Free Studio Tour &amp; Chat First</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-group mt-15">
+          <label for="memo-upload">Voice Memo or Demo Audio (Optional)</label>
+          <span id="memo-hint" class="hint">Have a rough voice memo or phone recording? Drop it here or paste links below.</span>
+          <div class="upload-dropzone-wireframe">
+            <span class="upload-icon" aria-hidden="true">&uarr;</span>
+            <p class="upload-label">Drag and drop audio file (.m4a, .mp3, .wav) or <label for="memo-upload" class="upload-browse">Browse Files</label></p>
+            <span class="upload-note">Max 50MB &bull; Or paste a Google Drive / SoundCloud link below</span>
+            <input type="file" id="memo-upload" name="memoUpload" accept="audio/*" class="visually-hidden" aria-describedby="memo-hint">
+          </div>
+        </div>
+
+        <div class="field-group mt-15">
+          <label for="project-details">Tell Seth About Your Sound &amp; Ideas</label>
+          <span id="details-hint" class="hint">Share links to phone voice memos, Google Drive, SoundCloud, favorite artist inspirations, or instruments you play.</span>
+          <textarea id="project-details" name="projectDetails" rows="4" aria-describedby="details-hint"></textarea>
+        </div>
+
+        <div class="button-group mt-15">
+          <button type="submit" class="btn-placeholder btn-primary">Send Message to Seth</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Section 2: What Happens Next? (Zero-Anxiety Roadmap) -->
+    <section class="section-block">
+      <h2>[Roadmap Title Placeholder]</h2>
+      
+      <div class="roadmap-steps">
+        <article class="roadmap-step">
+          <div class="step-badge">1</div>
+          <h3>[Step 1: Seth Listens]</h3>
+          <p class="placeholder-text">[Step 1 Description Placeholder - Seth reviews your idea, notes, or voice memos and sends a friendly reply within 24-48 hours.]</p>
+        </article>
+
+        <article class="roadmap-step">
+          <div class="step-badge">2</div>
+          <h3>[Step 2: We Chat Vibe &amp; Dates]</h3>
+          <p class="placeholder-text">[Step 2 Description Placeholder - We talk about what you want the songs to feel like, choose a date that works, and plan zero-stress prep.]</p>
+        </article>
+
+        <article class="roadmap-step">
+          <div class="step-badge">3</div>
+          <h3>[Step 3: You Come In &amp; Record]</h3>
+          <p class="placeholder-text">[Step 3 Description Placeholder - Show up, hang out, plug into amps, and have fun capturing your authentic sound.]</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Section 3: Direct Chat & Studio Location -->
+    <section class="section-block">
+      <h2>[Direct Reaching &amp; Studio Location Placeholder]</h2>
+      
+      <div class="grid-cards">
+        <article class="card">
+          <h3>[Direct Channels Placeholder]</h3>
+          <p class="placeholder-text">[Email &amp; Social Placeholder - Prefer to email or DM directly? Drop a line anytime.]</p>
+          <p class="mt-1 contact-details-mono">
+            seth@alcoverecording.placeholder<br>
+            @alcoverecording (Instagram)
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>[Studio Location &amp; Visiting Placeholder]</h3>
+          <p class="placeholder-text">[Location &amp; Parent Reassurance Placeholder - Studio location, easy neighborhood parking/transit, and a comfortable lounge space for bandmates, guests, or parents.]</p>
+        </article>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="site-footer">
+    <p>Alcove Recording &copy; 2026</p>
+  </footer>
+
+</body>
+</html>
