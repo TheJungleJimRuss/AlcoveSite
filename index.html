@@ -140,35 +140,26 @@
     <p>Alcove Recording &copy; 2026</p>
   </footer>
 
-  <!-- Smart Scroll Reveal Script -->
+  <!-- Persistent Sticky Scroll Header Script -->
   <script>
     (function () {
       const header = document.querySelector('.site-header--smart');
       const hero = document.querySelector('.hero-wordmark-viewport');
       if (!header || !hero) return;
 
-      let lastScrollY = window.scrollY;
       let ticking = false;
-      const scrollThreshold = 10;
 
       function updateHeader() {
         const currentScrollY = window.scrollY;
-        const heroBottom = hero.offsetTop + hero.offsetHeight;
+        // Keep header visible whenever scrolled down past ~45% of hero viewport
+        const threshold = hero.offsetHeight * 0.45;
 
-        // When in or near the hero viewport, keep the top sticky header hidden
-        if (currentScrollY <= heroBottom * 0.5) {
-          header.classList.remove('site-header--visible');
+        if (currentScrollY > threshold) {
+          header.classList.add('site-header--visible');
         } else {
-          // Beyond the hero viewport: show when scrolling UP, hide when scrolling DOWN
-          const diff = currentScrollY - lastScrollY;
-          if (diff > scrollThreshold) {
-            header.classList.remove('site-header--visible');
-          } else if (diff < -scrollThreshold) {
-            header.classList.add('site-header--visible');
-          }
+          header.classList.remove('site-header--visible');
         }
 
-        lastScrollY = currentScrollY;
         ticking = false;
       }
 
