@@ -42,13 +42,38 @@
       <a href="#content-start" class="scroll-cue" aria-label="Scroll to explore content">&darr;</a>
     </section>
 
-    <!-- Studio Atmosphere Full Viewport Parallax Section -->
-    <section id="content-start" class="parallax-viewport" aria-label="Studio Atmosphere">
-      <div class="parallax-media" id="parallax-media"></div>
-      <div class="parallax-content">
-        <span class="parallax-badge">[The Tracking Room &bull; Vintage amps, guitars, analog warmth]</span>
-      </div>
-    </section>
+    <!-- Studio Atmosphere Full Viewport Sticky Carousel Track -->
+    <div id="content-start" class="carousel-track">
+      <section class="carousel-viewport" aria-label="Studio Atmosphere Carousel">
+        <div class="carousel-slides" id="carousel-slides">
+          <div class="carousel-slide active" data-caption="[The Tracking Room &bull; Vintage console, analog warmth]">
+            <img src="images/studio-live-room.jpg" alt="The Tracking Room" class="carousel-slide-img" loading="eager" />
+          </div>
+          <div class="carousel-slide" data-caption="[Live Acoustic Space &bull; Room for full band setups &amp; natural drums]">
+            <img src="images/studio-acoustic-room.jpg" alt="Live Acoustic Space" class="carousel-slide-img" loading="lazy" />
+          </div>
+          <div class="carousel-slide" data-caption="[Warm Upright Piano &bull; Acoustic tracking with natural resonance]">
+            <img src="images/studio-piano.jpg" alt="Warm Upright Piano" class="carousel-slide-img" loading="lazy" />
+          </div>
+          <div class="carousel-slide" data-caption="[Instruments &amp; Mics &bull; Tube amps, vintage guitars &amp; warm mics]">
+            <img src="images/studio-instruments.jpg" alt="Instruments and Mics" class="carousel-slide-img" loading="lazy" />
+          </div>
+        </div>
+
+        <button type="button" class="carousel-btn carousel-btn--prev" id="carousel-prev" aria-label="Previous Slide">&lsaquo;</button>
+        <button type="button" class="carousel-btn carousel-btn--next" id="carousel-next" aria-label="Next Slide">&rsaquo;</button>
+
+        <div class="carousel-overlay">
+          <div class="carousel-badge" id="carousel-caption">[The Tracking Room &bull; Vintage console, analog warmth]</div>
+          <div class="carousel-dots" id="carousel-dots" role="tablist" aria-label="Slide Selector">
+            <button type="button" class="carousel-dot active" role="tab" aria-selected="true" aria-label="Slide 1"></button>
+            <button type="button" class="carousel-dot" role="tab" aria-selected="false" aria-label="Slide 2"></button>
+            <button type="button" class="carousel-dot" role="tab" aria-selected="false" aria-label="Slide 3"></button>
+            <button type="button" class="carousel-dot" role="tab" aria-selected="false" aria-label="Slide 4"></button>
+          </div>
+        </div>
+      </section>
+    </div>
 
     <div class="container">
       <!-- Section 2: First Time in a Studio? 3-Step Journey -->
@@ -180,20 +205,8 @@
         window.scrollTo(0, hero.offsetHeight);
       }
 
+      // Sticky Scroll Header Visibility
       let ticking = false;
-
-      function updateParallax() {
-        if (!parallaxMedia || !parallaxSection || prefersReducedMotion) return;
-        const rect = parallaxSection.getBoundingClientRect();
-        const windowHeight = window.innerHeight;
-        if (rect.top < windowHeight && rect.bottom > 0) {
-          const sectionCenter = rect.top + rect.height / 2;
-          const viewportCenter = windowHeight / 2;
-          const distanceFromCenter = sectionCenter - viewportCenter;
-          const offset = -distanceFromCenter * 0.40;
-          parallaxMedia.style.transform = `translate3d(0, ${offset.toFixed(1)}px, 0)`;
-        }
-      }
 
       function updateHeader() {
         const currentScrollY = window.scrollY;
@@ -206,7 +219,6 @@
           header.classList.remove('site-header--visible');
         }
 
-        updateParallax();
         ticking = false;
       }
 
@@ -219,6 +231,42 @@
 
       window.addEventListener('resize', updateHeader, { passive: true });
       updateHeader();
+
+      // Studio Atmosphere Carousel Controller
+      const slides = Array.from(document.querySelectorAll('.carousel-slide'));
+      const dots = Array.from(document.querySelectorAll('.carousel-dot'));
+      const caption = document.getElementById('carousel-caption');
+      const prevBtn = document.getElementById('carousel-prev');
+      const nextBtn = document.getElementById('carousel-next');
+      let currentSlide = 0;
+
+      function setSlide(index) {
+        if (!slides.length) return;
+        currentSlide = (index + slides.length) % slides.length;
+        slides.forEach(function (slide, idx) {
+          slide.classList.toggle('active', idx === currentSlide);
+        });
+        dots.forEach(function (dot, idx) {
+          const isActive = idx === currentSlide;
+          dot.classList.toggle('active', isActive);
+          dot.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        if (caption && slides[currentSlide]) {
+          caption.innerHTML = slides[currentSlide].getAttribute('data-caption') || '';
+        }
+      }
+
+      if (prevBtn) prevBtn.addEventListener('click', function () { setSlide(currentSlide - 1); });
+      if (nextBtn) nextBtn.addEventListener('click', function () { setSlide(currentSlide + 1); });
+      dots.forEach(function (dot, idx) {
+        dot.addEventListener('click', function () { setSlide(idx); });
+      });
+
+      // Keyboard arrow navigation when carousel is focused or visible
+      window.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowLeft') setSlide(currentSlide - 1);
+        if (e.key === 'ArrowRight') setSlide(currentSlide + 1);
+      });
 
       // Prevent redundant reload/transition when clicking Home while already on Home
       const homeLinks = document.querySelectorAll('.hero-nav a[href="index.html"], .site-header .nav-links a[href="index.html"]');
