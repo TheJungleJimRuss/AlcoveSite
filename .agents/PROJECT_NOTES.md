@@ -70,5 +70,10 @@
   - Expanded content on `about.html`: 3 Producer Philosophy cards (Mentorship Over Gatekeeping, Creative Safe Space, Affordable & Fair) and 4 first-timer FAQ accordions.
   - Expanded content on `contact.html`: Low-pressure inquiry form with project scope (Single, EP, Vocals, Full Album, Tour), sound inspiration link, preferred dates, and 3-step roadmap.
   - Fully verified across desktop and mobile viewports with zero errors.
+- [x] Implemented approved expanded theme styles on branch `feature/theme-options-and-content-expansion`:
+  - Preserved client favorites: **Golden Hour Room** (now site default) and typography pairings **Friendly Modernist** (`Outfit` + `Plus Jakarta Sans`, now site default) and **Indie Album Liner** (`Space Grotesk` + `Inter`).
+  - Added 3 organic/cozy studio color palettes: *Amber Hearth (Tube Saturator)*, *Dusty Moss & Terracotta*, and *Sundown Live Room (Twilight Dark)*.
+  - Added 2 new typography pairings: *Warm Studio Editorial* (`Fraunces` display serif) and *Contemporary Indie Groove* (`Syne`).
+  - Updated `theme-preview.css` with smooth scrollable dock panel and verified dynamic switching live.
 - [x] Re-engaged `.agents/PLAN_LOCK` to gate modifications.
 - [ ] Client Discovery Review with Seth Miller.

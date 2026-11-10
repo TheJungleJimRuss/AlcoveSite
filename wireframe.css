@@ -1,19 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&family=Syne:wght@600;700;800&display=swap');
 
 /* Wireframe Prototype Styles - Alcove Recording */
 :root {
-  --bg-page: #FAF6EE;
+  --bg-page: #FDFBF7;
   --bg-surface: #FFFFFF;
-  --bg-accent: #F0EAE1;
-  --border-color: #E5DCD0;
-  --border-focus: #D97706;
-  --text-main: #1C1814;
-  --text-muted: #6B635B;
-  --accent-primary: #D97706;
+  --bg-accent: #F4EFE6;
+  --border-color: #E0DACF;
+  --border-focus: #4D7C5F;
+  --text-main: #242E20;
+  --text-muted: #5D6B57;
+  --accent-primary: #4D7C5F;
   --color-error: #d93025;
   --color-valid: #188038;
-  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-heading: "Plus Jakarta Sans", var(--font-sans);
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Outfit", var(--font-sans);
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 

@@ -4,6 +4,62 @@
  */
 (function () {
   const PALETTES = {
+    'golden-hour': {
+      name: 'Golden Hour Room (Favorite)',
+      swatches: ['#FDFBF7', '#4D7C5F', '#242E20'],
+      vars: {
+        '--bg-page': '#FDFBF7',
+        '--bg-surface': '#FFFFFF',
+        '--bg-accent': '#F4EFE6',
+        '--text-main': '#242E20',
+        '--text-muted': '#5D6B57',
+        '--accent-primary': '#4D7C5F',
+        '--border-color': '#E0DACF',
+        '--border-focus': '#4D7C5F'
+      }
+    },
+    'amber-hearth': {
+      name: 'Amber Hearth (Tube Saturator)',
+      swatches: ['#FAF5EB', '#D96B27', '#2C1E14'],
+      vars: {
+        '--bg-page': '#FAF5EB',
+        '--bg-surface': '#FFFDF9',
+        '--bg-accent': '#F3E9D2',
+        '--text-main': '#2C1E14',
+        '--text-muted': '#78604B',
+        '--accent-primary': '#D96B27',
+        '--border-color': '#E6D8C3',
+        '--border-focus': '#D96B27'
+      }
+    },
+    'dusty-moss': {
+      name: 'Dusty Moss & Terracotta',
+      swatches: ['#F7F5EE', '#C86446', '#1F241E'],
+      vars: {
+        '--bg-page': '#F7F5EE',
+        '--bg-surface': '#FFFFFF',
+        '--bg-accent': '#EBE7DA',
+        '--text-main': '#1F241E',
+        '--text-muted': '#636B5F',
+        '--accent-primary': '#C86446',
+        '--border-color': '#DBD5C5',
+        '--border-focus': '#C86446'
+      }
+    },
+    'sundown-room': {
+      name: 'Sundown Live Room (Twilight Dark)',
+      swatches: ['#1A1D1A', '#E5A93C', '#F2EFE9'],
+      vars: {
+        '--bg-page': '#1A1D1A',
+        '--bg-surface': '#242924',
+        '--bg-accent': '#2E352E',
+        '--text-main': '#F2EFE9',
+        '--text-muted': '#9EAAA0',
+        '--accent-primary': '#E5A93C',
+        '--border-color': '#374037',
+        '--border-focus': '#E5A93C'
+      }
+    },
     'warm-analog': {
       name: 'Warm Analog Studio',
       swatches: ['#FAF6EE', '#D97706', '#1C1814'],
@@ -31,43 +87,15 @@
         '--border-color': '#302B45',
         '--border-focus': '#E05A47'
       }
-    },
-    'golden-hour': {
-      name: 'Golden Hour Room',
-      swatches: ['#FDFBF7', '#4D7C5F', '#242E20'],
-      vars: {
-        '--bg-page': '#FDFBF7',
-        '--bg-surface': '#FFFFFF',
-        '--bg-accent': '#F4EFE6',
-        '--text-main': '#242E20',
-        '--text-muted': '#5D6B57',
-        '--accent-primary': '#4D7C5F',
-        '--border-color': '#E0DACF',
-        '--border-focus': '#4D7C5F'
-      }
-    },
-    'midnight-console': {
-      name: 'Midnight Console',
-      swatches: ['#0D131C', '#F59E0B', '#EDF3F8'],
-      vars: {
-        '--bg-page': '#0D131C',
-        '--bg-surface': '#151E2B',
-        '--bg-accent': '#1D2A3C',
-        '--text-main': '#EDF3F8',
-        '--text-muted': '#8496AA',
-        '--accent-primary': '#F59E0B',
-        '--border-color': '#243348',
-        '--border-focus': '#F59E0B'
-      }
     }
   };
 
   const FONTS = {
-    'editorial': {
-      name: 'Warm Editorial (Jakarta + Inter)',
+    'modernist': {
+      name: 'Friendly Modernist (Outfit + Jakarta)',
       vars: {
-        '--font-heading': "'Plus Jakarta Sans', system-ui, sans-serif",
-        '--font-sans': "'Inter', system-ui, sans-serif",
+        '--font-heading': "'Outfit', system-ui, sans-serif",
+        '--font-sans': "'Plus Jakarta Sans', system-ui, sans-serif",
         '--font-mono': "'JetBrains Mono', monospace"
       }
     },
@@ -79,24 +107,40 @@
         '--font-mono': "'Space Mono', monospace"
       }
     },
-    'modernist': {
-      name: 'Friendly Modernist (Outfit + Jakarta)',
+    'warm-editorial': {
+      name: 'Warm Studio Editorial (Fraunces Serif)',
       vars: {
-        '--font-heading': "'Outfit', system-ui, sans-serif",
+        '--font-heading': "'Fraunces', serif",
         '--font-sans': "'Plus Jakarta Sans', system-ui, sans-serif",
+        '--font-mono': "'JetBrains Mono', monospace"
+      }
+    },
+    'indie-groove': {
+      name: 'Contemporary Indie Groove (Syne)',
+      vars: {
+        '--font-heading': "'Syne', sans-serif",
+        '--font-sans': "'Inter', system-ui, sans-serif",
+        '--font-mono': "'Space Mono', monospace"
+      }
+    },
+    'editorial': {
+      name: 'Editorial Grotesk (Jakarta + Inter)',
+      vars: {
+        '--font-heading': "'Plus Jakarta Sans', system-ui, sans-serif",
+        '--font-sans': "'Inter', system-ui, sans-serif",
         '--font-mono': "'JetBrains Mono', monospace"
       }
     }
   };
 
   const urlParams = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
-  let activePalette = (urlParams && urlParams.get('theme')) || localStorage.getItem('alcove_theme_palette') || 'warm-analog';
-  let activeFont = (urlParams && urlParams.get('font')) || localStorage.getItem('alcove_theme_font') || 'editorial';
+  let activePalette = (urlParams && urlParams.get('theme')) || localStorage.getItem('alcove_theme_palette') || 'golden-hour';
+  let activeFont = (urlParams && urlParams.get('font')) || localStorage.getItem('alcove_theme_font') || 'modernist';
 
   function applyTheme() {
     const root = document.documentElement;
-    const pVars = (PALETTES[activePalette] || PALETTES['warm-analog']).vars;
-    const fVars = (FONTS[activeFont] || FONTS['editorial']).vars;
+    const pVars = (PALETTES[activePalette] || PALETTES['golden-hour']).vars;
+    const fVars = (FONTS[activeFont] || FONTS['modernist']).vars;
 
     Object.entries({ ...pVars, ...fVars }).forEach(([k, v]) => {
       root.style.setProperty(k, v);
