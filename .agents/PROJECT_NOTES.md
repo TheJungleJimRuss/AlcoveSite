@@ -78,7 +78,7 @@
 - [x] Created branch `feature/fill-site-content` from latest approved theme & wireframe state to begin populating real client content, media assets, and audio.
 - [x] Updated Home page hero wordmark: replaced placeholder `[Alcove Recording]` with prominent title-case "Alcove" styled with `var(--font-heading)` (`clamp(3.75rem, 11vw, 7.5rem)`).
 - [x] Implemented below-the-fold full-viewport sticky studio photo carousel on `index.html`:
-  - Enclosed inside `.carousel-track` (`height: 200vh`) with a `position: sticky; top: 0` viewport (`100dvh`), locking flush to the screen for a full viewport dwell on scroll.
+  - Enclosed inside `.carousel-track` (`height: 120vh`) with a `position: sticky; top: 0` viewport (`100dvh`), locking flush to the screen for a soft, brief ~20vh dwell on scroll before releasing smoothly into Section 2.
   - 4 curated studio atmosphere slides: The Tracking Room, Live Acoustic Space, Warm Upright Piano, and Instruments & Mics.
   - Interactive frosted-glass chevron controls (`‹` and `›`), dynamic pill badge captions, active dot indicators, and keyboard navigation.
   - Edge-to-edge full-bleed framing with zero gradient overlays.
