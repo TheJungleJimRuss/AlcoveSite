@@ -76,4 +76,5 @@
   - Added 2 new typography pairings: *Warm Studio Editorial* (`Fraunces` display serif) and *Contemporary Indie Groove* (`Syne`).
   - Updated `theme-preview.css` with smooth scrollable dock panel and verified dynamic switching live.
 - [x] Re-engaged `.agents/PLAN_LOCK` to gate modifications.
+- [x] Created branch `feature/fill-site-content` from latest approved theme & wireframe state to begin populating real client content, media assets, and audio.
 - [ ] Client Discovery Review with Seth Miller.
