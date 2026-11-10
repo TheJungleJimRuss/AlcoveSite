@@ -313,13 +313,13 @@ p {
 .parallax-viewport {
   width: 100%;
   height: 100vh;
-  min-height: 100dvh;
+  height: 100dvh;
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-block: 0 4rem;
+  margin-block: 0;
   background-color: var(--bg-page);
 }
 
@@ -335,28 +335,6 @@ p {
   background-repeat: no-repeat;
   will-change: transform;
   transform: translate3d(0, 0, 0);
-}
-
-/* Gradient Fade Masks matching dynamic active theme background */
-.parallax-fade-top,
-.parallax-fade-bottom {
-  position: absolute;
-  left: 0;
-  right: 0;
-  width: 100%;
-  height: 25%;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.parallax-fade-top {
-  top: 0;
-  background: linear-gradient(to bottom, var(--bg-page) 0%, color-mix(in srgb, var(--bg-page) 80%, transparent) 50%, transparent 100%);
-}
-
-.parallax-fade-bottom {
-  bottom: 0;
-  background: linear-gradient(to top, var(--bg-page) 0%, color-mix(in srgb, var(--bg-page) 80%, transparent) 50%, transparent 100%);
 }
 
 .parallax-content {

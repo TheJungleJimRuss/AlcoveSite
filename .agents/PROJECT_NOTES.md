@@ -77,10 +77,10 @@
   - Updated `theme-preview.css` with smooth scrollable dock panel and verified dynamic switching live.
 - [x] Created branch `feature/fill-site-content` from latest approved theme & wireframe state to begin populating real client content, media assets, and audio.
 - [x] Updated Home page hero wordmark: replaced placeholder `[Alcove Recording]` with prominent title-case "Alcove" styled with `var(--font-heading)` (`clamp(3.75rem, 11vw, 7.5rem)`).
-- [x] Implemented below-the-fold edge-to-edge full-viewport (`100dvh`) continuous speed-differential parallax scroll on `index.html`:
-  - Image glides through the viewport window at ~0.60x scroll speed without pinning or scroll-locking.
-  - Top/bottom gradient masks dynamically blend with any active palette (`--bg-page`).
-  - High-performance `requestAnimationFrame` updates with `prefers-reduced-motion` accessibility support.
-  - Verified across desktop and mobile viewports with live transform logging and screenshots.
+- [x] Implemented below-the-fold full-bleed, edge-to-edge full-viewport (`100dvh`) studio parallax image on `index.html`:
+  - Removed top and bottom gradient masks for 100% crisp, saturated photographic presentation.
+  - Zero margin borders (`margin-block: 0;`), completely filling the viewport frame.
+  - Retained smooth continuous speed-differential parallax translation (~0.60x scroll speed).
+  - Verified across desktop and mobile breakpoints.
 - [x] Re-engaged `.agents/PLAN_LOCK` to gate modifications.
 - [ ] Client Discovery Review with Seth Miller.
