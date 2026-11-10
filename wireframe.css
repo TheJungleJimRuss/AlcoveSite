@@ -1,16 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
 /* Wireframe Prototype Styles - Alcove Recording */
 :root {
-  --bg-page: #f8f9fa;
-  --bg-surface: #ffffff;
-  --bg-accent: #e9ecef;
-  --border-color: #ced4da;
-  --border-focus: #495057;
-  --text-main: #212529;
-  --text-muted: #6c757d;
+  --bg-page: #FAF6EE;
+  --bg-surface: #FFFFFF;
+  --bg-accent: #F0EAE1;
+  --border-color: #E5DCD0;
+  --border-focus: #D97706;
+  --text-main: #1C1814;
+  --text-muted: #6B635B;
+  --accent-primary: #D97706;
   --color-error: #d93025;
   --color-valid: #188038;
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Plus Jakarta Sans", var(--font-sans);
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 /* Cross-Document View Transitions (Modern Web Guidance) */
@@ -77,6 +81,7 @@ body {
 }
 
 h1, h2, h3, h4 {
+  font-family: var(--font-heading);
   color: var(--text-main);
   line-height: 1.25;
   margin-bottom: 0.5rem;
@@ -764,6 +769,13 @@ p {
   color: var(--text-muted);
 }
 
+.gear-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .btn-sm {
   padding: 0.4rem 0.85rem;
   font-size: 0.8rem;
@@ -851,6 +863,13 @@ p {
   .nav-links a {
     padding: 0.25rem 0.45rem;
     font-size: 0.85rem;
+  }
+  .hero-nav .nav-links {
+    gap: 0.5rem;
+  }
+  .hero-nav .nav-links a {
+    font-size: 0.95rem;
+    padding: 0.25rem 0.4rem;
   }
   .feature-item {
     flex-direction: column;

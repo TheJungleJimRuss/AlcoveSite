@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Work - Alcove Recording</title>
   <link rel="stylesheet" href="wireframe.css">
+  <link rel="stylesheet" href="theme-preview.css">
+  <script src="theme-preview.js" defer></script>
 </head>
 <body>
 
@@ -33,61 +35,61 @@
     <section class="section-block">
       <h2>[Featured Release Sampler Placeholder]</h2>
       
-      <div class="filter-bar">
-        <button type="button" class="filter-pill active">All Genres</button>
-        <button type="button" class="filter-pill">Indie Rock</button>
-        <button type="button" class="filter-pill">Bedroom Pop</button>
-        <button type="button" class="filter-pill">Acoustic / Folk</button>
-        <button type="button" class="filter-pill">Punk / Alt</button>
+      <div class="filter-bar" role="toolbar" aria-label="Genre Filters">
+        <button type="button" class="filter-pill active" data-genre="all">All Genres</button>
+        <button type="button" class="filter-pill" data-genre="indie">Indie Rock</button>
+        <button type="button" class="filter-pill" data-genre="pop">Bedroom Pop</button>
+        <button type="button" class="filter-pill" data-genre="acoustic">Acoustic / Folk</button>
+        <button type="button" class="filter-pill" data-genre="punk">Punk / Alt</button>
       </div>
 
       <div class="audio-widget">
         <div class="media-box">[Main Audio Player / Waveform &amp; Progress Bar Placeholder]</div>
         <div class="player-scrubber-wireframe" role="region" aria-label="Audio timeline">
-          <span class="player-timestamp">0:42</span>
+          <span class="player-timestamp" id="current-time">0:42</span>
           <div class="scrubber-track" role="progressbar" aria-valuenow="35" aria-valuemin="0" aria-valuemax="100">
-            <div class="scrubber-progress"></div>
+            <div class="scrubber-progress" id="progress-bar"></div>
           </div>
-          <span class="player-timestamp">2:45</span>
+          <span class="player-timestamp" id="total-time">2:45</span>
         </div>
         
-        <div class="track-row">
+        <div class="track-row" data-genre="indie">
           <div class="track-info">
             <strong>[Track Title Placeholder 1]</strong> &bull; <span class="placeholder-text">[Artist Name / Indie Rock Demo]</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">2:45</span>
-            <button type="button" class="btn-placeholder btn-sm">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-time="2:45">Play Preview</button>
           </div>
         </div>
 
-        <div class="track-row">
+        <div class="track-row" data-genre="pop">
           <div class="track-info">
             <strong>[Track Title Placeholder 2]</strong> &bull; <span class="placeholder-text">[Artist Name / Bedroom Pop Single]</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">3:12</span>
-            <button type="button" class="btn-placeholder btn-sm">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-time="3:12">Play Preview</button>
           </div>
         </div>
 
-        <div class="track-row">
+        <div class="track-row" data-genre="acoustic">
           <div class="track-info">
             <strong>[Track Title Placeholder 3]</strong> &bull; <span class="placeholder-text">[Artist Name / Acoustic Folk Song]</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">1:58</span>
-            <button type="button" class="btn-placeholder btn-sm">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-time="1:58">Play Preview</button>
           </div>
         </div>
 
-        <div class="track-row">
+        <div class="track-row" data-genre="punk">
           <div class="track-info">
             <strong>[Track Title Placeholder 4]</strong> &bull; <span class="placeholder-text">[Artist Name / Alternative &amp; Punk Track]</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">3:30</span>
-            <button type="button" class="btn-placeholder btn-sm">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-time="3:30">Play Preview</button>
           </div>
         </div>
       </div>
@@ -165,6 +167,48 @@
   <footer class="site-footer">
     <p>Alcove Recording &copy; 2026</p>
   </footer>
+
+  <script>
+    (function () {
+      const filters = document.querySelectorAll('.filter-pill');
+      const rows = document.querySelectorAll('.track-row');
+      const playBtns = document.querySelectorAll('.play-btn');
+      const totalTimeEl = document.getElementById('total-time');
+      const currentTimeEl = document.getElementById('current-time');
+      const progressBar = document.getElementById('progress-bar');
+
+      filters.forEach(f => {
+        f.addEventListener('click', () => {
+          filters.forEach(btn => btn.classList.remove('active'));
+          f.classList.add('active');
+          const genre = f.dataset.genre;
+          rows.forEach(r => {
+            if (genre === 'all' || r.dataset.genre === genre) {
+              r.style.display = 'flex';
+            } else {
+              r.style.display = 'none';
+            }
+          });
+        });
+      });
+
+      playBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const isPlaying = btn.textContent === 'Pause';
+          playBtns.forEach(b => b.textContent = 'Play Preview');
+          if (!isPlaying) {
+            btn.textContent = 'Pause';
+            totalTimeEl.textContent = btn.dataset.time || '2:45';
+            currentTimeEl.textContent = '0:01';
+            progressBar.style.width = '15%';
+          } else {
+            currentTimeEl.textContent = '0:00';
+            progressBar.style.width = '0%';
+          }
+        });
+      });
+    })();
+  </script>
 
 </body>
 </html>

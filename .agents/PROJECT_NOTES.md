@@ -63,5 +63,12 @@
 - [x] Suppressed redundant page reload and sliding cross-document view transition when clicking "Home" while already on the Home Page (`index.html`).
 - [x] Updated Home Page navigation so the sticky top navbar is continuously active and visible whenever scrolling down through page content (replacing the hide-on-scroll-down behavior).
 - [x] Created GitHub repository [`TheJungleJimRuss/AlcoveSite`](https://github.com/TheJungleJimRuss/AlcoveSite) and pushed all committed code to `main`.
+- [x] Implemented `plan.md` on branch `feature/theme-options-and-content-expansion`:
+  - Built zero-dependency Theme Preview Toolbar (`theme-preview.css` + `theme-preview.js`) with 4 studio palettes (Warm Analog, Indie Cassette, Golden Hour, Midnight Console), 3 typography pairings, `localStorage` persistence, URL search params support, and one-click CSS export.
+  - Expanded content on `index.html`: First-timer 3-step journey, accessible studio gear badges, and 4 genre showcase cards (Indie Rock, Acoustic, Bedroom Pop, Rap/Vocals).
+  - Expanded content on `work.html`: Interactive genre filter bar (`All`, `Indie`, `Bedroom Pop`, `Acoustic`, `Punk`), dynamic play/pause preview toggles with timeline scrubber.
+  - Expanded content on `about.html`: 3 Producer Philosophy cards (Mentorship Over Gatekeeping, Creative Safe Space, Affordable & Fair) and 4 first-timer FAQ accordions.
+  - Expanded content on `contact.html`: Low-pressure inquiry form with project scope (Single, EP, Vocals, Full Album, Tour), sound inspiration link, preferred dates, and 3-step roadmap.
+  - Fully verified across desktop and mobile viewports with zero errors.
 - [x] Re-engaged `.agents/PLAN_LOCK` to gate modifications.
 - [ ] Client Discovery Review with Seth Miller.
