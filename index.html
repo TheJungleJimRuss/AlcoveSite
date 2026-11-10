@@ -184,6 +184,19 @@
 
       let ticking = false;
 
+      function updateParallax() {
+        if (!parallaxMedia || !parallaxSection || prefersReducedMotion) return;
+        const rect = parallaxSection.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        if (rect.top < windowHeight && rect.bottom > 0) {
+          const sectionCenter = rect.top + rect.height / 2;
+          const viewportCenter = windowHeight / 2;
+          const distanceFromCenter = sectionCenter - viewportCenter;
+          const offset = -distanceFromCenter * 0.40;
+          parallaxMedia.style.transform = `translate3d(0, ${offset.toFixed(1)}px, 0)`;
+        }
+      }
+
       function updateHeader() {
         const currentScrollY = window.scrollY;
         // Keep header visible whenever scrolled down past ~45% of hero viewport
@@ -195,16 +208,7 @@
           header.classList.remove('site-header--visible');
         }
 
-        if (parallaxMedia && parallaxSection && !prefersReducedMotion) {
-          const rect = parallaxSection.getBoundingClientRect();
-          const windowHeight = window.innerHeight;
-          if (rect.top < windowHeight && rect.bottom > 0) {
-            const progress = (windowHeight - rect.top) / (windowHeight + rect.height);
-            const offset = (progress - 0.5) * 140;
-            parallaxMedia.style.transform = `translate3d(0, ${offset.toFixed(1)}px, 0)`;
-          }
-        }
-
+        updateParallax();
         ticking = false;
       }
 
@@ -214,6 +218,9 @@
           ticking = true;
         }
       }, { passive: true });
+
+      window.addEventListener('resize', updateHeader, { passive: true });
+      updateHeader();
 
       // Prevent redundant reload/transition when clicking Home while already on Home
       const homeLinks = document.querySelectorAll('.hero-nav a[href="index.html"], .site-header .nav-links a[href="index.html"]');
