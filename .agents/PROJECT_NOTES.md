@@ -77,5 +77,6 @@
   - Updated `theme-preview.css` with smooth scrollable dock panel and verified dynamic switching live.
 - [x] Created branch `feature/fill-site-content` from latest approved theme & wireframe state to begin populating real client content, media assets, and audio.
 - [x] Updated Home page hero wordmark: replaced placeholder `[Alcove Recording]` with prominent title-case "Alcove" styled with `var(--font-heading)` (`clamp(3.75rem, 11vw, 7.5rem)`).
+- [x] Implemented below-the-fold edge-to-edge full-viewport (`100dvh`) parallax studio image with dynamic top/bottom gradient fades matching active theme palettes and smooth hardware-accelerated scroll translation.
 - [x] Re-engaged `.agents/PLAN_LOCK` to gate modifications.
 - [ ] Client Discovery Review with Seth Miller.
