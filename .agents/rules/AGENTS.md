@@ -21,10 +21,18 @@
 - **Stage 2 (Human Alignment Gate)**: STOP and wait for explicit user approval before touching project files.
 - **Micro-Batching Cap**: No edit may exceed 150 lines.
 
-## 3. Living Project Notes Protocol (`.agents/PROJECT_NOTES.md`)
+## 3. Mandatory Style Guide Adherence (`STYLE_GUIDE.md`)
+- **Mandatory Reference**: Whenever designing, proposing, adding, or modifying pages, layouts, UI components, colors, typography, or interactive widgets, agents MUST read and strictly adhere to [`STYLE_GUIDE.md`](../../STYLE_GUIDE.md).
+- **Studio Minimalism**: Enforce intentional visual restraint—prioritize generous whitespace, open layouts, clean typography, and zero decorative clutter (no nested boxes, border fatigue, or badge spam).
+- **Design Tokens**: All styles must use existing CSS custom properties (`--bg-page`, `--bg-surface`, `--bg-accent`, `--text-main`, `--text-muted`, `--accent-primary`, `--border-color`, `--border-focus`) defined in `wireframe.css` and documented in `STYLE_GUIDE.md`. Never introduce unvetted hardcoded hex colors or arbitrary dimensions.
+- **Component & Pattern Reuse**: Build strictly with documented components (`.section-block`, `.page-header`, `.grid-cards`, `.grid-showcase`, `.roadmap-steps`, `.comparison-container`, `.btn-primary`, `.filter-pill`/`.filter-btn`, `.audio-widget`, `<details class="faq-item">`, `.upload-dropzone-wireframe`).
+- **Fluid Typography**: Follow the fluid typographic scale (`clamp()`) and font pairings (`Outfit` headings, `Plus Jakarta Sans` body, `JetBrains Mono` audio/tech metadata).
+- **Pre-Completion Checklist**: Verify every new or modified page against Section 9 ("Checklist for Adding New Pages or Sections") of `STYLE_GUIDE.md`.
+
+## 4. Living Project Notes Protocol (`.agents/PROJECT_NOTES.md`)
 - **Automatic Read on Start**: Read `.agents/PROJECT_NOTES.md` at session start.
 - **Automatic Write on Progress**: Update `.agents/PROJECT_NOTES.md` on client decisions or scope changes.
 
-## 4. Project Charter Synchronization
+## 5. Project Charter Synchronization
 - **Source of Truth**: Google Doc ID `1pKumu8AMftI42kU4cJL_V7S-5Z1vxSb3Tmt0WJ_V64Q` ([Alcove Site Charter](https://docs.google.com/document/d/1pKumu8AMftI42kU4cJL_V7S-5Z1vxSb3Tmt0WJ_V64Q/edit?usp=sharing)).
 - **Sync Protocol**: The local file is `Project Charter.md`. Run `./sync_charter.sh` whenever reviewing project scope or updating requirements to keep Antigravity aligned.

@@ -83,5 +83,29 @@
   - Interactive frosted-glass chevron controls (`‹` and `›`), dynamic pill badge captions, active dot indicators, and keyboard navigation.
   - Edge-to-edge full-bleed framing with zero gradient overlays.
   - Verified across desktop and mobile breakpoints.
+- [x] Implemented Integrated Full-Viewport Parallax Carousel with Subtle Sticky Dwell on `index.html`:
+  - Combined the 4-slide atmosphere photo gallery with continuous speed-differential parallax scrolling (`distanceFromCenter * 0.40`).
+  - Restored subtle sticky scroll dwell (`.carousel-track` at `120vh` with `position: sticky; top: 0` viewport) so the carousel locks flush for ~20vh of dwell while photos continuously glide with depth parallax.
+  - Preserved full interactive controls: frosted-glass chevrons, dynamic caption badge, active dot indicators, and keyboard arrow navigation.
+  - Added reduced-motion accessibility overrides in `wireframe.css` and JavaScript.
+- [x] Refreshed Themes & Typography in `theme-preview.js`, `wireframe.css`, and `STYLE_GUIDE.md`:
+  - Preserved client-favorite palettes: **Golden Hour Room**, **Terracotta Studio**, and **Sundown Live Room**.
+  - Replaced retired palettes with 3 fresh studio themes: **Laurel Canyon (Vintage Folk)**, **Deep Vinyl Midnight (Late Night)**, and **Desert Sound City (Agave Teal)**.
+  - Preserved client-favorite fonts: **Warm Studio Editorial (Fraunces)**, **Friendly Modernist (Outfit)**, and **Indie Album Liner (Space Grotesk)**.
+  - Replaced retired fonts with **Modern Heritage (Bricolage Grotesque)**.
+  - Verified all variables, Google Font imports, and toolbar switching logic.
+- [x] Implemented Stationary Parallax Lock During Sticky Dwell on `index.html`:
+  - Upgraded `updateParallax()` to a continuous piecewise calculation that freezes translation (`offset = 0px`) while the viewport is stuck flush at `top: 0` (`0 >= trackRect.top >= -dwell`).
+  - Background photo glides smoothly during approach and exit, but remains 100% still without moving during the 20vh sticky dwell.
+- [x] Implemented Velocity-Based Sticky Dwell Bypass on `index.html` & `wireframe.css`:
+  - Senses scroll velocity approaching the carousel ($v > 0.95\text{ px/ms}$).
+  - When scrolling fast downwards, automatically collapses track height to `100dvh` and sets `position: relative`, letting fast-scrolling users glide straight past into Section 2 with zero sticky dwell.
+  - Slower, deliberate scrolling preserves the full sticky dwell with stationary photo lock.
+- [x] Implemented Targeted Pill & Box Removal (Studio Minimalism Refinement):
+  - Removed pill capsules and frosted background containers behind carousel captions (`.carousel-badge`) and slide dots (`.carousel-dots`), allowing captions and dots to float cleanly over images with high-contrast text shadows.
+  - Converted genre filter buttons (`.filter-pill`) on `work.html` to clean, pill-free typographic text tabs with subtle bottom-border active indicator.
+  - Replaced circle badge containers on roadmap steps (`contact.html`) with bold editorial monospace numerals (`01`, `02`, `03`).
+  - Removed all solid background fill boxes (`--bg-surface`, `--bg-accent`, `--bg-page`) from `.section-block`, `.card`, `.feature-item`, `.faq-item`, `.audio-widget`, `.media-box`, `.player-scrubber-wireframe`, and `.upload-dropzone-wireframe`, maintaining clean 1px hairline border outlines directly over the page canvas.
+  - Updated `STYLE_GUIDE.md` to document the minimalist unboxed architecture.
 - [x] Re-engaged `.agents/PLAN_LOCK` to gate modifications.
 - [ ] Client Discovery Review with Seth Miller.

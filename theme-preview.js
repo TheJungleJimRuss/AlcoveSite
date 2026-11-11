@@ -18,32 +18,18 @@
         '--border-focus': '#4D7C5F'
       }
     },
-    'amber-hearth': {
-      name: 'Amber Hearth (Tube Saturator)',
-      swatches: ['#FAF5EB', '#D96B27', '#2C1E14'],
+    'terracotta': {
+      name: 'Terracotta Studio',
+      swatches: ['#F7F4EE', '#C85A32', '#231D19'],
       vars: {
-        '--bg-page': '#FAF5EB',
-        '--bg-surface': '#FFFDF9',
-        '--bg-accent': '#F3E9D2',
-        '--text-main': '#2C1E14',
-        '--text-muted': '#78604B',
-        '--accent-primary': '#D96B27',
-        '--border-color': '#E6D8C3',
-        '--border-focus': '#D96B27'
-      }
-    },
-    'dusty-moss': {
-      name: 'Dusty Moss & Terracotta',
-      swatches: ['#F7F5EE', '#C86446', '#1F241E'],
-      vars: {
-        '--bg-page': '#F7F5EE',
+        '--bg-page': '#F7F4EE',
         '--bg-surface': '#FFFFFF',
-        '--bg-accent': '#EBE7DA',
-        '--text-main': '#1F241E',
-        '--text-muted': '#636B5F',
-        '--accent-primary': '#C86446',
-        '--border-color': '#DBD5C5',
-        '--border-focus': '#C86446'
+        '--bg-accent': '#EFE9DC',
+        '--text-main': '#231D19',
+        '--text-muted': '#6E5E52',
+        '--accent-primary': '#C85A32',
+        '--border-color': '#E2D9CB',
+        '--border-focus': '#C85A32'
       }
     },
     'sundown-room': {
@@ -60,37 +46,59 @@
         '--border-focus': '#E5A93C'
       }
     },
-    'warm-analog': {
-      name: 'Warm Analog Studio',
-      swatches: ['#FAF6EE', '#D97706', '#1C1814'],
+    'laurel-canyon': {
+      name: 'Laurel Canyon (Vintage Folk)',
+      swatches: ['#FBF7EE', '#B86B28', '#262016'],
       vars: {
-        '--bg-page': '#FAF6EE',
-        '--bg-surface': '#FFFFFF',
-        '--bg-accent': '#F0EAE1',
-        '--text-main': '#1C1814',
-        '--text-muted': '#6B635B',
-        '--accent-primary': '#D97706',
-        '--border-color': '#E5DCD0',
-        '--border-focus': '#D97706'
+        '--bg-page': '#FBF7EE',
+        '--bg-surface': '#FFFDF9',
+        '--bg-accent': '#F2E9D4',
+        '--text-main': '#262016',
+        '--text-muted': '#6B5E4B',
+        '--accent-primary': '#B86B28',
+        '--border-color': '#E3D6BF',
+        '--border-focus': '#B86B28'
       }
     },
-    'indie-cassette': {
-      name: 'Indie Cassette / Sunset',
-      swatches: ['#13111C', '#E05A47', '#F5EFEB'],
+    'deep-vinyl': {
+      name: 'Deep Vinyl Midnight (Late Night)',
+      swatches: ['#11141E', '#FF7A59', '#F0F2FA'],
       vars: {
-        '--bg-page': '#13111C',
-        '--bg-surface': '#1C1929',
-        '--bg-accent': '#262238',
-        '--text-main': '#F5EFEB',
-        '--text-muted': '#9E97B0',
-        '--accent-primary': '#E05A47',
-        '--border-color': '#302B45',
-        '--border-focus': '#E05A47'
+        '--bg-page': '#11141E',
+        '--bg-surface': '#181C2A',
+        '--bg-accent': '#22273B',
+        '--text-main': '#F0F2FA',
+        '--text-muted': '#8C94B0',
+        '--accent-primary': '#FF7A59',
+        '--border-color': '#2D344E',
+        '--border-focus': '#FF7A59'
+      }
+    },
+    'desert-sound': {
+      name: 'Desert Sound City (Agave Teal)',
+      swatches: ['#F6F4F0', '#2C7A7B', '#1C2321'],
+      vars: {
+        '--bg-page': '#F6F4F0',
+        '--bg-surface': '#FFFFFF',
+        '--bg-accent': '#ECE7DF',
+        '--text-main': '#1C2321',
+        '--text-muted': '#576561',
+        '--accent-primary': '#2C7A7B',
+        '--border-color': '#DAD3C7',
+        '--border-focus': '#2C7A7B'
       }
     }
   };
 
   const FONTS = {
+    'warm-editorial': {
+      name: 'Warm Studio Editorial (Fraunces Serif)',
+      vars: {
+        '--font-heading': "'Fraunces', serif",
+        '--font-sans': "'Plus Jakarta Sans', system-ui, sans-serif",
+        '--font-mono': "'JetBrains Mono', monospace"
+      }
+    },
     'modernist': {
       name: 'Friendly Modernist (Outfit + Jakarta)',
       vars: {
@@ -107,35 +115,23 @@
         '--font-mono': "'Space Mono', monospace"
       }
     },
-    'warm-editorial': {
-      name: 'Warm Studio Editorial (Fraunces Serif)',
+    'bricolage-groove': {
+      name: 'Modern Heritage (Bricolage Grotesque)',
       vars: {
-        '--font-heading': "'Fraunces', serif",
-        '--font-sans': "'Plus Jakarta Sans', system-ui, sans-serif",
-        '--font-mono': "'JetBrains Mono', monospace"
-      }
-    },
-    'indie-groove': {
-      name: 'Contemporary Indie Groove (Syne)',
-      vars: {
-        '--font-heading': "'Syne', sans-serif",
+        '--font-heading': "'Bricolage Grotesque', sans-serif",
         '--font-sans': "'Inter', system-ui, sans-serif",
         '--font-mono': "'Space Mono', monospace"
-      }
-    },
-    'editorial': {
-      name: 'Editorial Grotesk (Jakarta + Inter)',
-      vars: {
-        '--font-heading': "'Plus Jakarta Sans', system-ui, sans-serif",
-        '--font-sans': "'Inter', system-ui, sans-serif",
-        '--font-mono': "'JetBrains Mono', monospace"
       }
     }
   };
 
   const urlParams = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
-  let activePalette = (urlParams && urlParams.get('theme')) || localStorage.getItem('alcove_theme_palette') || 'golden-hour';
-  let activeFont = (urlParams && urlParams.get('font')) || localStorage.getItem('alcove_theme_font') || 'modernist';
+  let rawPalette = (urlParams && urlParams.get('theme')) || localStorage.getItem('alcove_theme_palette') || 'golden-hour';
+  if (rawPalette === 'dusty-moss') rawPalette = 'terracotta';
+  let activePalette = PALETTES[rawPalette] ? rawPalette : 'golden-hour';
+
+  let rawFont = (urlParams && urlParams.get('font')) || localStorage.getItem('alcove_theme_font') || 'warm-editorial';
+  let activeFont = FONTS[rawFont] ? rawFont : 'warm-editorial';
 
   function applyTheme() {
     const root = document.documentElement;
