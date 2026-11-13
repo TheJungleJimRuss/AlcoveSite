@@ -1,0 +1,7 @@
+{
+  "name": "alcove-site",
+  "private": true,
+  "type": "module",
+  "scripts": { "check": "node tests/browser-check.mjs && node tests/fader-check.mjs && node tests/booking-check.mjs && node tests/ab-check.mjs && node tests/texture-check.mjs && node tests/admin-check.mjs" },
+  "devDependencies": { "playwright": "1.49.0" }
+}

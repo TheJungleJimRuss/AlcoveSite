@@ -1,0 +1,269 @@
+/* ===== Tactile textures (ADR 0003) =====
+   Contract: <html data-texture="off|quiet|bold"> (missing = quiet); html[data-scheme="dark"]
+   switches to light tints.
+   Paper and tape are REAL SCANS (grayscale photos): the layer's background-color comes from the
+   active palette and the scan is multiplied onto it with background-blend-mode (inside the one
+   element, so nothing blends with the page behind). They keep the palette's hue and show the
+   scan's own tooth, ridges and creases. Paper is only on paper THINGS (polaroid frames, Card
+   Stock); the page itself is brushed metal.
+   Print wear and metal are ALPHA-ONLY tiles (white RGB, alpha = intensity): a palette colour cut
+   by ONE mask-image tile. No mask-composite, no multi-layer masks (engines disagree), no
+   mix-blend-mode. Opacity = base * --tex-strength, so Off paints nothing. */
+:root {
+  --tex-strength: 1;
+  --tex-paper-img: url("images/textures/paper.webp");
+  --tex-tape-img: url("images/textures/tape.webp");
+  --tex-tape-img-2: url("images/textures/tape-2.webp");
+  --tex-tape-img-3: url("images/textures/tape-3.webp");
+  --tape-scan: var(--tex-tape-img); /* which scan a strip uses; cards override it (see the 3-cycle rules) */
+  --tex-wear-img: url("images/textures/print-wear.webp");
+  --tex-film-img: url("images/textures/film-grain.webp");
+  --tex-metal-img: url("images/textures/metal.webp");
+  --tex-metal-base: 0.16;
+  --tex-metal-color: color-mix(in srgb, var(--text-main) 70%, #6b7280);
+  --tex-sheen: rgb(255 255 255 / 0.55);
+  --tex-steel: color-mix(in srgb, #9aa3ad 22%, transparent);
+  /* shade that darkens the metal toward the viewport edges */
+  --tex-edge: color-mix(in srgb, var(--text-main) 26%, transparent);
+  --tex-edge-w: clamp(1.5rem, 7vw, 7rem);
+  /* the shadow the Home hero casts on the metal at the fold */
+  --tex-fold: color-mix(in srgb, var(--text-main) 42%, transparent);
+  --tex-grain-base: 0.1;
+  /* how much of the scanned sheet shows on polaroid frames and Card Stock */
+  --tex-paper-base: 0.75;
+  /* polaroid frames show less of the sheet's tooth than Card Stock: a smoother, coated photo paper */
+  --tex-polaroid-base: 0.35;
+  --tex-tape-base: 0.55;
+  --tex-wear-base: 0.4;
+  /* the surface colour under headings: wear is painted in it */
+  --tex-under: var(--bg-page);
+  /* mirrors the tape colour in wireframe.css so the texture can fade over it */
+  --tex-tape-color: color-mix(in srgb, var(--accent-secondary) 15%, #dcc08c);
+}
+/* Dark palettes: lighter wear */
+:root[data-scheme="dark"] {
+  --tex-grain-base: 0.08;
+  --tex-wear-base: 0.35;
+  --tex-metal-base: 0.12;
+  --tex-polaroid-base: 0.5;
+  --tex-metal-color: color-mix(in srgb, var(--text-main) 60%, #c9d1da);
+  --tex-sheen: rgb(255 255 255 / 0.07);
+  --tex-steel: color-mix(in srgb, #8b96a3 10%, transparent);
+  --tex-edge: rgb(0 0 0 / 0.42);
+  --tex-fold: rgb(0 0 0 / 0.62);
+}
+:root[data-texture="off"] { --tex-strength: 0; }
+:root[data-texture="quiet"] { --tex-strength: 1; }
+:root[data-texture="bold"] { --tex-strength: 1.6; }
+
+/* Page surface: brushed metal (the only surface; toolbar "Surface" picks its strength).
+   body::before is a sheet of horizontal brushed streaks behind all content. It covers the whole
+   body and scrolls with the page (absolute, body is its containing block); z-index -1 sits above
+   the canvas background and below every in-flow box; body itself is not a stacking context.
+   body::after is a fixed steel wash with soft diagonal highlight bands: it stays put while the
+   brushed sheet scrolls under it, so the light seems to slide across the metal. Its top layers
+   shade the four viewport edges (--tex-edge over --tex-edge-w, eased) so the sheet falls off into
+   shadow at its rim instead of running flat to the window edge.
+   "Metal (Subtle)" (html[data-surface="metal-subtle"]): the same layers at under half strength. */
+:root { --tex-metal-mul: 1; }
+:root[data-surface="metal-subtle"] { --tex-metal-mul: 0.45; }
+body { position: relative; }
+body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--tex-metal-color);
+  opacity: calc(var(--tex-metal-base) * var(--tex-metal-mul) * var(--tex-strength));
+  -webkit-mask-image: var(--tex-metal-img);
+  mask-image: var(--tex-metal-img);
+  -webkit-mask-size: 512px 256px;
+  mask-size: 512px 256px;
+}
+/* Home fold: the hero ends in a hard line where the metal sheet begins. The hero casts a soft
+   shadow down onto the metal (its own overflow: clip does not clip its box-shadow), so the sheet
+   reads as a surface lying under the hero rather than a picture butted against it. */
+.hero-wordmark-viewport {
+  box-shadow: 0 0.75rem calc(var(--tex-edge-w) * 0.6) color-mix(in srgb, var(--tex-fold) calc(min(1, var(--tex-strength)) * var(--tex-metal-mul) * 100%), transparent);
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: calc(min(1, var(--tex-strength)) * var(--tex-metal-mul));
+  --edge-mid: color-mix(in srgb, var(--tex-edge) 30%, transparent);
+  background:
+    linear-gradient(90deg, var(--tex-edge), var(--edge-mid) calc(var(--tex-edge-w) * 0.4), transparent var(--tex-edge-w), transparent calc(100% - var(--tex-edge-w)), var(--edge-mid) calc(100% - var(--tex-edge-w) * 0.4), var(--tex-edge)),
+    linear-gradient(180deg, var(--tex-edge), var(--edge-mid) calc(var(--tex-edge-w) * 0.3), transparent calc(var(--tex-edge-w) * 0.75), transparent calc(100% - var(--tex-edge-w) * 0.75), var(--edge-mid) calc(100% - var(--tex-edge-w) * 0.3), var(--tex-edge)),
+    linear-gradient(112deg, transparent 8%, var(--tex-sheen) 22%, transparent 34%, transparent 52%, color-mix(in srgb, var(--tex-sheen) 60%, transparent) 64%, transparent 74%),
+    linear-gradient(180deg, var(--tex-steel), color-mix(in srgb, var(--tex-steel) 40%, transparent) 50%, var(--tex-steel));
+}
+
+/* Cards are real card stock (the only style): an off-white sheet with
+   the scanned paper (Paper001) multiplied on, small corners and a soft layered shadow, no border or accent edge. */
+:root {
+  --card-stock: color-mix(in srgb, var(--bg-surface) 70%, white);
+  --card-shadow: 0 1px 1px rgb(40 30 20 / 0.10), 0 4px 10px -3px rgb(40 30 20 / 0.14), 0 16px 30px -14px rgb(40 30 20 / 0.22);
+  --card-edge: inset 0 1px 0 rgb(255 255 255 / 0.7);
+  --card-grain: 0.8;
+}
+:root[data-scheme="dark"] {
+  --card-stock: color-mix(in srgb, var(--bg-surface) 88%, var(--text-main));
+  --card-shadow: 0 1px 1px rgb(0 0 0 / 0.35), 0 6px 14px -4px rgb(0 0 0 / 0.45), 0 18px 34px -14px rgb(0 0 0 / 0.55);
+  --card-edge: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --card-grain: 0.65;
+}
+:root :is(.card, .roadmap-step, .faq-item) {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-radius: 3px;
+  background-color: var(--card-stock);
+  box-shadow: var(--card-edge), var(--card-shadow);
+}
+:root :is(.card, .roadmap-step, .faq-item)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background-color: var(--card-stock);
+  background-image: var(--tex-paper-img);
+  background-size: 256px 256px;
+  background-blend-mode: multiply;
+  opacity: min(1, calc(var(--tex-paper-base) * var(--card-grain) * var(--tex-strength)));
+}
+
+/* Polaroid frame: the scanned white sheet (Paper001) multiplied onto the frame colour. A cover
+   of the frame colour on top fades it with --tex-strength (an element's own background cannot
+   take opacity). The 512px scan is drawn at 256px so it stays sharp on 2x screens. */
+.media-box.has-photo:not(.has-video) {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--paper) calc((1 - min(1, var(--tex-polaroid-base) * var(--tex-strength))) * 100%), transparent) 0 0),
+    var(--tex-paper-img);
+  background-size: auto, 256px 256px;
+  background-position: 0 0, var(--paper-x, 0) var(--paper-y, 0);
+  background-blend-mode: normal, multiply;
+}
+
+/* Tape: three photographed strips of masking tape (Tape005: tape.webp, tape-2.webp, tape-3.webp, one per card in a cycle of three). The scan is multiplied onto the palette's
+   tape colour and its alpha is the strip's real outline (torn ends), used as the one mask.
+   wireframe.css gives the flat rectangle; this resizes it to the strip's 2.17:1 shape. */
+.media-box.has-photo:not(.has-video)::before {
+  inset-block-start: -1.3rem;
+  inline-size: calc(5.4rem * var(--tape-w, 1));
+  block-size: 2.49rem;
+  margin-inline-start: calc(-2.7rem * var(--tape-w, 1) + var(--tape-shift, 0rem));
+  opacity: 0.94;
+  scale: var(--tape-flip, 1 1);
+  transform: rotate(var(--tape-turn, 2deg));
+  filter: brightness(var(--tape-shade, 1));
+  background-color: var(--tex-tape-color);
+  background-image: var(--tape-scan);
+  background-size: 100% 100%;
+  background-blend-mode: multiply;
+  -webkit-mask-image: var(--tape-scan);
+  mask-image: var(--tape-scan);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+/* No two strips alike: each photo sits alone in its card, so the variation is keyed on the
+   CARD's place among its siblings. Three cycles of different lengths (3, 4, 5) mix the angle,
+   the flip (4 outlines from one scan) and the length, sideways shift and shade, so the same
+   combination only comes back every 60 cards. The 3-cycle also picks which of the three scans. */
+:nth-child(3n+2) > .media-box.has-photo:not(.has-video) { --tape-turn: -3.5deg; --tape-scan: var(--tex-tape-img-2); }
+:nth-child(3n) > .media-box.has-photo:not(.has-video) { --tape-turn: 0.6deg; --tape-scan: var(--tex-tape-img-3); }
+:nth-child(4n+2) > .media-box.has-photo:not(.has-video) { --tape-flip: -1 1; }
+:nth-child(4n+3) > .media-box.has-photo:not(.has-video) { --tape-flip: 1 -1; }
+:nth-child(4n) > .media-box.has-photo:not(.has-video) { --tape-flip: -1 -1; }
+:nth-child(5n+2) > .media-box.has-photo:not(.has-video) { --tape-shift: 0.9rem; --tape-w: 0.9; --tape-shade: 0.97; }
+:nth-child(5n+3) > .media-box.has-photo:not(.has-video) { --tape-shift: -1.1rem; --tape-w: 1.08; --tape-shade: 1.03; }
+:nth-child(5n+4) > .media-box.has-photo:not(.has-video) { --tape-shift: 0.4rem; --tape-w: 0.94; --tape-shade: 1.02; }
+:nth-child(5n) > .media-box.has-photo:not(.has-video) { --tape-shift: -0.5rem; --tape-w: 1.04; --tape-shade: 0.96; }
+
+
+/* Print wear: an OVERLAY of the surface colour under the type, cut by the speck tile, so the ink
+   looks worn. It sits over h1/h2.
+   :where() keeps specificity 0 so elements that are already positioned keep their position. */
+:where(h1, h2) { position: relative; }
+/* Text distress and edge grain removed (2026-11-13): headings and the hero wordmark render clean. */
+.svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* Off, reduced transparency, more contrast and forced colors: no texture layer at all */
+:root[data-texture="off"] :is(h1, h2)::after { display: none; }
+:root[data-texture="off"] .media-box.has-photo:not(.has-video)::before { background-image: none; -webkit-mask-image: none; mask-image: none; }
+:root[data-texture="off"] .media-box.has-photo:not(.has-video) { background-image: none; }
+:root[data-texture="off"] body::before,
+:root[data-texture="off"] body::after,
+:root[data-texture="off"] :is(.card, .roadmap-step, .faq-item)::before { display: none; }
+:root[data-texture="off"] h1.studio-wordmark { filter: none; }
+/* Hero grain: film grain on the Home hero wordmark only, not the photo (toolbar "Hero Grain",
+   html[data-hero-grain]). The logo is mask-image'd, so a child layer is clipped to the letters.
+   One alpha tile as a single mask, tinted by a palette token. Off by default. */
+:root { --hero-grain-alpha: 0; --hero-grain-size: 256px; }
+:root[data-hero-grain="soft"] { --hero-grain-alpha: 0.12; --hero-grain-size: 256px; }
+:root[data-hero-grain="strong"] { --hero-grain-alpha: 0.3; --hero-grain-size: 384px; }
+.logo-mark--hero { position: relative; }
+.logo-mark--hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: var(--text-main);
+  -webkit-mask: var(--tex-film-img) 0 0 / var(--hero-grain-size) var(--hero-grain-size) repeat;
+  mask: var(--tex-film-img) 0 0 / var(--hero-grain-size) var(--hero-grain-size) repeat;
+  opacity: var(--hero-grain-alpha);
+}
+:root:not([data-hero-grain="soft"], [data-hero-grain="strong"]) .logo-mark--hero::after,
+:root[data-texture="off"] .logo-mark--hero::after { display: none; }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  body::before, body::after, :is(.card, .roadmap-step, .faq-item)::before, :is(h1, h2)::after { display: none; }
+  h1.studio-wordmark { filter: none; }
+  .hero-wordmark-viewport { box-shadow: none; }
+  .logo-mark--hero::after { display: none; }
+  .media-box.has-photo:not(.has-video)::before { background-image: none; -webkit-mask-image: none; mask-image: none; }
+  .media-box.has-photo:not(.has-video) { background-image: none; }
+}
+
+/* Every sheet cut from a different part of the scan. Polaroid frames: a background cannot be
+   rotated, so each frame shows the 256px tile at its own offset (cycles of 6 and 7 keyed on the
+   CARD, like the tape). Card Stock: the texture layer is oversized, turned a quarter-turn or
+   two, and clipped by the card, so the fibre direction changes too (cycles of 4, 5 and 3). */
+:nth-child(6n+2) > .media-box.has-photo:not(.has-video) { --paper-x: 64px; }
+:nth-child(6n+3) > .media-box.has-photo:not(.has-video) { --paper-x: 150px; }
+:nth-child(6n+4) > .media-box.has-photo:not(.has-video) { --paper-x: 200px; }
+:nth-child(6n+5) > .media-box.has-photo:not(.has-video) { --paper-x: 30px; }
+:nth-child(6n) > .media-box.has-photo:not(.has-video) { --paper-x: 110px; }
+:nth-child(7n+2) > .media-box.has-photo:not(.has-video) { --paper-y: 90px; }
+:nth-child(7n+3) > .media-box.has-photo:not(.has-video) { --paper-y: 40px; }
+:nth-child(7n+4) > .media-box.has-photo:not(.has-video) { --paper-y: 170px; }
+:nth-child(7n+5) > .media-box.has-photo:not(.has-video) { --paper-y: 220px; }
+:nth-child(7n+6) > .media-box.has-photo:not(.has-video) { --paper-y: 120px; }
+:nth-child(7n) > .media-box.has-photo:not(.has-video) { --paper-y: 10px; }
+
+:is(.card, .roadmap-step, .faq-item):nth-child(4n+2) { --stock-turn: 90deg; }
+:is(.card, .roadmap-step, .faq-item):nth-child(4n+3) { --stock-turn: 180deg; }
+:is(.card, .roadmap-step, .faq-item):nth-child(4n) { --stock-turn: 270deg; }
+:is(.card, .roadmap-step, .faq-item):nth-child(5n+2) { --stock-x: 80px; }
+:is(.card, .roadmap-step, .faq-item):nth-child(5n+3) { --stock-x: 170px; }
+:is(.card, .roadmap-step, .faq-item):nth-child(5n+4) { --stock-x: 40px; }
+:is(.card, .roadmap-step, .faq-item):nth-child(5n) { --stock-x: 120px; }
+:is(.card, .roadmap-step, .faq-item):nth-child(3n+2) { --stock-y: 100px; }
+:is(.card, .roadmap-step, .faq-item):nth-child(3n) { --stock-y: 200px; }
+:root :is(.card, .roadmap-step, .faq-item) { overflow: clip; }
+:root :is(.card, .roadmap-step, .faq-item)::before {
+  /* A centred square 3x the card's width: turning a wide, short rectangle by 90deg left its edges bare */
+  inset: auto;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 300%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  rotate: var(--stock-turn, 0deg);
+  background-position: var(--stock-x, 0) var(--stock-y, 0);
+}

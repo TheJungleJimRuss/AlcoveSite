@@ -1,0 +1,34 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "alcove-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "scripts/dev-server.py",
+        "8765"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "alcove-site-alt",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "scripts/dev-server.py",
+        "8790"
+      ],
+      "port": 8790,
+      "autoPort": false
+    },
+    {
+      "name": "alcove-site-3",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "scripts/dev-server.py",
+        "8811"
+      ],
+      "port": 8811,
+      "autoPort": false
+    }
+  ]
+}

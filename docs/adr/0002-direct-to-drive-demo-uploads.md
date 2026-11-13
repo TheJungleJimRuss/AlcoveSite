@@ -1,0 +1,3 @@
+# Demos upload straight from the browser to Drive
+
+Every Inquiry now requires a Demo, and phone videos run 50–250MB, far past the ~50MB request cap of the Apps Script web app that receives Inquiries. So the script opens a Drive resumable upload session per file and the browser sends the file directly to Drive (up to 3 files, 250MB each); the Inquiry itself is sent only after every Demo has landed. We rejected a 20MB cap (would turn away most phone videos), dropping video, and a paid upload service (Seth must own the backend at no cost). Cost: more client code, an upload-slot endpoint that needs abuse caps and a daily cleanup of orphaned files, and no JavaScript-off path for booking.
