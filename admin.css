@@ -1,0 +1,65 @@
+/* Admin mode (admin.js). Unboxed to match the site: hairline outlines and borders, no pills, no solid fills. */
+[data-admin-edit] {
+  outline: 1px dashed var(--border-focus);
+  outline-offset: 3px;
+  cursor: text;
+}
+[data-admin-edit]:hover { outline-style: solid; }
+[data-admin-edit]:focus-visible, [data-admin-edit]:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 3px;
+}
+
+#alcove-admin {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 10001;
+  width: min(22rem, calc(100vw - 2rem));
+  background: var(--bg-page);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  font: 0.9rem/1.35 var(--font-sans);
+}
+#alcove-admin button {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+#alcove-admin button:hover:not(:disabled) { text-decoration: underline; }
+#alcove-admin button:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
+#alcove-admin button:disabled { color: var(--text-muted); cursor: not-allowed; }
+#alcove-admin .admin-toggle { display: block; width: 100%; text-align: left; }
+#admin-body { padding: 0 0.75rem 0.5rem; border-top: 1px solid var(--border-color); }
+#admin-body { max-height: min(70dvh, 38rem); overflow-y: auto; overscroll-behavior: contain; }
+.admin-defaults { margin: 0.5rem 0 0; padding: 0.25rem 0 0; border: 0; border-top: 1px solid var(--border-color); min-width: 0; }
+.admin-defaults legend { padding: 0 0.25rem 0 0; font-weight: 600; }
+.admin-defaults label { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: 44px; }
+.admin-defaults select {
+  flex: 0 1 12rem; min-width: 0; min-height: 44px; padding: 0 0.5rem;
+  background: var(--bg-page); color: var(--text-main); border: 1px solid var(--border-color); font: inherit;
+}
+.admin-defaults select:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
+#admin-body[hidden] { display: none; }
+.admin-status { margin: 0.5rem 0; color: var(--text-muted); }
+.admin-changes { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow-y: auto; }
+.admin-changes li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; border-top: 1px solid var(--border-color); }
+.admin-change-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-actions { display: flex; justify-content: space-between; gap: 0.5rem; border-top: 1px solid var(--border-color); }
+.admin-note { margin: 0.5rem 0 0; color: var(--text-muted); overflow-wrap: anywhere; }
+.admin-note:empty { display: none; }
+.admin-note button { font: inherit; min-height: 44px; }
+
+/* Clear the bottom tab bar on phones (nav height is about 3.5rem plus the safe-area inset). */
+@media (max-width: 640px) {
+  #alcove-admin { bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+  #admin-body { max-height: min(60dvh, calc(100dvh - 9rem - env(safe-area-inset-bottom, 0px))); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-admin-edit] { transition: outline-color 0.15s ease; }
+}

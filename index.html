@@ -2,15 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#FDFBF7">
   <title>Home - Alcove Recording</title>
   <link rel="stylesheet" href="wireframe.css">
+  <link rel="stylesheet" href="theme-preview.css">
+  <link rel="stylesheet" href="logo.css">
+  <link rel="stylesheet" href="textures.css?v=hg3">
+  <script src="content-loader.js"></script>
+  <script src="theme-preview.js"></script>
+  <script src="fader.js" defer></script>
+  <script src="nav-switch.js" defer></script>
+  <script src="now-playing.js" defer></script>
+  <script src="cards-tilt.js" defer></script>
 </head>
 <body>
 
   <!-- Global Header & Navigation (Smart Reveal on Scroll) -->
   <header class="site-header site-header--smart">
-    <a href="index.html" class="logo-placeholder">Alcove Recording</a>
+    <a href="index.html" class="logo-placeholder" aria-label="Alcove Recording, home"><span class="logo-mark" role="img" aria-label="Alcove Recording"></span></a>
     <nav aria-label="Sticky Main Navigation">
       <ul class="nav-links">
         <li><a href="index.html" class="active" aria-current="page">Home</a></li>
@@ -21,12 +31,13 @@
     </nav>
   </header>
 
-  <main class="container">
+  <main>
 
     <!-- Above-The-Fold Viewport: Studio Wordmark, Subheader & Centered Navigation -->
     <section class="hero-wordmark-viewport">
-      <h1 class="studio-wordmark">[Alcove Recording]</h1>
-      <p class="hero-wordmark-subline">[Short Subheader Placeholder - A comfortable, low-pressure creative studio space for emerging musicians and first-time recording artists. Lorem ipsum dolor sit amet.]</p>
+      <div class="hero-media" aria-hidden="true"></div>
+      <h1 class="studio-wordmark"><span class="logo-mark logo-mark--hero" role="img" aria-label="Alcove Recording"></span></h1>
+      <p class="hero-wordmark-subline" data-edit-key="index.p.a-relaxed-little-studio-where-your">A relaxed little studio where your first song is welcome.</p>
       
       <nav class="hero-nav" aria-label="Hero Navigation">
         <ul class="nav-links">
@@ -37,102 +48,116 @@
         </ul>
       </nav>
 
-      <a href="#content-start" class="scroll-cue" aria-label="Scroll to explore content">&darr;</a>
+      <a href="#process" class="scroll-cue" aria-label="Scroll to explore content">&darr;</a>
     </section>
 
-    <!-- Studio Atmosphere Visual Anchor (Opening Below The Fold) -->
-    <div id="content-start" class="hero-media-window">
-      [Studio Atmosphere Visual Placeholder (16:9 Window) - Warm lighting, cozy couch, instruments on stands, relaxed room]
-    </div>
-    <p class="hero-media-caption">[Studio Space &amp; Atmosphere &bull; A relaxed creative room with instruments ready to play]</p>
-
-    <!-- Section 2: The Creative Process ("From Voice Memo to Finished Track") -->
+    <div class="container">
+      <!-- Section 2: First Time in a Studio? 3-Step Journey -->
     <section id="process" class="section-block">
-      <h2>[Creative Process Title Placeholder]</h2>
-      <p class="placeholder-text">[Process Description Placeholder - Demystifying how raw voice memos turn into finished tracks. Lorem ipsum dolor sit amet.]</p>
+      <h2 data-edit-key="index.h2.first-time-in-a-studio-here">First Time in a Studio? Here's How It Goes</h2>
+      <p class="placeholder-text" data-edit-key="index.p.nobody-s-born-knowing-how-this">Nobody's born knowing how this works. Here's the short version of how a rough idea becomes a finished song.</p>
 
       <div class="grid-cards">
         <article class="card">
-          <div class="media-box">[Step 1 Visual Placeholder]</div>
-          <h3>[Step 1: The Raw Idea]</h3>
-          <p class="placeholder-text">[Step 1 Description Placeholder - Bringing phone voice memos, rough acoustic riffs, or bedroom beats.]</p>
+          <div class="media-box has-photo"><img src="images/studio-instruments.jpg" alt="Guitars and gear ready to play in the studio" class="p-left" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.01-start-with-what-you-ve">01. Start with what you've got</h3>
+          <p class="placeholder-text" data-edit-key="index.p.a-voice-memo-a-half-finished">A voice memo, a half-finished riff, a lyric in your notes app. It doesn't have to be polished, and you don't need any studio experience.</p>
         </article>
 
         <article class="card">
-          <div class="media-box">[Step 2 Visual Placeholder]</div>
-          <h3>[Step 2: Experimenting & Jamming]</h3>
-          <p class="placeholder-text">[Step 2 Description Placeholder - Dialing in guitar pedals, trying vocal layers, exploring without rush.]</p>
+          <div class="media-box has-photo"><img src="images/studio-live-room.jpg" alt="The live room at Alcove Recording" class="p-center" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.02-record-at-your-own-pace">02. Record at your own pace</h3>
+          <p class="placeholder-text" data-edit-key="index.p.no-rush-and-no-judgment-we">No rush and no judgment. We'll mess with sounds, try things, and keep going until you've got takes you love.</p>
         </article>
 
         <article class="card">
-          <div class="media-box">[Step 3 Visual Placeholder]</div>
-          <h3>[Step 3: Bringing It Together]</h3>
-          <p class="placeholder-text">[Step 3 Description Placeholder - Polishing the mix into a finished track to blast in the car.]</p>
+          <div class="media-box has-photo"><img src="images/studio-piano.jpg" alt="The piano in the studio" class="p-right" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.03-hear-it-finished">03. Hear it finished</h3>
+          <p class="placeholder-text" data-edit-key="index.p.we-mix-it-so-everything-sits">We mix it so everything sits right, then get it ready to share with friends, family, and the world.</p>
         </article>
       </div>
     </section>
 
     <!-- Section 3: The Studio Vibe & Tools to Play With (Showcase Layout Variant) -->
     <section class="section-block">
-      <h2>[The Space & Instruments Title Placeholder]</h2>
-      <p class="placeholder-text">[Vibe Description Placeholder - Emphasizing the welcoming atmosphere and instruments ready to play. Lorem ipsum dolor sit amet.]</p>
+      <h2 data-edit-key="index.h2.the-space">The Space</h2>
+      <p class="placeholder-text" data-edit-key="index.p.it-s-meant-to-feel-like">It's meant to feel like a hangout, not a lab. Come as you are.</p>
 
       <div class="grid-showcase">
         <article class="card">
-          <div class="media-box ratio-16-9">[Instruments &amp; Amps Wide Photo Placeholder]</div>
-          <h3>[Instruments & Gear Title Placeholder]</h3>
-          <p class="placeholder-text">[Instruments Description Placeholder - Amps, guitars, drums, pedals, and mics available to try out. Experiment with whatever catches your ear.]</p>
+          <div class="media-box ratio-16-9 has-photo"><img src="images/studio-instruments.jpg" alt="Instruments and amps set up in the studio" class="p-center" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.instruments-and-gear">Instruments &amp; Gear</h3>
+          <p class="placeholder-text" data-edit-key="index.p.there-s-real-gear-around-to">There's real gear around to try out. If you're curious about something, just ask and we'll plug it in.</p>
+          <div class="gear-badges mt-1">
+            <span class="track-duration">Acoustic Room</span> &bull;
+            <span class="track-duration">Vocal Mics</span> &bull;
+            <span class="track-duration">Amps &amp; Pedals</span> &bull;
+            <span class="track-duration">Comfy Headphones</span>
+          </div>
         </article>
 
         <div class="showcase-side-cards">
           <article class="card">
-            <div class="media-box ratio-16-9">[Room Atmosphere Photo Placeholder]</div>
-            <h3>[Comfortable Space Title Placeholder]</h3>
-            <p class="placeholder-text">[Comfortable Space Description Placeholder - A relaxed room with no stiff glass walls or intimidation.]</p>
+            <div class="media-box ratio-16-9 has-photo"><img src="images/studio-acoustic-room.jpg" alt="The relaxed acoustic room at Alcove Recording" class="p-right" loading="lazy" decoding="async"></div>
+            <h3 data-edit-key="index.h3.a-comfortable-space">A Comfortable Space</h3>
+            <p class="placeholder-text" data-edit-key="index.p.it-feels-more-like-a-friend">It feels more like a friend's living room than an intimidating studio. Settle in.</p>
           </article>
 
           <article class="card">
-            <div class="media-box ratio-16-9">[Collaboration Photo Placeholder]</div>
-            <h3>[Creative Partner Title Placeholder]</h3>
-            <p class="placeholder-text">[Creative Collaboration Description Placeholder - Working together as a creative team to find your sound.]</p>
+            <div class="media-box ratio-16-9 has-photo"><img src="images/studio-live-room.jpg" alt="The live room, set up for a session" class="p-left" loading="lazy" decoding="async"></div>
+            <h3 data-edit-key="index.h3.a-creative-partner">A Creative Partner</h3>
+            <p class="placeholder-text" data-edit-key="index.p.i-m-here-to-help-you">I'm here to help you get the sound in your head out into the world, not to push my own.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <!-- Section 4: What People Are Making Here (Music & Sessions Sneak Peek) -->
+    <!-- Section 4: What We Record (Genre Showcase Cards) -->
     <section class="section-block">
-      <h2>[Recent Projects Title Placeholder]</h2>
-      <p class="placeholder-text">[Projects Intro Placeholder - Sneak peek of songs created by local teens and emerging artists. Lorem ipsum dolor sit amet.]</p>
+      <h2 data-edit-key="index.h2.what-we-record">What We Record</h2>
+      <p class="placeholder-text" data-edit-key="index.p.all-kinds-of-music-all-kinds">All kinds of music, all kinds of artists. If you're making something, I want to hear it.</p>
 
       <div class="grid-cards">
         <article class="card">
-          <div class="media-box">[Track 1 Visual / Waveform Placeholder]</div>
-          <h3>[Track 1 Title & Artist Placeholder]</h3>
-          <p class="placeholder-text">[Track 1 Genre & Notes Placeholder - e.g. High school indie rock band demo.]</p>
+          <div class="media-box has-photo"><img src="images/studio-live-room.jpg" alt="The live room, ready for a band" class="p-center" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.indie-and-alternative">Indie &amp; Alternative</h3>
+          <p class="placeholder-text" data-edit-key="index.p.bands-playing-together-in-the-room">Bands playing together in the room, loud and a little messy in the best way.</p>
         </article>
 
         <article class="card">
-          <div class="media-box">[Track 2 Visual / Waveform Placeholder]</div>
-          <h3>[Track 2 Title & Artist Placeholder]</h3>
-          <p class="placeholder-text">[Track 2 Genre & Notes Placeholder - e.g. Acoustic singer-songwriter bedroom single.]</p>
+          <div class="media-box has-photo"><img src="images/studio-acoustic-room.jpg" alt="The acoustic room" class="p-left" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.singer-songwriters-and-acoustic">Singer-Songwriters &amp; Acoustic</h3>
+          <p class="placeholder-text" data-edit-key="index.p.just-you-a-guitar-and-a">Just you, a guitar, and a song worth telling. We'll keep it close and honest.</p>
+        </article>
+
+        <article class="card">
+          <div class="media-box has-photo"><img src="images/studio-piano.jpg" alt="The piano in the studio" class="p-center" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.bedroom-pop-and-electronic">Bedroom Pop &amp; Electronic</h3>
+          <p class="placeholder-text" data-edit-key="index.p.layers-textures-and-weird-little-ideas">Layers, textures, and weird little ideas. Bring your demo and we'll build it up together.</p>
+        </article>
+
+        <article class="card">
+          <div class="media-box has-photo"><img src="images/studio-instruments.jpg" alt="Microphones and gear set up for vocals" class="p-right" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.rap-hip-hop-and-vocals">Rap, Hip-Hop &amp; Vocals</h3>
+          <p class="placeholder-text" data-edit-key="index.p.clear-punchy-vocals-that-sit-right">Clear, punchy vocals that sit right on the beat, with all your ad-libs in the right places.</p>
         </article>
       </div>
 
-      <div class="mt-15">
-        <a href="work.html" class="btn-placeholder">Hear More Songs &amp; Session Photos &rarr;</a>
+      <div class="mt-15 text-center">
+        <a href="work.html" class="btn-placeholder">Explore Songs, Demos &amp; Session Photos &rarr;</a>
       </div>
     </section>
 
     <!-- Section 5: Low-Stress Closing Invitation -->
     <section class="section-block text-center">
-      <h2>[Closing Callout Headline Placeholder]</h2>
-      <p class="placeholder-text">[Closing Encouragement Placeholder - No studio experience required. Send a voice memo or say hi to talk about your songs. Lorem ipsum dolor sit amet.]</p>
+      <h2 data-edit-key="index.h2.ready-to-record-your-first-track">Ready to Record Your First Track?</h2>
+      <p class="placeholder-text" data-edit-key="index.p.you-don-t-need-any-experience">You don't need any experience. Send me a voice memo, or just say hi and tell me about your songs.</p>
       <div class="button-group flex-center">
         <a href="contact.html" class="btn-placeholder btn-primary">Start a Conversation</a>
       </div>
     </section>
 
+    </div>
   </main>
 
   <!-- Global Footer -->
@@ -145,12 +170,23 @@
     (function () {
       const header = document.querySelector('.site-header--smart');
       const hero = document.querySelector('.hero-wordmark-viewport');
+      const heroMedia = hero ? hero.querySelector('.hero-media') : null;
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const cssParallax = window.CSS && CSS.supports('animation-timeline: scroll()');
       if (!header || !hero) return;
 
       let ticking = false;
 
+      // Fallback hero parallax for browsers without scroll-driven animations
+      function updateParallax() {
+        if (!heroMedia || cssParallax || prefersReducedMotion) return;
+        const y = Math.min(window.scrollY, hero.offsetHeight);
+        heroMedia.style.transform = 'translate3d(0, ' + (y * 0.4).toFixed(1) + 'px, 0)';
+      }
+
       function updateHeader() {
         const currentScrollY = window.scrollY;
+
         // Keep header visible whenever scrolled down past ~45% of hero viewport
         const threshold = hero.offsetHeight * 0.45;
 
@@ -160,6 +196,7 @@
           header.classList.remove('site-header--visible');
         }
 
+        updateParallax();
         ticking = false;
       }
 
@@ -169,6 +206,9 @@
           ticking = true;
         }
       }, { passive: true });
+
+      window.addEventListener('resize', updateHeader, { passive: true });
+      updateHeader();
 
       // Prevent redundant reload/transition when clicking Home while already on Home
       const homeLinks = document.querySelectorAll('.hero-nav a[href="index.html"], .site-header .nav-links a[href="index.html"]');

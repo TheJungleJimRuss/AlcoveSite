@@ -2,15 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#FDFBF7">
   <title>Work - Alcove Recording</title>
   <link rel="stylesheet" href="wireframe.css">
+  <link rel="stylesheet" href="theme-preview.css">
+  <link rel="stylesheet" href="logo.css">
+  <link rel="stylesheet" href="textures.css?v=hg3">
+  <script src="content-loader.js"></script>
+  <script src="theme-preview.js"></script>
+  <script src="fader.js" defer></script>
+  <script src="nav-switch.js" defer></script>
+  <script src="ab-compare.js" defer></script>
+  <script src="now-playing.js" defer></script>
+  <script src="cards-tilt.js" defer></script>
 </head>
 <body>
 
   <!-- Global Header & Navigation -->
   <header class="site-header">
-    <a href="index.html" class="logo-placeholder">Alcove Recording</a>
+    <a href="index.html" class="logo-placeholder" aria-label="Alcove Recording, home"><span class="logo-mark" role="img" aria-label="Alcove Recording"></span></a>
     <nav aria-label="Main Navigation">
       <ul class="nav-links">
         <li><a href="index.html">Home</a></li>
@@ -25,135 +36,175 @@
 
     <!-- Open Page Header -->
     <header class="page-header">
-      <h1>[Work Main Headline Placeholder]</h1>
-      <p class="page-intro">[Work Subheadline Placeholder - A collection of tracks, demos, and in-progress sessions recorded by emerging local artists, bands, and bedroom songwriters. Plug in your headphones. Lorem ipsum dolor sit amet.]</p>
+      <h1 data-edit-key="work.h1.listen-in">Listen In</h1>
+      <p class="page-intro" data-edit-key="work.p.a-few-things-made-at-alcove">A few things made at Alcove, from rough ideas to finished songs.</p>
     </header>
 
     <!-- Section 1: Featured Audio Demos (Interactive Sampler) -->
     <section class="section-block">
-      <h2>[Featured Release Sampler Placeholder]</h2>
+      <h2 data-edit-key="work.h2.recent-recordings">Recent Recordings</h2>
       
-      <div class="filter-bar">
-        <button type="button" class="filter-pill active">All Genres</button>
-        <button type="button" class="filter-pill">Indie Rock</button>
-        <button type="button" class="filter-pill">Bedroom Pop</button>
-        <button type="button" class="filter-pill">Acoustic / Folk</button>
-        <button type="button" class="filter-pill">Punk / Alt</button>
+      <div class="filter-bar" role="toolbar" aria-label="Genre Filters">
+        <button type="button" class="filter-pill active" data-genre="all">All Genres</button>
+        <button type="button" class="filter-pill" data-genre="indie">Indie Rock</button>
+        <button type="button" class="filter-pill" data-genre="pop">Bedroom Pop</button>
+        <button type="button" class="filter-pill" data-genre="acoustic">Acoustic / Folk</button>
+        <button type="button" class="filter-pill" data-genre="punk">Punk / Alt</button>
       </div>
 
       <div class="audio-widget">
-        <div class="media-box">[Main Audio Player / Waveform &amp; Progress Bar Placeholder]</div>
+        <audio id="audio-player" preload="none"></audio>
+        <div class="deck-display">
+          <p class="deck-label placeholder-text">Now Playing</p>
+          <div class="deck-reels" aria-hidden="true"><span class="reel"></span><span class="reel"></span></div>
+        </div>
+        <div class="transport" role="group" aria-label="Transport">
+          <button type="button" class="btn-placeholder btn-sm transport-btn" data-action="prev" aria-label="Previous track">&#9198;&#xFE0E;</button>
+          <button type="button" class="btn-placeholder btn-sm btn-primary transport-btn" data-action="play" aria-label="Play or pause">&#9654;&#xFE0E;</button>
+          <button type="button" class="btn-placeholder btn-sm transport-btn" data-action="next" aria-label="Next track">&#9197;&#xFE0E;</button>
+        </div>
         <div class="player-scrubber-wireframe" role="region" aria-label="Audio timeline">
-          <span class="player-timestamp">0:42</span>
+          <span class="player-timestamp" id="current-time">0:00</span>
           <div class="scrubber-track" role="progressbar" aria-valuenow="35" aria-valuemin="0" aria-valuemax="100">
-            <div class="scrubber-progress"></div>
+            <div class="scrubber-progress" id="progress-bar"></div>
           </div>
-          <span class="player-timestamp">2:45</span>
+          <span class="player-timestamp" id="total-time">2:45</span>
         </div>
         
-        <div class="track-row">
+        <div class="track-row" data-genre="indie">
           <div class="track-info">
-            <strong>[Track Title Placeholder 1]</strong> &bull; <span class="placeholder-text">[Artist Name / Indie Rock Demo]</span>
+            <strong>Indie Rock Demo</strong> &bull; <span class="placeholder-text">Recorded at Alcove</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">2:45</span>
-            <button type="button" class="btn-placeholder btn-sm">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-1-indie.wav" data-time="2:45">Play Preview</button>
           </div>
         </div>
 
-        <div class="track-row">
+        <div class="track-row" data-genre="pop">
           <div class="track-info">
-            <strong>[Track Title Placeholder 2]</strong> &bull; <span class="placeholder-text">[Artist Name / Bedroom Pop Single]</span>
+            <strong>Bedroom Pop Single</strong> &bull; <span class="placeholder-text">Recorded at Alcove</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">3:12</span>
-            <button type="button" class="btn-placeholder btn-sm">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-2-bedroom-pop.wav" data-time="3:12">Play Preview</button>
           </div>
         </div>
 
-        <div class="track-row">
+        <div class="track-row" data-genre="acoustic">
           <div class="track-info">
-            <strong>[Track Title Placeholder 3]</strong> &bull; <span class="placeholder-text">[Artist Name / Acoustic Folk Song]</span>
+            <strong>Acoustic Folk Song</strong> &bull; <span class="placeholder-text">Recorded at Alcove</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">1:58</span>
-            <button type="button" class="btn-placeholder btn-sm">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-3-acoustic.wav" data-time="1:58">Play Preview</button>
           </div>
         </div>
 
-        <div class="track-row">
+        <div class="track-row" data-genre="punk">
           <div class="track-info">
-            <strong>[Track Title Placeholder 4]</strong> &bull; <span class="placeholder-text">[Artist Name / Alternative &amp; Punk Track]</span>
+            <strong>Alternative &amp; Punk Track</strong> &bull; <span class="placeholder-text">Recorded at Alcove</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">3:30</span>
-            <button type="button" class="btn-placeholder btn-sm">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-4-punk.wav" data-time="3:30">Play Preview</button>
           </div>
         </div>
       </div>
 
-      <p class="placeholder-text mt-1">[Audio Note Placeholder - From raw bedroom voice memos to Spotify-ready masters. All tracks engineered, mixed, or mastered right here in the room.]</p>
+      <p class="placeholder-text mt-1" data-edit-key="work.p.from-rough-bedroom-voice-memos-to">From rough bedroom voice memos to finished songs, recorded and mixed right here.</p>
     </section>
 
     <!-- Section 2: From Voice Memo to Finished Song (The Creative Evolution) -->
+    <section class="section-block ab-compare">
+      <h2 data-edit-key="work.h2.voice-memo-vs-finished-song">Voice Memo vs. Finished Song</h2>
+      <p class="placeholder-text" data-edit-key="work.p.flip-the-switch-and-hear-what">Flip the switch and hear what happens when a phone recording becomes a finished song.</p>
+
+      <div class="audio-widget ab-player">
+        <audio data-version="memo" preload="none" data-src="media/voice-memo-rough.wav"></audio>
+        <audio data-version="master" preload="none" data-src="media/track-3-acoustic.wav"></audio>
+        <div class="deck-display">
+          <p class="deck-label" aria-live="polite">Voice Memo</p>
+          <div class="deck-reels" aria-hidden="true"><span class="reel"></span><span class="reel"></span></div>
+        </div>
+        <div class="ab-slide-row">
+          <button type="button" class="ab-slide" role="switch" aria-checked="false" aria-label="Finished Master"><span class="ab-slide-cap"></span></button>
+          <div class="ab-slide-labels" aria-hidden="true">
+            <span class="ab-slide-label" data-version="memo">Memo</span>
+            <span class="ab-slide-label" data-version="master">Master</span>
+          </div>
+        </div>
+        <div class="transport">
+          <button type="button" class="btn-placeholder btn-sm btn-primary transport-btn ab-play" aria-label="Play">&#9654;&#xFE0E;</button>
+        </div>
+        <div class="player-scrubber-wireframe">
+          <span class="player-timestamp ab-time">0:00</span>
+          <input type="range" class="ab-seek" min="0" max="0" step="0.1" value="0" aria-label="Seek">
+          <span class="player-timestamp ab-dur">0:00</span>
+        </div>
+        <p class="ab-hint" data-edit-key="work.p.slide-the-switch-while-it-plays">Slide the switch while it plays. The song keeps its place.</p>
+      </div>
+
+      <table class="ab-specs">
+        <caption class="visually-hidden">What changed between the voice memo and the master</caption>
+        <thead>
+          <tr><td></td><th scope="col" data-version="memo">Voice Memo</th><th scope="col" data-version="master">Finished Master</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row"><span class="ab-strip">Mic</span></th><td data-version="memo">Phone mic</td><td data-version="master">Studio mics</td></tr>
+          <tr><th scope="row"><span class="ab-strip">Room</span></th><td data-version="memo">Bedroom, some room noise</td><td data-version="master">Live room</td></tr>
+          <tr><th scope="row"><span class="ab-strip">Takes</span></th><td data-version="memo">One take</td><td data-version="master">Layered takes and harmonies</td></tr>
+          <tr><th scope="row"><span class="ab-strip">Mix</span></th><td data-version="memo">None</td><td data-version="master">Mixed and finished</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section: Studio Video (placeholder) -->
     <section class="section-block">
-      <h2>[How a Song Evolves Here Placeholder]</h2>
-      <p class="placeholder-text">[Evolution Intro Placeholder - You don't need a full arrangement or perfect takes before coming in. Here is how rough ideas grow into finished songs. Lorem ipsum dolor sit amet.]</p>
-
-      <div class="comparison-container">
-        <article class="card">
-          <div class="media-box ratio-16-9">[Where It Started - Phone Voice Memo Player Placeholder]</div>
-          <h3>[Where It Started: Bedroom Phone Memo]</h3>
-          <p class="placeholder-text">[Where It Started Description Placeholder - Rough acoustic chords and humming into an iPhone microphone with background noise.]</p>
-        </article>
-
-        <div class="comparison-arrow" aria-hidden="true">&rarr;</div>
-
-        <article class="card">
-          <div class="media-box ratio-16-9">[Where It Ended Up - Studio Master Player Placeholder]</div>
-          <h3>[Where It Ended Up: Full Studio Master]</h3>
-          <p class="placeholder-text">[Where It Ended Up Description Placeholder - Tight live drums, layered vocal harmonies, dialed guitar tones, and radio-ready punch.]</p>
-        </article>
+      <h2 data-edit-key="work.h2.a-look-inside">A Look Inside</h2>
+      <p class="placeholder-text" data-edit-key="work.p.a-quick-peek-at-the-room">A quick peek at the room and the vibe.</p>
+      <div class="media-box ratio-16-9 has-photo has-video">
+        <video controls loop muted playsinline preload="metadata" poster="images/studio-live-room.jpg" src="media/placeholder-session.webm" aria-label="A short video tour of Alcove Recording"></video>
       </div>
     </section>
 
     <!-- Section 3: In-Studio Sessions (Candid Photo Gallery) -->
     <section class="section-block">
-      <h2>[Real Moments in the Room Placeholder]</h2>
-      <p class="placeholder-text">[Gallery Description Placeholder - A look at real sessions, tracking moments, and the relaxed energy at Alcove.]</p>
+      <h2 data-edit-key="work.h2.in-the-room">In the Room</h2>
+      <p class="placeholder-text" data-edit-key="work.p.what-a-session-looks-and-feels">What a session looks and feels like.</p>
 
       <div class="grid-cards">
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 1 Placeholder]</div>
-          <p class="placeholder-text">[Tracking live drums &amp; percussion in the room]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-live-room.jpg" alt="The live room at Alcove Recording" class="p-left" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.setting-up-in-the-live-room">Setting up in the live room</p>
         </article>
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 2 Placeholder]</div>
-          <p class="placeholder-text">[Vocal tracking with warm condenser microphone]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-acoustic-room.jpg" alt="The acoustic room at Alcove Recording" class="p-right" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.getting-comfortable-before-the-first-take">Getting comfortable before the first take</p>
         </article>
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 3 Placeholder]</div>
-          <p class="placeholder-text">[Dialing pedals &amp; guitar amp textures on the floor]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-instruments.jpg" alt="Instruments and amps in the studio" class="p-left" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.trying-out-different-sounds">Trying out different sounds</p>
         </article>
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 4 Placeholder]</div>
-          <p class="placeholder-text">[Listening back on the lounge couch with bandmates]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-piano.jpg" alt="The piano in the studio" class="p-right" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.listening-back-together">Listening back together</p>
         </article>
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 5 Placeholder]</div>
-          <p class="placeholder-text">[Acoustic guitar layering by the window]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-acoustic-room.jpg" alt="The acoustic room at Alcove Recording" class="p-left" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.layering-parts-one-at-a-time">Layering parts, one at a time</p>
         </article>
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 6 Placeholder]</div>
-          <p class="placeholder-text">[Printing the final master mix with Seth]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-instruments.jpg" alt="Instruments and amps in the studio" class="p-right" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.putting-the-finishing-touches-on-a">Putting the finishing touches on a mix</p>
         </article>
       </div>
     </section>
 
     <!-- Section 4: Invitation -->
     <section class="section-block text-center">
-      <h2>[Closing Invitation Headline Placeholder]</h2>
-      <p class="placeholder-text">[Closing Encouragement Placeholder - Want to hear what your songs could sound like? Send over a voice memo or demo and let's talk about your music. Lorem ipsum dolor sit amet.]</p>
+      <h2 data-edit-key="work.h2.have-a-song-you-want-to">Have a Song You Want to Hear Come Together?</h2>
+      <p class="placeholder-text" data-edit-key="work.p.send-me-your-rough-demo-or">Send me your rough demo or voice memo. No pressure at all.</p>
       <div class="button-group flex-center">
         <a href="contact.html" class="btn-placeholder btn-primary">Start Your Project</a>
       </div>
@@ -165,6 +216,118 @@
   <footer class="site-footer">
     <p>Alcove Recording &copy; 2026</p>
   </footer>
+
+  <script>
+    (function () {
+      const filters = document.querySelectorAll('.filter-pill');
+      const rows = document.querySelectorAll('.track-row');
+      const playBtns = document.querySelectorAll('.play-btn');
+      const totalTimeEl = document.getElementById('total-time');
+      const currentTimeEl = document.getElementById('current-time');
+      const progressBar = document.getElementById('progress-bar');
+
+      filters.forEach(f => {
+        f.addEventListener('click', () => {
+          filters.forEach(btn => btn.classList.remove('active'));
+          f.classList.add('active');
+          const genre = f.dataset.genre;
+          rows.forEach(r => {
+            if (genre === 'all' || r.dataset.genre === genre) {
+              r.style.display = 'flex';
+            } else {
+              r.style.display = 'none';
+            }
+          });
+        });
+      });
+
+      const widget = document.querySelector('.audio-widget');
+      const audio = document.getElementById('audio-player');
+      const visibleBtns = () => [...rows].filter(r => r.style.display !== 'none').map(r => r.querySelector('.play-btn'));
+      const playingBtn = () => [...playBtns].find(b => b.textContent === 'Pause');
+      widget.querySelectorAll('.transport-btn').forEach(t => t.addEventListener('click', () => {
+        const list = visibleBtns(); if (!list.length) return;
+        const curRow = document.querySelector('.track-row.is-current');
+        const cur = curRow && curRow.querySelector('.play-btn'); const i = cur ? list.indexOf(cur) : -1;
+        const a = t.dataset.action;
+        if (a === 'play') {
+          if (cur && audio.paused) { audio.play().catch(() => {}); cur.textContent = 'Pause'; widget.dataset.playing = 'true'; }
+          else (cur || list[0]).click();
+          return;
+        }
+        const n = a === 'next' ? (i + 1) % list.length : (i <= 0 ? list.length - 1 : i - 1);
+        list[n].click();
+      }));
+      playBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const isPlaying = btn.textContent === 'Pause';
+          setTimeout(() => { widget.dataset.playing = playingBtn() ? 'true' : 'false'; }, 0);
+          playBtns.forEach(b => b.textContent = 'Play Preview');
+          if (!isPlaying) {
+            audio.src = btn.dataset.src; audio.play().catch(() => {});
+            btn.textContent = 'Pause';
+            totalTimeEl.textContent = btn.dataset.time || '2:45';
+            currentTimeEl.textContent = '0:01';
+            progressBar.style.width = '15%';
+          } else {
+            audio.pause();
+            currentTimeEl.textContent = '0:00';
+            progressBar.style.width = '0%';
+          }
+        });
+      });
+      // Transport play key shows pause while audio is playing.
+      const playKey = widget.querySelector('.transport-btn[data-action="play"]');
+      const syncPlayKey = () => {
+        const on = !audio.paused;
+        playKey.textContent = on ? '⏸︎' : '▶︎';
+        playKey.setAttribute('aria-label', on ? 'Pause' : 'Play');
+      };
+      ['play', 'pause', 'ended', 'emptied'].forEach(ev => audio.addEventListener(ev, syncPlayKey));
+      syncPlayKey();
+
+      // Current track: highlight its row and name it in the deck display.
+      const deckLabel = widget.querySelector('.deck-label');
+      const idleLabel = deckLabel.innerHTML;
+      const syncCurrent = () => {
+        const src = audio.getAttribute('src');
+        let current = null;
+        rows.forEach(r => {
+          const on = !!src && r.querySelector('.play-btn').dataset.src === src;
+          r.classList.toggle('is-current', on);
+          r.classList.toggle('is-playing', on && !audio.paused);
+          if (on) { r.setAttribute('aria-current', 'true'); current = r; } else r.removeAttribute('aria-current');
+        });
+        if (!current) { deckLabel.innerHTML = idleLabel; deckLabel.classList.add('placeholder-text'); return; }
+        deckLabel.classList.remove('placeholder-text');
+        deckLabel.textContent = (audio.paused ? 'Paused: ' : 'Now playing: ') + current.querySelector('.track-info strong').textContent;
+      };
+      ['play', 'pause', 'ended', 'emptied'].forEach(ev => audio.addEventListener(ev, syncCurrent));
+
+      // Only one media element plays at a time: starting any pauses the rest.
+      document.addEventListener('play', e => {
+        document.querySelectorAll('audio, video').forEach(m => {
+          if (m === e.target || m.paused) return;
+          m.pause();
+          if (m === audio) {
+            playBtns.forEach(b => b.textContent = 'Play Preview');
+            widget.dataset.playing = 'false';
+          }
+        });
+      }, true);
+      const fmt = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+      audio.addEventListener('loadedmetadata', () => { totalTimeEl.textContent = fmt(audio.duration); });
+      audio.addEventListener('timeupdate', () => {
+        if (!audio.duration) return;
+        currentTimeEl.textContent = fmt(audio.currentTime);
+        progressBar.style.width = (audio.currentTime / audio.duration * 100) + '%';
+      });
+      audio.addEventListener('ended', () => {
+        const list = visibleBtns(); const i = list.indexOf(playingBtn());
+        if (i >= 0) list[(i + 1) % list.length].click();
+      });
+    })();
+  </script>
 
 </body>
 </html>
