@@ -161,58 +161,9 @@
     soft: 'Soft',
     medium: 'Medium',
     full: 'Full',
-    bold: 'Bold',
-    grainy: 'Grainy'
+    bold: 'Bold'
   };
   let activeGradient = pick(GRADIENTS, urlParams && urlParams.get('gradient'), readStored('alcove_theme_gradient'), draftDefaults.gradient, SITE_DEFAULTS.gradient) || 'full';
-
-  // Grainy gradient: dither the palette sweep on a canvas (each pixel picks one of the two neighbouring stops).
-  let grainyUrl = null;
-  function buildGrainyGradient(root) {
-    try {
-      const cs = getComputedStyle(root);
-      const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-      const rgb = name => {
-        probe.clearRect(0, 0, 1, 1);
-        probe.fillStyle = '#000';
-        probe.fillStyle = cs.getPropertyValue(name).trim() || '#000';
-        probe.fillRect(0, 0, 1, 1);
-        return Array.from(probe.getImageData(0, 0, 1, 1).data).slice(0, 3);
-      };
-      const stops = [[0.08, rgb('--accent-primary')], [0.5, rgb('--accent-secondary')], [0.92, rgb('--accent-tertiary')]];
-      const W = 768, H = 900;
-      const c = document.createElement('canvas'); c.width = W; c.height = H;
-      const g = c.getContext('2d');
-      const img = g.createImageData(W, H);
-      const mix = (p, q, u) => [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u, p[2] + (q[2] - p[2]) * u];
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          // smooth sweep, but each pixel samples it at a slightly shifted spot (grain in the colour) plus a little brightness noise
-          const t = Math.min(1, Math.max(0, x / (W - 1) + (Math.random() - 0.5) * 0.45));
-          let col;
-          if (t <= stops[0][0]) col = stops[0][1];
-          else if (t >= stops[2][0]) col = stops[2][1];
-          else {
-            const k = t < stops[1][0] ? 0 : 1;
-            col = mix(stops[k][1], stops[k + 1][1], (t - stops[k][0]) / (stops[k + 1][0] - stops[k][0]));
-          }
-          const j = 1 + (Math.random() - 0.5) * 0.6;
-          const i = (y * W + x) * 4;
-          img.data[i] = Math.min(255, col[0] * j);
-          img.data[i + 1] = Math.min(255, col[1] * j);
-          img.data[i + 2] = Math.min(255, col[2] * j);
-          img.data[i + 3] = 255;
-        }
-      }
-      g.putImageData(img, 0, 0);
-      c.toBlob(blob => {
-        if (!blob || activeGradient !== 'grainy') return;
-        if (grainyUrl) URL.revokeObjectURL(grainyUrl);
-        grainyUrl = URL.createObjectURL(blob);
-        root.style.setProperty('--grad-grainy', `url(${grainyUrl})`);
-      }, 'image/png');
-    } catch (err) { console.warn('grainy gradient failed', err); root.style.removeProperty('--grad-grainy'); }
-  }
 
   const HERO_GRAINS = { off: 'Off', soft: 'Soft', strong: 'Strong' };
   let activeHeroGrain = pick(HERO_GRAINS, urlParams && urlParams.get('herograin'), readStored('alcove_theme_hero_grain'), draftDefaults.heroGrain, SITE_DEFAULTS.heroGrain) || 'off';
@@ -230,8 +181,6 @@
     Object.entries({ ...pVars, ...fVars }).forEach(([k, v]) => {
       root.style.setProperty(k, v);
     });
-
-    if (activeGradient === 'grainy') buildGrainyGradient(root); else root.style.removeProperty('--grad-grainy');
 
     document.querySelectorAll('[data-palette-btn]').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.paletteBtn === activePalette ? 'true' : 'false');
@@ -293,7 +242,7 @@
     lines.push('');
     lines.push(`/* Texture: set <html data-texture="${activeTexture}"> (off | quiet | bold) */`);
     lines.push(`/* Surface: set <html data-surface="${activeSurface}"> (metal | metal-subtle; metal is the default) */`);
-    lines.push(`/* Gradient: set <html data-gradient="${activeGradient}"> (flat | soft | medium | full | bold | grainy; full is the default) */`);
+    lines.push(`/* Gradient: set <html data-gradient="${activeGradient}"> (flat | soft | medium | full | bold; full is the default) */`);
     lines.push(`/* Hero grain: set <html data-hero-grain="${activeHeroGrain}"> (off | soft | strong; off is the default) */`);
     lines.push(`/* Scheme: set <html data-scheme="${activePalette.endsWith('-dark') ? 'dark' : 'light'}"> */`);
     return lines.join('\n');

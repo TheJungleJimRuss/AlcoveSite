@@ -71,7 +71,7 @@ async function mockGitHub(ctx, gh) {
 }
 
 // Opens a page with a console-error log. `probe` installs a per-frame sampler before any page script runs.
-async function open(path, { override, probe, reducedMotion, token, width = 1280, height = 900, gh = {} } = {}) {
+async function open(path, { override, probe, reducedMotion, token, edit, width = 1280, height = 900, gh = {} } = {}) {
   content = override;
   const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion });
   await mockGitHub(ctx, gh);
@@ -82,6 +82,8 @@ async function open(path, { override, probe, reducedMotion, token, width = 1280,
   page.on('request', r => { requests.push(r.url()); allReqs.push({ url: r.url(), auth: r.headers().authorization, body: r.postData() }); });
   // Seeds a token once per context (not on every reload, so sign-out sticks).
   if (token) await ctx.addInitScript(t => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('alcove_admin_token', t); } } catch {} }, token);
+  // Edit mode is off by default on each load; tests that edit seed it on (sessionStorage is how admin.js remembers it).
+  if (edit) await ctx.addInitScript(() => { try { sessionStorage.setItem('alcove_admin_edit', '1'); } catch {} });
   page.on('console', m => m.type() === 'error' && errors.push(m.text()));
   page.on('pageerror', e => errors.push(e.message));
   if (probe) await page.addInitScript(probe);
@@ -96,8 +98,12 @@ for (const p of pages) {
   const keyed = await page.$$eval('[data-edit-key]', els => els.map(e => ({ tag: e.tagName, key: e.dataset.editKey, kids: e.children.length })));
   const tags = new Set(keyed.map(k => k.tag));
   check(`${p}: headings, paragraphs have text keys`, tags.has('H2') && tags.has('P'), JSON.stringify([...tags]));
-  // admin.js tracks one element per key (one draft per key), so a repeated key would edit and revert inconsistently.
-  check(`${p}: keys are unique`, new Set(keyed.map(k => k.key)).size === keyed.length, JSON.stringify(keyed.map(k => k.key).filter((k, i, a) => a.indexOf(k) !== i)));
+  // One draft per key, so a repeated key must mean the same text everywhere: only the shared site.* keys (nav, footer) repeat.
+  const dups = keyed.map(k => k.key).filter((k, i, a) => a.indexOf(k) !== i);
+  check(`${p}: keys are unique (only site.* nav/footer keys repeat)`, dups.every(k => k.startsWith('site.')), JSON.stringify(dups));
+  const texts = await page.$$eval('[data-edit-key^="site."]', els => els.map(e => [e.dataset.editKey, e.textContent]));
+  check(`${p}: shared site.* keys carry identical text`, texts.every(([k, t]) => texts.filter(x => x[0] === k).every(x => x[1] === t)));
+  check(`${p}: nav labels, footer and buttons are keyed`, await page.evaluate(() => [...document.querySelectorAll('.site-header .nav-links a, .site-footer p, .btn-placeholder:not(.transport-btn), .filter-pill')].filter(e => !e.closest('#booking-form')).every(e => e.dataset.editKey || e.querySelector('[data-edit-key]'))));
   check(`${p}: keyed elements hold plain text only`, keyed.every(k => k.kids === 0));
   await ctx.close();
 }
@@ -227,7 +233,7 @@ const adminReq = rs => rs.filter(u => /admin\.(js|css)/.test(u));
 // --- Ticket 02: edit text in place ---------------------------------------------------------------------------
 const H1SEL = 'h1[data-edit-key="work.h1.listen-in"]';
 const unlocked = async (path, opts = {}) => {
-  const o = await open(path, { token: TOKEN, ...opts });
+  const o = await open(path, { token: TOKEN, edit: true, ...opts });
   o.dialogs = [];
   o.page.on('dialog', d => { o.dialogs.push(d.type()); d.accept(); });
   await o.page.waitForSelector('#alcove-admin');
@@ -645,6 +651,96 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   check('keyboard: editable heading is a tab stop with a visible focus outline', await page.evaluate(sel => { const e = document.querySelector(sel); e.focus(); return e.tabIndex === 0 && getComputedStyle(e).outlineStyle !== 'none' && parseFloat(getComputedStyle(e).outlineWidth) >= 2; }, H1SEL));
   check('headings keep their levels while editing', JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('h1,h2,h3')].map(h => h.tagName))) === JSON.stringify(before));
   await ctx.close();
+}
+
+
+// --- Edit mode: any visible text, buttons and genre names ------------------------------------------------------
+const SW = '#alcove-admin .admin-edit-switch';
+{
+  const { ctx, page } = await unlocked('work.html', { edit: false });
+  check('edit switch is a labelled switch, off by default', (await page.getAttribute(SW, 'role')) === 'switch' && (await page.getAttribute(SW, 'aria-checked')) === 'false' && (await page.textContent(SW)).trim() === 'Edit mode: off');
+  check('off: nothing is outlined, editable or a tab stop', (await page.locator('[contenteditable], [data-admin-edit]').count()) === 0 && (await page.$$eval('[data-edit-key]', els => els.every(e => !e.hasAttribute('tabindex')))));
+  // site behaves normally: genre filter, Play Preview, nav
+  await page.click('.filter-pill[data-genre="punk"]');
+  check('off: genre filter works', (await page.$$eval('.track-row', r => r.filter(x => getComputedStyle(x).display !== 'none').length)) === 1);
+  await page.click('.filter-pill[data-genre="all"]');
+  await page.click('.track-row[data-genre="indie"] .play-btn');
+  check('off: Play Preview button runs its action (shows Pause)', (await page.textContent('.track-row[data-genre="indie"] .play-btn')).includes('Pause') && (await page.getAttribute('.track-row[data-genre="indie"] .play-btn', 'data-playing')) === 'true');
+  await page.click('.track-row[data-genre="indie"] .play-btn');
+  await page.click('.site-header .nav-links a[data-edit-key="site.nav.about"]');
+  await page.waitForURL(/about\.html/);
+  check('off: nav link still navigates', true);
+  // switch on with keyboard
+  await page.waitForSelector(SW);
+  await page.focus(SW);
+  await page.keyboard.press('Space');
+  check('Space on the switch turns Edit mode on', (await page.getAttribute(SW, 'aria-checked')) === 'true' && (await page.textContent(SW)).trim() === 'Edit mode: on' && (await page.locator('[contenteditable]').count()) > 10);
+  await page.reload();
+  await page.waitForSelector(SW);
+  check('Edit mode is remembered for the session', (await page.getAttribute(SW, 'aria-checked')) === 'true');
+  await page.click(SW);
+  check('turning it off removes the outlines again', (await page.locator('[contenteditable], [data-admin-edit]').count()) === 0);
+  await ctx.close();
+}
+{
+  const { ctx, page } = await unlocked('work.html');
+  // on: clicking a button's text edits instead of running the action
+  await page.click('.track-row[data-genre="indie"] .play-label');
+  check('on: clicking Play Preview text does not play', (await page.getAttribute('.track-row[data-genre="indie"] .play-btn', 'data-playing')) !== 'true' && (await page.evaluate(() => document.activeElement.matches('.play-label'))));
+  await page.click('.filter-pill[data-genre="punk"]');
+  check('on: clicking a genre tab edits instead of filtering', (await page.$$eval('.track-row', r => r.filter(x => getComputedStyle(x).display !== 'none').length)) === 4);
+  const url = page.url();
+  await page.click('.site-header .nav-links a[data-edit-key="site.nav.about"]');
+  await page.waitForTimeout(500);
+  check('on: clicking a nav label does not navigate', page.url() === url);
+  const pad = await page.$eval('.track-row[data-genre="indie"] .play-btn', b => { const r = b.getBoundingClientRect(); return [r.left + 3, r.top + r.height / 2]; });
+  await page.mouse.click(pad[0], pad[1]);
+  check('on: clicking the button padding focuses its text, still no action', (await page.getAttribute('.track-row[data-genre="indie"] .play-btn', 'data-playing')) !== 'true');
+  check('on: the A/B slide (no text of its own) keeps working', await (async () => { await page.click('.ab-slide'); return (await page.getAttribute('.ab-slide', 'aria-checked')) === 'true'; })());
+  check('on: A/B slide labels are not inside aria-hidden while editable', (await page.locator('.ab-slide-labels[aria-hidden="true"]').count()) === 0);
+  check('A/B switch name comes from visible text, not a copied aria-label', (await page.getAttribute('.ab-slide', 'aria-label')) === null && (await page.getAttribute('.ab-slide', 'aria-labelledby')) === 'ab-master-name');
+  await ctx.close();
+}
+{
+  // Rename a song and a genre tab; Save PUT carries the keys; reload shows them; filter still keys off data-genre.
+  const gh = { file: { sha: 's0', text: JSON.stringify({ version: 1, text: {}, defaults: {} }) } };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  const TITLE = '.track-row[data-genre="pop"] strong', TAB = '.filter-pill[data-genre="pop"]';
+  await replaceText(page, TITLE, 'My Bedroom Banger'); await page.keyboard.press('Escape');
+  await replaceText(page, TAB, 'Dream Pop'); await page.keyboard.press('Escape');
+  await replaceText(page, '.ab-strip[data-edit-key="work.ab.mic.name"]', 'Microphone'); await page.keyboard.press('Escape');
+  await openPanel(page);
+  await page.click(saveBtn);
+  await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
+  const sent = JSON.parse(Buffer.from(JSON.parse(puts(gh)[0].body).content, 'base64').toString('utf8'));
+  check('Save PUT carries the song title, genre label and A/B label under their own keys', sent.text['work.track.pop.title'] === 'My Bedroom Banger' && sent.text['work.tab.pop'] === 'Dream Pop' && sent.text['work.ab.mic.name'] === 'Microphone' && Object.keys(sent.text).length === 3, JSON.stringify(sent.text));
+  await page.click(SW); // edit off, so the tab is an ordinary filter again
+  await page.click('#alcove-admin .admin-toggle');
+  await page.evaluate(sel => document.querySelector(sel).scrollIntoView({ block: 'center' }), TAB);
+  await page.click(TAB);
+  check('after renaming, the renamed genre tab still filters by data-genre', (await page.$$eval('.track-row', r => r.filter(x => getComputedStyle(x).display !== 'none').map(x => x.dataset.genre))).join() === 'pop');
+  await page.click('.filter-pill[data-genre="all"]');
+  await page.evaluate(() => sessionStorage.setItem('alcove_admin_edit', '0'));
+  await ctx.close();
+  // Fresh visitor sees the saved wording and the filter works
+  const v = await open('work.html', { override: JSON.stringify(sent) });
+  check('visitor reload shows the renamed title and tab', (await v.page.textContent(TITLE)) === 'My Bedroom Banger' && (await v.page.textContent(TAB)) === 'Dream Pop');
+  await v.page.click(TAB);
+  check('visitor: renamed tab filters to its tracks', (await v.page.$$eval('.track-row', r => r.filter(x => getComputedStyle(x).display !== 'none').length)) === 1);
+  await v.page.click('.track-row[data-genre="pop"] .play-btn');
+  await v.page.waitForTimeout(200);
+  check('visitor: deck names the renamed song when playing', /My Bedroom Banger/.test(await v.page.textContent('.audio-widget .deck-label')));
+  await v.ctx.close();
+}
+{
+  const { ctx, page } = await unlocked('index.html');
+  // shared nav key on index (header + hero nav) edit together
+  await replaceText(page, '.site-header .nav-links a[data-edit-key="site.nav.work"]', 'Music'); await page.keyboard.press('Escape');
+  check('shared nav key updates every copy on the page', (await page.$$eval('[data-edit-key="site.nav.work"]', e => e.map(x => x.textContent))).join() === 'Music,Music');
+  await ctx.close();
+  const c = await unlocked('contact.html');
+  check('booking form still has no keys with Edit mode on', (await c.page.locator('#booking-form [data-edit-key], #booking-form [contenteditable]').count()) === 0);
+  await c.ctx.close();
 }
 
 await browser.close();

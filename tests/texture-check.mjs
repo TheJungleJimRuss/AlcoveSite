@@ -216,7 +216,7 @@ const pagePaper = page => page.evaluate(() => { const c = getComputedStyle(docum
   const full = await grad(page);
   check(full.attr === 'full' && full.stops.length === 3 && new Set(full.stops).size === 3, 'default gradient is full: three distinct stops', `(gradient=${full.attr})`);
   const kinds = await page.locator('[data-gradient-btn]').evaluateAll(bs => bs.map(b => b.dataset.gradientBtn).join(','));
-  check(kinds === 'flat,soft,medium,full,bold,grainy', 'Gradient control offers flat, soft, medium, full, bold, grainy', `(${kinds})`);
+  check(kinds === 'flat,soft,medium,full,bold', 'Gradient control offers flat, soft, medium, full, bold', `(${kinds})`);
   await page.locator('[data-gradient-btn="soft"]').evaluate(b => b.click()); await page.waitForTimeout(100);
   let g = await grad(page);
   check(g.attr === 'soft' && g.stops[0] === full.stops[0] && g.stops[1] !== full.stops[1] && g.stops[1] !== g.stops[0], 'Soft gradient sits between flat and full');

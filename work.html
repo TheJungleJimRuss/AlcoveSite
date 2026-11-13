@@ -24,10 +24,10 @@
     <a href="index.html" class="logo-placeholder" aria-label="Alcove Recording, home"><span class="logo-mark" role="img" aria-label="Alcove Recording"></span></a>
     <nav aria-label="Main Navigation">
       <ul class="nav-links">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="work.html" class="active" aria-current="page">Work</a></li>
-        <li><a href="about.html">About</a></li>
-        <li><a href="contact.html">Contact</a></li>
+        <li><a href="index.html" data-edit-key="site.nav.home">Home</a></li>
+        <li><a href="work.html" class="active" aria-current="page" data-edit-key="site.nav.work">Work</a></li>
+        <li><a href="about.html" data-edit-key="site.nav.about">About</a></li>
+        <li><a href="contact.html" data-edit-key="site.nav.contact">Contact</a></li>
       </ul>
     </nav>
   </header>
@@ -45,11 +45,11 @@
       <h2 data-edit-key="work.h2.recent-recordings">Recent Recordings</h2>
       
       <div class="filter-bar" role="toolbar" aria-label="Genre Filters">
-        <button type="button" class="filter-pill active" data-genre="all">All Genres</button>
-        <button type="button" class="filter-pill" data-genre="indie">Indie Rock</button>
-        <button type="button" class="filter-pill" data-genre="pop">Bedroom Pop</button>
-        <button type="button" class="filter-pill" data-genre="acoustic">Acoustic / Folk</button>
-        <button type="button" class="filter-pill" data-genre="punk">Punk / Alt</button>
+        <button type="button" class="filter-pill active" data-genre="all" data-edit-key="work.tab.all">All Genres</button>
+        <button type="button" class="filter-pill" data-genre="indie" data-edit-key="work.tab.indie">Indie Rock</button>
+        <button type="button" class="filter-pill" data-genre="pop" data-edit-key="work.tab.pop">Bedroom Pop</button>
+        <button type="button" class="filter-pill" data-genre="acoustic" data-edit-key="work.tab.acoustic">Acoustic / Folk</button>
+        <button type="button" class="filter-pill" data-genre="punk" data-edit-key="work.tab.punk">Punk / Alt</button>
       </div>
 
       <div class="audio-widget">
@@ -73,41 +73,41 @@
         
         <div class="track-row" data-genre="indie">
           <div class="track-info">
-            <strong>Indie Rock Demo</strong> &bull; <span class="placeholder-text">Recorded at Alcove</span>
+            <strong data-edit-key="work.track.indie.title">Indie Rock Demo</strong> &bull; <span class="placeholder-text" data-edit-key="work.track.indie.sub">Recorded at Alcove</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">2:45</span>
-            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-1-indie.wav" data-time="2:45">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-1-indie.wav" data-time="2:45"><span class="play-label" data-edit-key="work.track.indie.play">Play Preview</span><span class="pause-label" hidden>Pause</span></button>
           </div>
         </div>
 
         <div class="track-row" data-genre="pop">
           <div class="track-info">
-            <strong>Bedroom Pop Single</strong> &bull; <span class="placeholder-text">Recorded at Alcove</span>
+            <strong data-edit-key="work.track.pop.title">Bedroom Pop Single</strong> &bull; <span class="placeholder-text" data-edit-key="work.track.pop.sub">Recorded at Alcove</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">3:12</span>
-            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-2-bedroom-pop.wav" data-time="3:12">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-2-bedroom-pop.wav" data-time="3:12"><span class="play-label" data-edit-key="work.track.pop.play">Play Preview</span><span class="pause-label" hidden>Pause</span></button>
           </div>
         </div>
 
         <div class="track-row" data-genre="acoustic">
           <div class="track-info">
-            <strong>Acoustic Folk Song</strong> &bull; <span class="placeholder-text">Recorded at Alcove</span>
+            <strong data-edit-key="work.track.acoustic.title">Acoustic Folk Song</strong> &bull; <span class="placeholder-text" data-edit-key="work.track.acoustic.sub">Recorded at Alcove</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">1:58</span>
-            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-3-acoustic.wav" data-time="1:58">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-3-acoustic.wav" data-time="1:58"><span class="play-label" data-edit-key="work.track.acoustic.play">Play Preview</span><span class="pause-label" hidden>Pause</span></button>
           </div>
         </div>
 
         <div class="track-row" data-genre="punk">
           <div class="track-info">
-            <strong>Alternative &amp; Punk Track</strong> &bull; <span class="placeholder-text">Recorded at Alcove</span>
+            <strong data-edit-key="work.track.punk.title">Alternative &amp; Punk Track</strong> &bull; <span class="placeholder-text" data-edit-key="work.track.punk.sub">Recorded at Alcove</span>
           </div>
           <div class="track-meta">
             <span class="track-duration">3:30</span>
-            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-4-punk.wav" data-time="3:30">Play Preview</button>
+            <button type="button" class="btn-placeholder btn-sm play-btn" data-src="media/track-4-punk.wav" data-time="3:30"><span class="play-label" data-edit-key="work.track.punk.play">Play Preview</span><span class="pause-label" hidden>Pause</span></button>
           </div>
         </div>
       </div>
@@ -128,10 +128,10 @@
           <div class="deck-reels" aria-hidden="true"><span class="reel"></span><span class="reel"></span></div>
         </div>
         <div class="ab-slide-row">
-          <button type="button" class="ab-slide" role="switch" aria-checked="false" aria-label="Finished Master"><span class="ab-slide-cap"></span></button>
+          <button type="button" class="ab-slide" role="switch" aria-checked="false" aria-labelledby="ab-master-name"><span class="ab-slide-cap"></span></button>
           <div class="ab-slide-labels" aria-hidden="true">
-            <span class="ab-slide-label" data-version="memo">Memo</span>
-            <span class="ab-slide-label" data-version="master">Master</span>
+            <span class="ab-slide-label" data-version="memo" data-edit-key="work.ab.label-memo">Memo</span>
+            <span class="ab-slide-label" data-version="master" data-edit-key="work.ab.label-master">Master</span>
           </div>
         </div>
         <div class="transport">
@@ -148,13 +148,13 @@
       <table class="ab-specs">
         <caption class="visually-hidden">What changed between the voice memo and the master</caption>
         <thead>
-          <tr><td></td><th scope="col" data-version="memo">Voice Memo</th><th scope="col" data-version="master">Finished Master</th></tr>
+          <tr><td></td><th scope="col" data-version="memo" data-edit-key="work.ab.col-memo">Voice Memo</th><th scope="col" data-version="master" id="ab-master-name" data-edit-key="work.ab.col-master">Finished Master</th></tr>
         </thead>
         <tbody>
-          <tr><th scope="row"><span class="ab-strip">Mic</span></th><td data-version="memo">Phone mic</td><td data-version="master">Studio mics</td></tr>
-          <tr><th scope="row"><span class="ab-strip">Room</span></th><td data-version="memo">Bedroom, some room noise</td><td data-version="master">Live room</td></tr>
-          <tr><th scope="row"><span class="ab-strip">Takes</span></th><td data-version="memo">One take</td><td data-version="master">Layered takes and harmonies</td></tr>
-          <tr><th scope="row"><span class="ab-strip">Mix</span></th><td data-version="memo">None</td><td data-version="master">Mixed and finished</td></tr>
+          <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.mic.name">Mic</span></th><td data-version="memo" data-edit-key="work.ab.mic.memo">Phone mic</td><td data-version="master" data-edit-key="work.ab.mic.master">Studio mics</td></tr>
+          <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.room.name">Room</span></th><td data-version="memo" data-edit-key="work.ab.room.memo">Bedroom, some room noise</td><td data-version="master" data-edit-key="work.ab.room.master">Live room</td></tr>
+          <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.takes.name">Takes</span></th><td data-version="memo" data-edit-key="work.ab.takes.memo">One take</td><td data-version="master" data-edit-key="work.ab.takes.master">Layered takes and harmonies</td></tr>
+          <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.mix.name">Mix</span></th><td data-version="memo" data-edit-key="work.ab.mix.memo">None</td><td data-version="master" data-edit-key="work.ab.mix.master">Mixed and finished</td></tr>
         </tbody>
       </table>
     </section>
@@ -206,7 +206,7 @@
       <h2 data-edit-key="work.h2.have-a-song-you-want-to">Have a Song You Want to Hear Come Together?</h2>
       <p class="placeholder-text" data-edit-key="work.p.send-me-your-rough-demo-or">Send me your rough demo or voice memo. No pressure at all.</p>
       <div class="button-group flex-center">
-        <a href="contact.html" class="btn-placeholder btn-primary">Start Your Project</a>
+        <a href="contact.html" class="btn-placeholder btn-primary" data-edit-key="work.a.start-your-project">Start Your Project</a>
       </div>
     </section>
 
@@ -214,7 +214,7 @@
 
   <!-- Global Footer -->
   <footer class="site-footer">
-    <p>Alcove Recording &copy; 2026</p>
+    <p data-edit-key="site.footer.copyright">Alcove Recording &copy; 2026</p>
   </footer>
 
   <script>
@@ -244,14 +244,15 @@
       const widget = document.querySelector('.audio-widget');
       const audio = document.getElementById('audio-player');
       const visibleBtns = () => [...rows].filter(r => r.style.display !== 'none').map(r => r.querySelector('.play-btn'));
-      const playingBtn = () => [...playBtns].find(b => b.textContent === 'Pause');
+      const setBtn = (b, on) => { b.dataset.playing = String(on); b.querySelector('.play-label').hidden = on; b.querySelector('.pause-label').hidden = !on; };
+      const playingBtn = () => [...playBtns].find(b => b.dataset.playing === 'true');
       widget.querySelectorAll('.transport-btn').forEach(t => t.addEventListener('click', () => {
         const list = visibleBtns(); if (!list.length) return;
         const curRow = document.querySelector('.track-row.is-current');
         const cur = curRow && curRow.querySelector('.play-btn'); const i = cur ? list.indexOf(cur) : -1;
         const a = t.dataset.action;
         if (a === 'play') {
-          if (cur && audio.paused) { audio.play().catch(() => {}); cur.textContent = 'Pause'; widget.dataset.playing = 'true'; }
+          if (cur && audio.paused) { audio.play().catch(() => {}); setBtn(cur, true); widget.dataset.playing = 'true'; }
           else (cur || list[0]).click();
           return;
         }
@@ -260,12 +261,12 @@
       }));
       playBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-          const isPlaying = btn.textContent === 'Pause';
+          const isPlaying = btn.dataset.playing === 'true';
           setTimeout(() => { widget.dataset.playing = playingBtn() ? 'true' : 'false'; }, 0);
-          playBtns.forEach(b => b.textContent = 'Play Preview');
+          playBtns.forEach(b => setBtn(b, false));
           if (!isPlaying) {
             audio.src = btn.dataset.src; audio.play().catch(() => {});
-            btn.textContent = 'Pause';
+            setBtn(btn, true);
             totalTimeEl.textContent = btn.dataset.time || '2:45';
             currentTimeEl.textContent = '0:01';
             progressBar.style.width = '15%';
@@ -310,7 +311,7 @@
           if (m === e.target || m.paused) return;
           m.pause();
           if (m === audio) {
-            playBtns.forEach(b => b.textContent = 'Play Preview');
+            playBtns.forEach(b => setBtn(b, false));
             widget.dataset.playing = 'false';
           }
         });

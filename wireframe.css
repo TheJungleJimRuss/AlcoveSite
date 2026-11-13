@@ -1827,22 +1827,6 @@ html.has-fader::-webkit-scrollbar { display: none; }
   background-position: 50% 0;
 }
 
-/* Grainy gradient (html[data-gradient="grainy"]): the sweep is a dithered image, not a smooth blend. theme-preview.js
-   paints it on a canvas from the palette (each pixel randomly picks one of the two neighbouring stops, so the colours
-   stipple into each other) and sets it as --grad-grainy. It replaces the linear gradient on the same elements. */
-:root[data-gradient="grainy"] .studio-wordmark {
-  background: var(--grad-grainy, linear-gradient(100deg, var(--accent-primary), var(--grad-mid) 55%, var(--grad-end))) 0 0 / 100% 100% no-repeat;
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-:root[data-gradient="grainy"] .logo-mark--hero,
-:root[data-gradient="grainy"] .hero-wordmark-subline,
-:root[data-gradient="grainy"] .hero-nav .nav-links a,
-:root[data-gradient="grainy"] .hero-wordmark-viewport .scroll-cue {
-  background-image: var(--grad-grainy, linear-gradient(100deg, var(--accent-primary) 8%, var(--grad-mid) 50%, var(--grad-end) 92%));
-  background-size: min(46rem, 88vw) 100dvh;
-}
-
 /* Booking form: required Demo field (dropzone, file list, hairline progress). Unboxed: 1px lines, faint fill on drag-over. */
 .demo-label { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; }
 .demo-drop { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 1.25rem 1rem; border: 1px dashed var(--border-color); border-radius: 4px; color: var(--text-muted); font-size: 0.9rem; }

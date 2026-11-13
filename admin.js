@@ -19,9 +19,17 @@
 
   function start() {
     var els = Array.prototype.slice.call(document.querySelectorAll('[data-edit-key]'));
-    var byKey = {};
+    var byKey = {};  // key -> every element carrying it (shared nav/footer keys appear more than once; they edit together)
     var base = {};   // saved wording at unlock time: the revert target
-    els.forEach(function (el) { if (!(el.dataset.editKey in byKey)) { byKey[el.dataset.editKey] = el; base[el.dataset.editKey] = el.textContent; } });
+    els.forEach(function (el) {
+      var k = el.dataset.editKey;
+      if (!(k in byKey)) { byKey[k] = []; base[k] = el.textContent; }
+      byKey[k].push(el);
+    });
+    var setAll = function (k, t) { byKey[k].forEach(function (e) { if (e.textContent !== t) e.textContent = t; }); };
+    var EDIT_KEY = 'alcove_admin_edit';
+    var editOn = false;
+    try { editOn = sessionStorage.getItem(EDIT_KEY) === '1'; } catch (e) { /* off */ }
     var draft = {};  // key -> edited text, only where it differs from base
 
     function loadDraft() {
@@ -131,7 +139,17 @@
     signOut.textContent = 'Sign out';
     actions.append(save, signOut);
     body.append(status, list, defs, actions, note);
-    panel.append(toggle, body);
+    // Edit mode switch: always visible in the panel header. While off the site behaves normally.
+    var editSwitch = document.createElement('button');
+    editSwitch.type = 'button';
+    editSwitch.className = 'admin-edit-switch';
+    editSwitch.setAttribute('role', 'switch');
+    var editName = document.createElement('span');
+    editName.textContent = 'Edit mode';
+    var editState = document.createElement('span');
+    editState.setAttribute('aria-hidden', 'true'); // the switch's own checked state is announced instead
+    editSwitch.append(editName, editState);
+    panel.append(toggle, editSwitch, body);
     document.body.appendChild(panel);
 
     toggle.addEventListener('click', function () {
@@ -156,7 +174,9 @@
       toggle.textContent = 'Admin · ' + n + (n === 1 ? ' change' : ' changes');
       defRevert.disabled = !Object.keys(defChanges()).length;
       optNames.forEach(function (o) { if (selects[o].value !== chosen[o]) selects[o].value = chosen[o]; });
-      status.textContent = n ? n + (n === 1 ? ' unsaved change' : ' unsaved changes') + '.' : 'No changes yet. Click any outlined text to edit it, or pick Site Defaults below.';
+      editSwitch.setAttribute('aria-checked', String(editOn));
+      editState.textContent = editOn ? ': on' : ': off';
+      status.textContent = n ? n + (n === 1 ? ' unsaved change' : ' unsaved changes') + '.' : (editOn ? 'No changes yet. Click any outlined text to edit it, or pick Site Defaults below.' : 'No changes yet. Turn Edit mode on to change text, or pick Site Defaults below.');
       while (list.firstChild) list.removeChild(list.firstChild);
       Object.keys(draft).forEach(function (k) {
         var li = document.createElement('li');
@@ -169,7 +189,7 @@
         rev.textContent = 'Revert';
         rev.setAttribute('aria-label', 'Revert ' + k);
         rev.addEventListener('click', function () {
-          byKey[k].textContent = base[k];
+          setAll(k, base[k]);
           delete draft[k];
           saveDraft();
           render();
@@ -318,24 +338,55 @@
     }
     function record(el) {
       var k = el.dataset.editKey, t = flatten(el);
+      setAll(k, t); // other elements sharing this key follow
       if (t !== base[k]) draft[k] = t; else delete draft[k];
       saveDraft();
       render();
     }
 
     loadDraft();
-    Object.keys(draft).forEach(function (k) { byKey[k].textContent = draft[k]; });
+    Object.keys(draft).forEach(function (k) { setAll(k, draft[k]); });
+
+    // Edit mode on: keyed text becomes outlined, focusable, plain-text editable. Off: the elements are untouched again.
+    var unhidden = []; // aria-hidden ancestors opened while editing (focusable text must not sit inside one)
+    function setEdit(on) {
+      editOn = on;
+      try { sessionStorage.setItem(EDIT_KEY, on ? '1' : '0'); } catch (e) { /* remembered only in memory */ }
+      if (!on && document.activeElement && document.activeElement.matches && document.activeElement.matches('[data-edit-key]')) document.activeElement.blur();
+      els.forEach(function (el) {
+        if (on) {
+          el.setAttribute('data-admin-edit', '');
+          el.setAttribute('contenteditable', 'plaintext-only');
+          if (el.contentEditable !== 'plaintext-only') el.setAttribute('contenteditable', 'true'); // older engines: paste/Enter handled below
+          el.tabIndex = 0;
+          el.spellcheck = true;
+          var h = el.closest('[aria-hidden="true"]');
+          if (h && unhidden.indexOf(h) < 0) { h.removeAttribute('aria-hidden'); unhidden.push(h); }
+        } else {
+          el.removeAttribute('data-admin-edit');
+          el.removeAttribute('contenteditable');
+          el.removeAttribute('tabindex');
+          el.removeAttribute('spellcheck');
+        }
+      });
+      if (!on) { unhidden.forEach(function (h) { h.setAttribute('aria-hidden', 'true'); }); unhidden = []; }
+      render();
+    }
+    editSwitch.addEventListener('click', function () { setEdit(!editOn); });
 
     els.forEach(function (el) {
-      el.setAttribute('data-admin-edit', '');
-      el.setAttribute('contenteditable', 'plaintext-only');
-      if (el.contentEditable !== 'plaintext-only') el.setAttribute('contenteditable', 'true'); // older engines: paste/Enter handled below
-      el.tabIndex = 0;
-      el.spellcheck = true;
       el.addEventListener('keydown', function (e) {
+        if (!editOn) return;
         if (e.key === 'Enter') e.preventDefault();          // headings and paragraphs stay single text
         else if (e.key === 'Escape') el.blur();
+        else if (e.key === ' ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          // Inside a <button> or <summary> the browser treats Space as "activate" and types nothing; insert it ourselves.
+          e.preventDefault();
+          document.execCommand('insertText', false, ' ');
+        }
       });
+      // A space typed inside a button or summary must not activate it.
+      el.addEventListener('keyup', function (e) { if (editOn) e.stopPropagation(); });
       el.addEventListener('paste', function (e) {
         e.preventDefault();
         var t = oneLine((e.clipboardData && e.clipboardData.getData('text/plain')) || '');
@@ -344,6 +395,7 @@
       el.addEventListener('drop', function (e) { e.preventDefault(); });
       el.addEventListener('input', function () { record(el); });
       el.addEventListener('blur', function () {
+        if (!editOn) return;
         var k = el.dataset.editKey;
         var t = el.textContent.trim();
         if (!t) t = base[k];             // an empty heading would break structure
@@ -351,9 +403,20 @@
         record(el);
       });
     });
-    // Editable text inside a link, <details> summary or button must not navigate or toggle while editing.
+    // While Edit mode is on, a click on text (or on the button, link or tab that holds it) edits the text instead of
+    // running the control: no navigation, no play, no filter change. Capture phase, so the control's own handlers never run.
     document.addEventListener('click', function (e) {
-      if (e.target.closest && e.target.closest('[data-edit-key]')) e.preventDefault();
+      if (!editOn || !e.target.closest) return;
+      var hit = e.target.closest('[data-edit-key]');
+      if (!hit) {
+        var host = e.target.closest('a, button, summary, [role="switch"], [role="button"]');
+        if (!host || panel.contains(host)) return;
+        hit = host.querySelector('[data-edit-key]');
+        if (!hit) return; // a control with no editable text (transport keys, the A/B slide) keeps working
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (hit !== e.target.closest('[data-edit-key]')) hit.focus();
     }, true);
 
     window.addEventListener('beforeunload', function (e) {
@@ -362,7 +425,7 @@
       e.returnValue = '';
     });
 
-    render();
+    setEdit(editOn);
   }
 
   // content-loader.js holds the page until saved text is applied; baseline must be the saved wording.

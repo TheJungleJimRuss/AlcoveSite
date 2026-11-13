@@ -8,7 +8,9 @@
   const section = root.closest('.ab-compare') || root;
   const tracks = {};
   root.querySelectorAll('audio[data-version]').forEach(a => { tracks[a.dataset.version] = a; });
-  const names = { memo: 'Voice Memo', master: 'Finished Master' };
+  const fallback = { memo: 'Voice Memo', master: 'Finished Master' };
+  // Names come from the table's column headers so an edited wording shows up on the deck too.
+  const names = new Proxy(fallback, { get: (t, v) => (section.querySelector(`th[data-version="${v}"]`)?.textContent.trim()) || t[v] });
   const slide = root.querySelector('.ab-slide');
   const playBtn = root.querySelector('.ab-play');
   const seek = root.querySelector('.ab-seek');

@@ -13,7 +13,7 @@ Admin mode lets Seth edit the site's wording and default look in the browser. It
 
 ## 2. Unlock Admin mode
 
-Open any page of the site with `?admin` on the end, for example `https://.../index.html?admin`. Paste the token and press Unlock. The token stays on that device, so you only paste it once. Click any outlined text to edit it; open the Admin panel (bottom left) to change the Site Defaults.
+Open any page of the site with `?admin` on the end, for example `https://.../index.html?admin`. Paste the token and press Unlock. The token stays on that device, so you only paste it once. The Admin panel (bottom left) has an Edit mode switch, off on every new visit. While it is off the site works normally. Switch it on and any text turns outlined: headings, paragraphs, captions, nav labels, the footer, button labels (Play Preview, Start Your Project), song titles, genre tabs and the A/B deck wording. Click the text to edit it (clicking a button or tab edits its words instead of running it), press Esc or click away to keep the change. The booking form, email address, audio files and times are not editable. Open the panel to change the Site Defaults.
 
 ## 3. Save and publish
 

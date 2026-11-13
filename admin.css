@@ -34,7 +34,9 @@
 #alcove-admin button:hover:not(:disabled) { text-decoration: underline; }
 #alcove-admin button:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
 #alcove-admin button:disabled { color: var(--text-muted); cursor: not-allowed; }
-#alcove-admin .admin-toggle { display: block; width: 100%; text-align: left; }
+#alcove-admin .admin-toggle, #alcove-admin .admin-edit-switch { display: block; width: 100%; text-align: left; }
+#alcove-admin .admin-edit-switch { border-top: 1px solid var(--border-color); }
+#alcove-admin .admin-edit-switch[aria-checked="true"] { text-decoration: underline; }
 #admin-body { padding: 0 0.75rem 0.5rem; border-top: 1px solid var(--border-color); }
 #admin-body { max-height: min(70dvh, 38rem); overflow-y: auto; overscroll-behavior: contain; }
 .admin-defaults { margin: 0.5rem 0 0; padding: 0.25rem 0 0; border: 0; border-top: 1px solid var(--border-color); min-width: 0; }
