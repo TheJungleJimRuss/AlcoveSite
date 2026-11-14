@@ -15,6 +15,7 @@
   --accent-tertiary: #575021;
   --tint-1: #EDC070;
   --tint-2: #F1A65A;
+  --fader-mark: #F58448; /* fader cap line: the light-mode accent, same in light and dark */
   --color-error: #d93025;
   --color-valid: #188038;
   --font-sans: "Fraunces", Georgia, serif;
@@ -436,7 +437,7 @@ p {
   font-size: 0.85rem;
   border: 2px solid var(--border-focus);
   background: transparent;
-  cursor: pointer;
+  cursor: var(--cursor-pointer, pointer);
   text-decoration: none;
   color: var(--text-main);
 }
@@ -546,20 +547,6 @@ p {
   margin-top: 1rem;
 }
 
-.track-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border-color);
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-}
-
-.track-row:last-child {
-  border-bottom: none;
-}
-
 /* Filter Bar */
 .filter-bar {
   display: flex;
@@ -576,7 +563,7 @@ p {
   border-bottom: 2px solid transparent;
   background: transparent;
   border-radius: 0;
-  cursor: pointer;
+  cursor: var(--cursor-pointer, pointer);
   color: var(--text-muted);
   text-decoration: none;
   transition: color 0.15s ease, border-color 0.15s ease;
@@ -737,7 +724,7 @@ p {
   padding: 1.15rem 1.25rem;
   font-size: 1rem;
   font-weight: 600;
-  cursor: pointer;
+  cursor: var(--cursor-pointer, pointer);
   list-style: none;
   display: flex;
   justify-content: space-between;
@@ -809,17 +796,6 @@ p {
   background: var(--text-main);
 }
 
-.track-info {
-  flex: 1;
-}
-
-.track-meta {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-left: 1rem;
-}
-
 .track-duration {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -844,7 +820,7 @@ p {
   padding: 1.75rem 1.25rem;
   text-align: center;
   border-radius: 6px;
-  cursor: pointer;
+  cursor: var(--cursor-pointer, pointer);
   transition: border-color 0.15s ease;
 }
 
@@ -870,7 +846,7 @@ p {
 
 .upload-browse {
   text-decoration: underline;
-  cursor: pointer;
+  cursor: var(--cursor-pointer, pointer);
   color: var(--text-main);
 }
 
@@ -1184,15 +1160,16 @@ html.has-fader::-webkit-scrollbar { display: none; }
 .fader.is-idle { opacity: 0; } /* phones only; still grabbable so a touch at the edge wakes it */
 .fader[hidden] { display: none; }
 
-/* Faceplate: brushed aluminium with bevel and tick scales either side of the slot */
+/* Faceplate: dark anodised plate with bevel and light tick scales either side of the slot */
 .fader-plate {
   position: absolute;
   inset-block: 0;
   inset-inline: 0.85rem;
   border-radius: 0.3rem;
-  background: color-mix(in srgb, var(--text-main) 14%, var(--bg-accent));
-  border: 1px solid color-mix(in srgb, var(--text-main) 40%, var(--bg-accent));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 2px 5px rgb(0 0 0 / 0.2);
+  --fader-tick: rgb(255 255 255 / 0.55);
+  background: #232326; /* dark anodised plate, same in every palette */
+  border: 1px solid #0d0d0e;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 2px 5px rgb(0 0 0 / 0.3);
 }
 .fader-plate::before,
 .fader-plate::after {
@@ -1201,13 +1178,13 @@ html.has-fader::-webkit-scrollbar { display: none; }
   inset-block: calc(var(--cap-h) / 2 - 1px) calc(var(--cap-h) / 2 - 1px);
   inline-size: 0.25rem;
   background:
-    linear-gradient(color-mix(in srgb, var(--text-main) 65%, transparent), color-mix(in srgb, var(--text-main) 65%, transparent)) bottom / 100% 1px no-repeat,
-    repeating-linear-gradient(to bottom, color-mix(in srgb, var(--text-main) 65%, transparent) 0 1px, transparent 1px 10%);
+    linear-gradient(var(--fader-tick), var(--fader-tick)) bottom / 100% 1px no-repeat,
+    repeating-linear-gradient(to bottom, var(--fader-tick) 0 1px, transparent 1px 10%);
 }
 .fader-plate::before { left: 0.08rem; }
 .fader-plate::after { right: 0.08rem; inline-size: 0.15rem; background:
-    linear-gradient(color-mix(in srgb, var(--text-main) 65%, transparent), color-mix(in srgb, var(--text-main) 65%, transparent)) bottom / 100% 1px no-repeat,
-    repeating-linear-gradient(to bottom, color-mix(in srgb, var(--text-main) 65%, transparent) 0 1px, transparent 1px 5%); }
+    linear-gradient(var(--fader-tick), var(--fader-tick)) bottom / 100% 1px no-repeat,
+    repeating-linear-gradient(to bottom, var(--fader-tick) 0 1px, transparent 1px 5%); }
 
 /* Slot: deep black groove with a lit centre line */
 .fader-slot {
@@ -1215,8 +1192,8 @@ html.has-fader::-webkit-scrollbar { display: none; }
   inset-block: calc(var(--cap-h) / 2);
   inset-inline: calc(50% - 0.1rem);
   border-radius: 0.2rem;
-  background: #1b1a1a;
-  box-shadow: inset 0 1px 3px #000, 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, var(--bg-accent));
+  background: #0b0b0c;
+  box-shadow: inset 0 1px 3px #000, 0 0 0 1px rgb(255 255 255 / 0.18);
 }
 
 /* Cap: dark ribbed grip, theme-coloured centre line, drop shadow along the slot */
@@ -1229,7 +1206,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
   border-radius: 0.3rem;
   border: 1px solid #111;
   background:
-    linear-gradient(var(--accent-secondary), var(--accent-secondary)) center / 100% 3px no-repeat,
+    linear-gradient(var(--fader-mark), var(--fader-mark)) center / 100% 3px no-repeat,
     repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.05) 0 1px, rgb(0 0 0 / 0.3) 1px 3px),
     #35353a;
   box-shadow: 0 4px 6px -2px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.12);
@@ -1518,15 +1495,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
 .deck-display .deck-label { margin: 0; color: #e8dcc0; font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.85rem; }
 .transport { display: flex; justify-content: center; gap: 0.6rem; margin-block: 0.9rem 0.6rem; }
 .transport-btn { min-inline-size: 3.5rem; font-size: 1.1rem; line-height: 1; }
-.track-row .play-btn { min-inline-size: 7.5rem; }
 
-/* Current track: accent edge (inset, no layout shift), faint wash, accent title, level bars */
-.track-row { transition: background-color 0.2s ease, box-shadow 0.2s ease; }
-.track-row.is-current {
-  background: color-mix(in srgb, var(--accent-secondary, var(--accent-primary)) 12%, transparent);
-  box-shadow: inset 3px 0 0 var(--accent-primary);
-}
-.track-row.is-current .track-info strong { color: var(--accent-primary); }
 /* Placeholder photos inside media boxes */
 .media-box.has-photo { padding: 0; overflow: hidden; border-style: solid; display: block; }
 .media-box.has-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -1573,8 +1542,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
 :nth-child(3n) > .media-box.has-photo:not(.has-video) { --tilt: -0.6deg; }
 :is(.card, .comparison-container > *, .grid-cards > *) > .media-box.has-photo:not(.has-video) { margin-block-start: 0.8rem; }
 
-/* Placeholder slots waiting for real photos: dashed and clearly labelled */
-.media-box.photo-slot { border: 2px dashed var(--accent-primary) !important; }
+/* Placeholder slots waiting for real photos: clearly labelled (no dashed outline, user request 2026-11-13) */
 .media-box.photo-slot::after {
   content: attr(data-slot-label);
   position: absolute;
@@ -1640,7 +1608,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
   border-radius: 0.5rem;
   background: color-mix(in srgb, #000 78%, var(--accent-tertiary));
   box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.6), 0 1px 0 color-mix(in srgb, #fff 35%, transparent);
-  cursor: pointer;
+  cursor: var(--cursor-pointer, pointer);
 }
 .ab-slide::before { /* the groove the cap rides in */
   content: "";
@@ -1694,7 +1662,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
-  cursor: pointer;
+  cursor: var(--cursor-pointer, pointer);
   transition: color 0.2s ease;
 }
 .ab-slide-label::before { /* indicator light */
@@ -1721,7 +1689,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
   border-radius: 3px;
   background: linear-gradient(var(--text-main), var(--text-main)) 0 0 / var(--pct, 0%) 100% no-repeat;
   appearance: none;
-  cursor: pointer;
+  cursor: var(--cursor-pointer, pointer);
 }
 .ab-seek::-webkit-slider-thumb { appearance: none; inline-size: 14px; block-size: 14px; border-radius: 50%; background: var(--accent-primary); border: 2px solid var(--bg-surface); box-shadow: 0 1px 2px rgb(0 0 0 / 0.35); }
 .ab-seek::-moz-range-thumb { inline-size: 12px; block-size: 12px; border-radius: 50%; background: var(--accent-primary); border: 2px solid var(--bg-surface); }
@@ -1835,7 +1803,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
 .demo-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
 .demo-name { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; color: var(--text-main); }
 .demo-size { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); }
-.demo-remove { min-block-size: 2.75rem; min-inline-size: 2.75rem; padding: 0 0.5rem; border: 0; background: transparent; color: var(--text-main); font: inherit; font-size: 0.85rem; text-decoration: underline; cursor: pointer; }
+.demo-remove { min-block-size: 2.75rem; min-inline-size: 2.75rem; padding: 0 0.5rem; border: 0; background: transparent; color: var(--text-main); font: inherit; font-size: 0.85rem; text-decoration: underline; cursor: var(--cursor-pointer, pointer); }
 .demo-remove:hover { background: color-mix(in srgb, var(--text-main) 5%, transparent); }
 .demo-remove:focus-visible, .demo-drop button:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 .demo-remove:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -1964,7 +1932,7 @@ html[data-content-pending] body { visibility: hidden; }
 #admin-token-form label { display: grid; gap: 0.25rem; }
 #admin-token-form input { min-width: 14rem; padding: 0.4rem 0.2rem; background: transparent; color: inherit; border: 0; border-bottom: 1px solid var(--border-color); font: inherit; }
 #admin-token-form input:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
-#admin-token-form button { padding: 0.5rem 0.75rem; min-height: 44px; background: transparent; color: inherit; border: 0; border-bottom: 1px solid var(--border-color); font: inherit; font-weight: 600; cursor: pointer; }
+#admin-token-form button { padding: 0.5rem 0.75rem; min-height: 44px; background: transparent; color: inherit; border: 0; border-bottom: 1px solid var(--border-color); font: inherit; font-weight: 600; cursor: var(--cursor-pointer, pointer); }
 #admin-token-form button:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 @media (max-width: 640px) {
   #admin-token-form { inset: auto 1rem calc(4.5rem + env(safe-area-inset-bottom, 0px)) 1rem; }
@@ -1976,28 +1944,35 @@ html[data-content-pending] body { visibility: hidden; }
 .how-steps .roadmap-step .placeholder-text:last-child { margin-bottom: 0; }
 .how-steps .step-badge { font-size: 1.6rem; margin-bottom: 0.6rem; }
 
-/* FAQ: a file of index cards; opening one unfolds the answer from under the question. */
+/* FAQ: index cards. The question is one sheet of paper; the answer is a second sheet (the
+   details' own ::details-content box) hinged to its bottom edge, so opening one folds it out. */
 .faq-accordion-group { counter-reset: faq; gap: 0; margin-top: 2rem; padding-inline: 0.5rem; }
 .faq-item {
   counter-increment: faq;
-  margin-block-start: 0.45rem;
-  border: 0; border-radius: 3px; background-color: var(--card-stock);
+  margin-block-start: 0.6rem;
+  border: 0; border-radius: 0; background: none; overflow: visible;
+  --sheet-grain: color-mix(in srgb, var(--card-stock) calc((1 - min(1, var(--tex-paper-base, 0.5) * var(--card-grain, 1) * var(--tex-strength, 1))) * 100%), transparent);
 }
 .faq-item:first-child { margin-block-start: 0; }
-.faq-item[open] { margin-block: 0.9rem; box-shadow: var(--card-edge), 0 2px 2px rgb(0 0 0 / 0.2), 0 14px 26px -8px rgb(0 0 0 / 0.4); }
-.faq-item:first-child[open] { margin-block-start: 0; }
+.faq-summary, .faq-item::details-content {
+  background-color: var(--card-stock);
+  background-image: linear-gradient(var(--sheet-grain) 0 0), var(--tex-paper-img);
+  background-size: auto, 256px 256px;
+  background-blend-mode: normal, multiply;
+}
+:root[data-texture="off"] :is(.faq-summary, .faq-item::details-content) { background-image: none; }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  .faq-summary, .faq-item::details-content { background-image: none; }
+}
 .faq-summary {
   gap: 0.9rem; justify-content: flex-start; min-block-size: 3.5rem; padding-inline: 1.1rem 1rem;
   font-family: var(--font-mono); font-size: 1.02rem;
+  border-radius: 3px; box-shadow: var(--card-edge), var(--card-shadow);
+  position: relative; z-index: 1;
 }
 .faq-summary::before {
   content: "Q." counter(faq, decimal-leading-zero);
   flex: none; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent-primary);
-}
-/* The fold: a soft shade pooling toward the crease. It lives on the question (which never moves),
-   not on the swinging flap, so nothing foreshortens or clips at the edges mid-animation. */
-.faq-item[open] .faq-summary {
-  background-image: linear-gradient(to bottom, transparent calc(100% - 0.9rem), rgb(70 45 20 / 0.1));
 }
 .faq-summary:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -3px; }
 /* the pencilled +/- mark, no key */
@@ -2006,25 +1981,28 @@ html[data-content-pending] body { visibility: hidden; }
   font-size: 1.4rem; font-weight: 700; line-height: 1; color: var(--accent-primary);
 }
 .faq-item[open] .faq-summary::after { content: "\2212"; }
-.faq-content {
-  border-top: 0; padding: 1.1rem 1.1rem 1.1rem 3.6rem;
+/* Open: the question sheet sits a touch higher, the answer sheet hangs from its bottom edge */
+.faq-item[open] { margin-block-end: 1rem; }
+.faq-item[open] .faq-summary { border-end-start-radius: 0; border-end-end-radius: 0; box-shadow: var(--card-edge), 0 1px 1px rgb(40 30 20 / 0.12); }
+.faq-item::details-content {
+  margin-block-start: -1px;
+  border-radius: 0 0 3px 3px;
+  box-shadow: var(--card-edge), 0 2px 2px rgb(0 0 0 / 0.14), 0 14px 24px -10px rgb(0 0 0 / 0.38);
 }
-/* Keep the paper grain still while the card grows: pin its texture layer to the top edge
-   (the shared rule centres it vertically, so it slid as the height changed) */
-html:root .faq-item::before { inset-block-start: 0; translate: -50% 0; }
+.faq-content { border: 0; padding: 1.1rem 1.1rem 1.15rem 3.6rem; }
 .faq-content .placeholder-text { margin: 0; }
-/* Unfold: the answer is a flap hinged at the crease. It swings down from edge-on while the card
-   grows to fit, and darkens as it tips away from the light. It folds back up on close.
-   Browsers without ::details-content just open instantly. */
+/* Fold out: the answer sheet starts edge-on at the hinge and swings down to lie flat, growing the
+   card as it goes. Lit from above, it is darkest while tipped away. Closing folds it back up.
+   Browsers without ::details-content open instantly. */
 @media (prefers-reduced-motion: no-preference) {
   .faq-item { perspective: 900px; interpolate-size: allow-keywords; }
   .faq-item::details-content {
-    block-size: 0; overflow: clip; transform-origin: top; transform: rotateX(-100deg); filter: brightness(0.75);
+    block-size: 0; overflow: clip; transform-origin: top; transform: rotateX(-90deg); filter: brightness(0.7);
     transition:
-      transform 0.55s cubic-bezier(0.25, 0.9, 0.3, 1),
-      block-size 0.55s cubic-bezier(0.25, 0.9, 0.3, 1),
-      filter 0.55s ease-out,
-      content-visibility 0.55s allow-discrete;
+      transform 0.6s cubic-bezier(0.3, 1.1, 0.4, 1),
+      block-size 0.6s cubic-bezier(0.3, 0.9, 0.4, 1),
+      filter 0.5s ease-out,
+      content-visibility 0.6s allow-discrete;
   }
   .faq-item[open]::details-content { block-size: auto; transform: none; filter: none; }
 }
@@ -2148,17 +2126,6 @@ html:root .faq-item::before { inset-block-start: 0; translate: -50% 0; }
 .audio-widget .ab-seek::-webkit-slider-thumb { inline-size: 20px; block-size: 20px; border: 1px solid #333; background: radial-gradient(circle at 35% 30%, #f6f3ec, #a8a398 55%, #5e5a52); box-shadow: 0 2px 4px rgb(0 0 0 / 0.55); }
 .audio-widget .ab-seek::-moz-range-thumb { inline-size: 18px; block-size: 18px; border: 1px solid #333; background: radial-gradient(circle at 35% 30%, #f6f3ec, #a8a398 55%, #5e5a52); }
 
-/* Track list: strips sit in a recessed rack under the transport */
-.audio-widget .track-row:first-of-type { margin-block-start: 1rem; }
-.audio-widget .track-row {
-  color: var(--text-main);
-  border-block-end: 0;
-  /* engraved groove between rows instead of a flat hairline */
-  background: linear-gradient(180deg, transparent calc(100% - 2px), rgb(0 0 0 / 0.28) calc(100% - 2px) calc(100% - 1px), rgb(255 255 255 / 0.6) calc(100% - 1px)) no-repeat;
-}
-.audio-widget .track-row:last-of-type { background: none; }
-.audio-widget .track-row.is-current { background-color: rgb(63 217 138 / 0.14); box-shadow: inset 3px 0 0 #2fae6e, inset 0 0 0 1px rgb(0 0 0 / 0.12); border-radius: 0.3rem; }
-.audio-widget .track-row.is-current .track-info strong { color: var(--text-main); }
 .audio-widget .track-duration { color: var(--text-main); }
 
 @media (prefers-reduced-motion: reduce) { .audio-widget[data-playing="true"] .reel { animation: none; } }

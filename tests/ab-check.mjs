@@ -30,8 +30,9 @@ await page.click('.ab-slide');
 check(await page.getAttribute('.ab-slide', 'aria-checked') === 'true', 'toggle reports Finished Master as on');
 const t = await page.evaluate(() => document.querySelector('.ab-player audio[data-version="master"]').currentTime);
 check(Math.abs(t - 1.5) < 0.05, `master picks up at the memo position (got ${t})`);
-const col = await page.evaluate(() => getComputedStyle(document.querySelector('.ab-specs thead [data-version="master"]')).boxShadow);
-check(col !== 'none', 'master column is highlighted after switching');
+const col = await page.evaluate(() => { const s = getComputedStyle(document.querySelector('.ab-specs thead [data-version="master"]')); return s.boxShadow + ' ' + s.backgroundImage; });
+// Highlight = the deeper etched groove (textures.css) or, without textures, the accent underline
+check(/3px|inset/.test(col), 'master column is highlighted after switching');
 const time = await page.textContent('.ab-time');
 check(time === '0:01', `timestamp shows the shared position (got ${time})`);
 const label = await page.textContent('.ab-player .deck-label');

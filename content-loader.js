@@ -11,18 +11,34 @@
  */
 (function () {
   var root = document.documentElement;
-  var content = { text: {}, defaults: {} };
+  var content = { text: {}, defaults: {}, media: {}, songs: null, songsRaw: undefined };
+  var clone = function (v) { return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); };
+  var baseOf = function (sha) { return { sha: sha, text: clone(content.text), defaults: clone(content.defaults), media: clone(content.media), songs: clone(content.songsRaw) }; };
   // Admin gate (ticket 02): the stored token is the switch. Read early because an unlocked editor loads the Content branch file.
   var TOKEN_KEY = 'alcove_admin_token';
   var token = null;
   try { token = localStorage.getItem(TOKEN_KEY); } catch (e) { /* storage blocked: stay a visitor */ }
 
+  // Songs (admin-media ticket 03): ordered [{ title, file }], 1 to 20, file a plain media/ audio path, title a short non-empty string.
+  // All or nothing: any bad entry makes the whole list invalid and the authored Work list stays. Titles are only ever set with textContent.
+  var SAFE_SONG = /^media\/[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.(?:mp3|m4a|wav|ogg|webm)$/;
+  function validSongs(list) {
+    if (!Array.isArray(list) || list.length < 1 || list.length > 20) return false;
+    return list.every(function (s) {
+      return s && typeof s === 'object' && !Array.isArray(s) && typeof s.title === 'string' && s.title.trim().length > 0 && s.title.length <= 120 &&
+        typeof s.file === 'string' && SAFE_SONG.test(s.file) && s.file.indexOf('..') < 0;
+    });
+  }
   function read(xhr) {
     if (xhr.status !== 200) return false;
     var data = JSON.parse(xhr.responseText);
     if (!data || data.version !== 1) return false;
     if (data.text && typeof data.text === 'object' && !Array.isArray(data.text)) content.text = data.text;
     if (data.defaults && typeof data.defaults === 'object' && !Array.isArray(data.defaults)) content.defaults = data.defaults;
+    // Media slots (admin-media ticket 01): slot key -> repo path under images/. Anything else is ignored at apply time.
+    if (data.media && typeof data.media === 'object' && !Array.isArray(data.media)) content.media = data.media;
+    content.songsRaw = data.songs; // what the file holds, valid or not: admin.js compares it to detect conflicts
+    if (validSongs(data.songs)) content.songs = data.songs.map(function (s) { return { title: s.title, file: s.file }; });
     return true;
   }
   var loaded = false;
@@ -42,9 +58,9 @@
         var fileText = new TextDecoder().decode(bytes);
         loaded = read({ status: 200, responseText: fileText });
         // admin.js detects conflicts against exactly what was loaded here (sha + per-key values).
-        if (loaded) window.__alcoveBase = { sha: meta.sha, text: JSON.parse(JSON.stringify(content.text)), defaults: JSON.parse(JSON.stringify(content.defaults)) };
+        if (loaded) window.__alcoveBase = baseOf(meta.sha);
       }
-    } catch (e) { content = { text: {}, defaults: {} }; loaded = false; window.__alcoveBase = null; }
+    } catch (e) { content = { text: {}, defaults: {}, media: {}, songs: null, songsRaw: undefined }; loaded = false; window.__alcoveBase = null; }
   }
   if (!loaded) {
     try {
@@ -53,12 +69,14 @@
       xhr.send();
       read(xhr);
       // No branch file at load (no token, no branch, or request failed): the published file is the base, sha unknown.
-      window.__alcoveBase = { sha: null, text: JSON.parse(JSON.stringify(content.text)), defaults: JSON.parse(JSON.stringify(content.defaults)) };
+      window.__alcoveBase = baseOf(null);
     } catch (e) { /* missing or malformed: silently keep authored values */ }
   }
 
   // theme-preview.js reads these as the lowest-priority default (below the URL and, for admins, localStorage).
   window.__alcoveDefaults = content.defaults;
+  // record-player.js (Work) builds the Crate from this; null keeps the authored sleeves.
+  window.__alcoveSongs = content.songs;
 
   // Without a stored token nothing of admin.js / admin.css is requested.
   // The token is the gate; this is only the switch. `?admin` without a token shows a tiny token prompt (styled in wireframe.css).
@@ -109,13 +127,56 @@
     });
   }
 
+  // Only plain repo paths are accepted: photos and posters under images/, audio and video clips under media/. No traversal, no URLs, no schemes.
+  var SAFE_IMG = /^images\/[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.(?:jpe?g|png|webp|svg)$/;
+  var SAFE_CLIP = /^media\/[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.(?:mp3|m4a|wav|ogg|webm|mp4)$/;
+  var safe = function (v, re) { return typeof v === 'string' && re.test(v) && v.indexOf('..') < 0; };
+  var mediaKeys = Object.keys(content.media).filter(function (k) { return safe(content.media[k], SAFE_IMG) || safe(content.media[k], SAFE_CLIP); });
   var keys = Object.keys(content.text).filter(function (k) { return typeof content.text[k] === 'string'; });
-  if (!keys.length) return;
+  if (!keys.length && !mediaKeys.length && !content.songs) return;
   root.setAttribute('data-content-pending', '');
+  var esc = function (k) { return k.replace(/["\\]/g, '\\$&'); };
+  function applyMedia(slot, path) {
+    var box = slot.closest && slot.closest('.photo-slot');
+    if (slot.tagName === 'IMG') {
+      var authored = slot.getAttribute('src');
+      slot.addEventListener('error', function () { if (slot.getAttribute('src') === path) slot.setAttribute('src', authored); }, { once: true }); // file not there (yet): keep the authored photo
+      slot.setAttribute('src', path);
+    } else {
+      // CSS background photo (home hero): the authored rule stays the fallback; the saved file is layered on through the style object, not markup.
+      var probe = new Image();
+      probe.onload = function () { slot.style.backgroundImage = 'url("' + path + '")'; };
+      probe.src = path;
+    }
+    if (box) box.classList.remove('photo-slot'); // a real photo replaces the dashed placeholder frame
+  }
+  // Clip slots (admin-media ticket 02): <video src>, a video's poster, or the A/B deck's <audio data-src>. The authored value stays the fallback.
+  function applyClip(el, path) {
+    if (el.tagName === 'VIDEO') {
+      var authored = el.getAttribute('src');
+      el.addEventListener('error', function () { if (el.getAttribute('src') === path && authored) el.setAttribute('src', authored); }, { once: true });
+      el.setAttribute('src', path);
+    } else {
+      el.setAttribute('data-src-fallback', el.getAttribute('data-src') || ''); // ab-compare.js falls back to this if the saved file will not load
+      el.setAttribute('data-src', path);
+    }
+  }
   document.addEventListener('DOMContentLoaded', function () {
     keys.forEach(function (k) {
-      var els = document.querySelectorAll('[data-edit-key="' + k.replace(/["\\]/g, '\\$&') + '"]');
+      var els = document.querySelectorAll('[data-edit-key="' + esc(k) + '"]');
       for (var i = 0; i < els.length; i++) els[i].textContent = content.text[k];
+    });
+    mediaKeys.forEach(function (k) {
+      var els = document.querySelectorAll('[data-media-slot="' + esc(k) + '"]');
+      if (!safe(content.media[k], SAFE_IMG)) return;
+      for (var i = 0; i < els.length; i++) applyMedia(els[i], content.media[k]);
+      var ps = document.querySelectorAll('[data-media-poster="' + esc(k) + '"]');
+      for (var j = 0; j < ps.length; j++) ps[j].setAttribute('poster', content.media[k]);
+    });
+    mediaKeys.forEach(function (k) {
+      if (!safe(content.media[k], SAFE_CLIP)) return;
+      var cs = document.querySelectorAll('[data-media-clip="' + esc(k) + '"]');
+      for (var i = 0; i < cs.length; i++) applyClip(cs[i], content.media[k]);
     });
     root.removeAttribute('data-content-pending');
   });

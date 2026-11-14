@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="wireframe.css">
   <link rel="stylesheet" href="theme-preview.css">
   <link rel="stylesheet" href="logo.css">
-  <link rel="stylesheet" href="textures.css?v=hg3">
+  <link rel="stylesheet" href="textures.css?v=etch1">
   <script src="content-loader.js"></script>
   <script src="theme-preview.js"></script>
   <script src="fader.js" defer></script>
@@ -35,7 +35,35 @@
 
     <!-- Above-The-Fold Viewport: Studio Wordmark, Subheader & Centered Navigation -->
     <section class="hero-wordmark-viewport">
-      <div class="hero-media" aria-hidden="true"></div>
+      <div class="hero-media" aria-hidden="true" data-media-slot="index.photo.hero"></div>
+      <!-- Hero halation (textures.css): the wordmark's own colours, blurred very softly and laid under it, plus a slight softening of the letters -->
+      <svg class="svg-defs" aria-hidden="true" focusable="false">
+        <filter id="hero-halation-soft" x="-25%" y="-60%" width="150%" height="220%" color-interpolation-filters="sRGB">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="22" result="wide"/>
+          <feComponentTransfer in="wide" result="glow"><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.5" result="soft"/>
+          <feMerge><feMergeNode in="glow"/><feMergeNode in="soft"/></feMerge>
+        </filter>
+        <filter id="hero-halation-strong" x="-25%" y="-60%" width="150%" height="220%" color-interpolation-filters="sRGB">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="wide"/>
+          <feComponentTransfer in="wide" result="glow"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.8" result="soft"/>
+          <feMerge><feMergeNode in="glow"/><feMergeNode in="soft"/></feMerge>
+        </filter>
+        <!-- Hero edge roughness (textures.css): fractal noise nudges the wordmark's edges, like ink on rough stock -->
+        <filter id="hero-edge-subtle" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="3" seed="7" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+        <filter id="hero-edge-medium" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="3" seed="7" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+        <filter id="hero-edge-rough" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="3" seed="7" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="9" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+      </svg>
       <h1 class="studio-wordmark"><span class="logo-mark logo-mark--hero" role="img" aria-label="Alcove Recording"></span></h1>
       <p class="hero-wordmark-subline" data-edit-key="index.p.a-relaxed-little-studio-where-your">A relaxed little studio where your first song is welcome.</p>
       
@@ -59,19 +87,19 @@
 
       <div class="grid-cards">
         <article class="card">
-          <div class="media-box has-photo"><img src="images/studio-instruments.jpg" alt="Guitars and gear ready to play in the studio" class="p-left" loading="lazy" decoding="async"></div>
+          <div class="media-box has-photo"><img src="images/studio-instruments.jpg" alt="Guitars and gear ready to play in the studio" data-media-slot="index.photo.guitars-and-gear-ready-to" class="p-left" loading="lazy" decoding="async"></div>
           <h3 data-edit-key="index.h3.01-start-with-what-you-ve">01. Start with what you've got</h3>
           <p class="placeholder-text" data-edit-key="index.p.a-voice-memo-a-half-finished">A voice memo, a half-finished riff, a lyric in your notes app. It doesn't have to be polished, and you don't need any studio experience.</p>
         </article>
 
         <article class="card">
-          <div class="media-box has-photo"><img src="images/studio-live-room.jpg" alt="The live room at Alcove Recording" class="p-center" loading="lazy" decoding="async"></div>
+          <div class="media-box has-photo"><img src="images/studio-live-room.jpg" alt="The live room at Alcove Recording" data-media-slot="index.photo.the-live-room-at-alcove" class="p-center" loading="lazy" decoding="async"></div>
           <h3 data-edit-key="index.h3.02-record-at-your-own-pace">02. Record at your own pace</h3>
           <p class="placeholder-text" data-edit-key="index.p.no-rush-and-no-judgment-we">No rush and no judgment. We'll mess with sounds, try things, and keep going until you've got takes you love.</p>
         </article>
 
         <article class="card">
-          <div class="media-box has-photo"><img src="images/studio-piano.jpg" alt="The piano in the studio" class="p-right" loading="lazy" decoding="async"></div>
+          <div class="media-box has-photo"><img src="images/studio-piano.jpg" alt="The piano in the studio" data-media-slot="index.photo.the-piano-in-the-studio" class="p-right" loading="lazy" decoding="async"></div>
           <h3 data-edit-key="index.h3.03-hear-it-finished">03. Hear it finished</h3>
           <p class="placeholder-text" data-edit-key="index.p.we-mix-it-so-everything-sits">We mix it so everything sits right, then get it ready to share with friends, family, and the world.</p>
         </article>
@@ -85,7 +113,7 @@
 
       <div class="grid-showcase">
         <article class="card">
-          <div class="media-box ratio-16-9 has-photo"><img src="images/studio-instruments.jpg" alt="Instruments and amps set up in the studio" class="p-center" loading="lazy" decoding="async"></div>
+          <div class="media-box ratio-16-9 has-photo"><img src="images/studio-instruments.jpg" alt="Instruments and amps set up in the studio" data-media-slot="index.photo.instruments-and-amps-set-up" class="p-center" loading="lazy" decoding="async"></div>
           <h3 data-edit-key="index.h3.instruments-and-gear">Instruments &amp; Gear</h3>
           <p class="placeholder-text" data-edit-key="index.p.there-s-real-gear-around-to">There's real gear around to try out. If you're curious about something, just ask and we'll plug it in.</p>
           <div class="gear-badges mt-1">
@@ -98,13 +126,13 @@
 
         <div class="showcase-side-cards">
           <article class="card">
-            <div class="media-box ratio-16-9 has-photo"><img src="images/studio-acoustic-room.jpg" alt="The relaxed acoustic room at Alcove Recording" class="p-right" loading="lazy" decoding="async"></div>
+            <div class="media-box ratio-16-9 has-photo"><img src="images/studio-acoustic-room.jpg" alt="The relaxed acoustic room at Alcove Recording" data-media-slot="index.photo.the-relaxed-acoustic-room-at" class="p-right" loading="lazy" decoding="async"></div>
             <h3 data-edit-key="index.h3.a-comfortable-space">A Comfortable Space</h3>
             <p class="placeholder-text" data-edit-key="index.p.it-feels-more-like-a-friend">It feels more like a friend's living room than an intimidating studio. Settle in.</p>
           </article>
 
           <article class="card">
-            <div class="media-box ratio-16-9 has-photo"><img src="images/studio-live-room.jpg" alt="The live room, set up for a session" class="p-left" loading="lazy" decoding="async"></div>
+            <div class="media-box ratio-16-9 has-photo"><img src="images/studio-live-room.jpg" alt="The live room, set up for a session" data-media-slot="index.photo.the-live-room-set-up" class="p-left" loading="lazy" decoding="async"></div>
             <h3 data-edit-key="index.h3.a-creative-partner">A Creative Partner</h3>
             <p class="placeholder-text" data-edit-key="index.p.i-m-here-to-help-you">I'm here to help you get the sound in your head out into the world, not to push my own.</p>
           </article>
@@ -119,25 +147,25 @@
 
       <div class="grid-cards">
         <article class="card">
-          <div class="media-box has-photo"><img src="images/studio-live-room.jpg" alt="The live room, ready for a band" class="p-center" loading="lazy" decoding="async"></div>
+          <div class="media-box has-photo"><img src="images/studio-live-room.jpg" alt="The live room, ready for a band" data-media-slot="index.photo.the-live-room-ready-for" class="p-center" loading="lazy" decoding="async"></div>
           <h3 data-edit-key="index.h3.indie-and-alternative">Indie &amp; Alternative</h3>
           <p class="placeholder-text" data-edit-key="index.p.bands-playing-together-in-the-room">Bands playing together in the room, loud and a little messy in the best way.</p>
         </article>
 
         <article class="card">
-          <div class="media-box has-photo"><img src="images/studio-acoustic-room.jpg" alt="The acoustic room" class="p-left" loading="lazy" decoding="async"></div>
+          <div class="media-box has-photo"><img src="images/studio-acoustic-room.jpg" alt="The acoustic room" data-media-slot="index.photo.the-acoustic-room" class="p-left" loading="lazy" decoding="async"></div>
           <h3 data-edit-key="index.h3.singer-songwriters-and-acoustic">Singer-Songwriters &amp; Acoustic</h3>
           <p class="placeholder-text" data-edit-key="index.p.just-you-a-guitar-and-a">Just you, a guitar, and a song worth telling. We'll keep it close and honest.</p>
         </article>
 
         <article class="card">
-          <div class="media-box has-photo"><img src="images/studio-piano.jpg" alt="The piano in the studio" class="p-center" loading="lazy" decoding="async"></div>
+          <div class="media-box has-photo"><img src="images/studio-piano.jpg" alt="The piano in the studio" data-media-slot="index.photo.the-piano-in-the-studio-2" class="p-center" loading="lazy" decoding="async"></div>
           <h3 data-edit-key="index.h3.bedroom-pop-and-electronic">Bedroom Pop &amp; Electronic</h3>
           <p class="placeholder-text" data-edit-key="index.p.layers-textures-and-weird-little-ideas">Layers, textures, and weird little ideas. Bring your demo and we'll build it up together.</p>
         </article>
 
         <article class="card">
-          <div class="media-box has-photo"><img src="images/studio-instruments.jpg" alt="Microphones and gear set up for vocals" class="p-right" loading="lazy" decoding="async"></div>
+          <div class="media-box has-photo"><img src="images/studio-instruments.jpg" alt="Microphones and gear set up for vocals" data-media-slot="index.photo.microphones-and-gear-set-up" class="p-right" loading="lazy" decoding="async"></div>
           <h3 data-edit-key="index.h3.rap-hip-hop-and-vocals">Rap, Hip-Hop &amp; Vocals</h3>
           <p class="placeholder-text" data-edit-key="index.p.clear-punchy-vocals-that-sit-right">Clear, punchy vocals that sit right on the beat, with all your ad-libs in the right places.</p>
         </article>

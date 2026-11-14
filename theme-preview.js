@@ -24,7 +24,8 @@
         '--tint-1': '#EDC070',
         '--tint-2': '#F1A65A',
         '--border-color': '#E8CE98',
-        '--border-focus': '#F58448'
+        '--border-focus': '#F58448',
+        '--fader-mark': '#F58448'
       }
     },
     'seth-olive-orange-dark': {
@@ -46,7 +47,8 @@
         '--tint-1': '#575021',
         '--tint-2': '#762E1A',
         '--border-color': '#4A4220',
-        '--border-focus': '#EDC070'
+        '--border-focus': '#EDC070',
+        '--fader-mark': '#F58448'
       }
     },
     'seth-sage-coral': {
@@ -68,7 +70,8 @@
         '--tint-1': '#C8CAA3',
         '--tint-2': '#FEE0A6',
         '--border-color': '#D6D6B4',
-        '--border-focus': '#E16C5B'
+        '--border-focus': '#E16C5B',
+        '--fader-mark': '#E16C5B'
       }
     },
     'seth-sage-coral-dark': {
@@ -90,7 +93,8 @@
         '--tint-1': '#723D45',
         '--tint-2': '#A5A67F',
         '--border-color': '#5A3A40',
-        '--border-focus': '#FEE0A6'
+        '--border-focus': '#FEE0A6',
+        '--fader-mark': '#E16C5B'
       }
     }
   };
@@ -143,13 +147,6 @@
   let activePalette = pick(PALETTES, urlParams && urlParams.get('theme'), readStored('alcove_theme_palette'), draftDefaults.palette, SITE_DEFAULTS.palette) || 'seth-olive-orange';
   let activeFont = pick(FONTS, urlParams && urlParams.get('font'), readStored('alcove_theme_font'), draftDefaults.font, SITE_DEFAULTS.font) || 'retro-display';
 
-  const TEXTURES = {
-    off: 'Off',
-    quiet: 'Quiet',
-    bold: 'Bold'
-  };
-  let activeTexture = pick(TEXTURES, urlParams && urlParams.get('texture'), readStored('alcove_theme_texture'), draftDefaults.texture, SITE_DEFAULTS.texture) || 'quiet';
-
   const SURFACES = {
     metal: 'Brushed Metal',
     'metal-subtle': 'Metal (Subtle)'
@@ -168,12 +165,27 @@
   const HERO_GRAINS = { off: 'Off', soft: 'Soft', strong: 'Strong' };
   let activeHeroGrain = pick(HERO_GRAINS, urlParams && urlParams.get('herograin'), readStored('alcove_theme_hero_grain'), draftDefaults.heroGrain, SITE_DEFAULTS.heroGrain) || 'off';
 
+  const HALATIONS = { off: 'Off', soft: 'Soft', strong: 'Strong' };
+  let activeHalation = pick(HALATIONS, urlParams && urlParams.get('halation'), readStored('alcove_theme_halation'), draftDefaults.halation, SITE_DEFAULTS.halation) || 'off';
+
+  const HERO_EDGES = { off: 'Off', subtle: 'Subtle', medium: 'Medium', rough: 'Rough' };
+  let activeHeroEdge = pick(HERO_EDGES, urlParams && urlParams.get('edge'), readStored('alcove_theme_hero_edge'), draftDefaults.heroEdge, SITE_DEFAULTS.heroEdge) || 'off';
+
+  const FILM_GRAINS = { off: 'Off', subtle: 'Subtle', medium: 'Medium', high: 'High' };
+  let activeFilm = pick(FILM_GRAINS, urlParams && urlParams.get('film'), readStored('alcove_theme_film'), draftDefaults.filmGrain, SITE_DEFAULTS.filmGrain) || 'off';
+
+  const CURSOR_SHADOWS = { off: 'Off', soft: 'Soft', strong: 'Strong' };
+  let activeCursor = pick(CURSOR_SHADOWS, urlParams && urlParams.get('cursor'), readStored('alcove_theme_cursor'), draftDefaults.cursorShadow, SITE_DEFAULTS.cursorShadow) || 'off';
+
   function applyTheme() {
     const root = document.documentElement;
-    root.dataset.texture = activeTexture;
     root.dataset.surface = activeSurface;
     root.dataset.gradient = activeGradient;
     root.dataset.heroGrain = activeHeroGrain;
+    root.dataset.film = activeFilm;
+    root.dataset.cursorShadow = activeCursor;
+    root.dataset.halation = activeHalation;
+    root.dataset.heroEdge = activeHeroEdge;
     root.dataset.scheme = activePalette.endsWith('-dark') ? 'dark' : 'light';
     const pVars = (PALETTES[activePalette] || PALETTES['seth-olive-orange']).vars;
     const fVars = (FONTS[activeFont] || FONTS['retro-display']).vars;
@@ -188,14 +200,23 @@
     document.querySelectorAll('[data-font-btn]').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.fontBtn === activeFont ? 'true' : 'false');
     });
-    document.querySelectorAll('[data-texture-btn]').forEach(btn => {
-      btn.setAttribute('aria-pressed', btn.dataset.textureBtn === activeTexture ? 'true' : 'false');
-    });
     document.querySelectorAll('[data-surface-btn]').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.surfaceBtn === activeSurface ? 'true' : 'false');
     });
     document.querySelectorAll('[data-hero-grain-btn]').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.heroGrainBtn === activeHeroGrain ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-halation-btn]').forEach(btn => {
+      btn.setAttribute('aria-pressed', btn.dataset.halationBtn === activeHalation ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-hero-edge-btn]').forEach(btn => {
+      btn.setAttribute('aria-pressed', btn.dataset.heroEdgeBtn === activeHeroEdge ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-film-btn]').forEach(btn => {
+      btn.setAttribute('aria-pressed', btn.dataset.filmBtn === activeFilm ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-cursor-btn]').forEach(btn => {
+      btn.setAttribute('aria-pressed', btn.dataset.cursorBtn === activeCursor ? 'true' : 'false');
     });
     document.querySelectorAll('[data-gradient-btn]').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.gradientBtn === activeGradient ? 'true' : 'false');
@@ -203,28 +224,34 @@
   }
 
   // Option definitions shared with the admin panel (admin.js), so they are never duplicated there.
-  const BUILTIN = { palette: 'seth-olive-orange', font: 'retro-display', texture: 'quiet', surface: 'metal', gradient: 'full', heroGrain: 'off' };
+  const BUILTIN = { palette: 'seth-olive-orange', font: 'retro-display', surface: 'metal', gradient: 'full', heroGrain: 'off', halation: 'off', heroEdge: 'off', filmGrain: 'off', cursorShadow: 'off' };
   const OPTIONS = {
     palette: { label: 'Color palette', values: Object.fromEntries(Object.entries(PALETTES).map(([k, p]) => [k, p.name])) },
     font: { label: 'Typography', values: Object.fromEntries(Object.entries(FONTS).map(([k, f]) => [k, f.name])) },
-    texture: { label: 'Texture', values: TEXTURES },
     surface: { label: 'Surface', values: SURFACES },
     gradient: { label: 'Gradient', values: GRADIENTS },
-    heroGrain: { label: 'Hero grain', values: HERO_GRAINS }
+    heroGrain: { label: 'Hero grain', values: HERO_GRAINS },
+    halation: { label: 'Hero halation', values: HALATIONS },
+    heroEdge: { label: 'Hero edge roughness', values: HERO_EDGES },
+    filmGrain: { label: 'Film grain', values: FILM_GRAINS },
+    cursorShadow: { label: 'Cursor shadow', values: CURSOR_SHADOWS }
   };
   window.AlcoveTheme = {
     options: OPTIONS,
     // Values every visitor gets today: the saved Site Defaults over the built-in look (no URL, no draft).
     saved: () => Object.fromEntries(Object.keys(OPTIONS).map(k => [k, pick(OPTIONS[k].values, SITE_DEFAULTS[k]) || BUILTIN[k]])),
-    get: () => ({ palette: activePalette, font: activeFont, texture: activeTexture, surface: activeSurface, gradient: activeGradient, heroGrain: activeHeroGrain }),
+    get: () => ({ palette: activePalette, font: activeFont, surface: activeSurface, gradient: activeGradient, heroGrain: activeHeroGrain, halation: activeHalation, heroEdge: activeHeroEdge, filmGrain: activeFilm, cursorShadow: activeCursor }),
     // Live preview only; nothing is stored here.
     set(name, value) {
       if (!OPTIONS[name] || !Object.prototype.hasOwnProperty.call(OPTIONS[name].values, value)) return false;
       if (name === 'palette') activePalette = value;
       else if (name === 'font') activeFont = value;
-      else if (name === 'texture') activeTexture = value;
       else if (name === 'surface') activeSurface = value;
       else if (name === 'gradient') activeGradient = value;
+      else if (name === 'filmGrain') activeFilm = value;
+      else if (name === 'cursorShadow') activeCursor = value;
+      else if (name === 'halation') activeHalation = value;
+      else if (name === 'heroEdge') activeHeroEdge = value;
       else activeHeroGrain = value;
       applyTheme();
       return true;
@@ -240,10 +267,13 @@
     });
     lines.push('}');
     lines.push('');
-    lines.push(`/* Texture: set <html data-texture="${activeTexture}"> (off | quiet | bold) */`);
     lines.push(`/* Surface: set <html data-surface="${activeSurface}"> (metal | metal-subtle; metal is the default) */`);
     lines.push(`/* Gradient: set <html data-gradient="${activeGradient}"> (flat | soft | medium | full | bold; full is the default) */`);
+    lines.push(`/* Film grain: set <html data-film="${activeFilm}"> (off | subtle | medium | high; off is the default) */`);
+    lines.push(`/* Cursor shadow: set <html data-cursor-shadow="${activeCursor}"> (off | soft | strong; off is the default) */`);
     lines.push(`/* Hero grain: set <html data-hero-grain="${activeHeroGrain}"> (off | soft | strong; off is the default) */`);
+    lines.push(`/* Hero halation: set <html data-halation="${activeHalation}"> (off | soft | strong; off is the default) */`);
+    lines.push(`/* Hero edge roughness: set <html data-hero-edge="${activeHeroEdge}"> (off | subtle | medium | rough; off is the default) */`);
     lines.push(`/* Scheme: set <html data-scheme="${activePalette.endsWith('-dark') ? 'dark' : 'light'}"> */`);
     return lines.join('\n');
   }
@@ -287,16 +317,6 @@
           </div>
         </div>
         <div class="theme-section">
-          <div class="theme-section-title">Texture</div>
-          <div class="theme-option-grid" role="toolbar" aria-label="Texture">
-            ${Object.entries(TEXTURES).map(([k, label]) => `
-              <button type="button" class="theme-btn" data-texture-btn="${k}" aria-pressed="${k === activeTexture}">
-                <span>${label}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-        <div class="theme-section">
           <div class="theme-section-title">Surface</div>
           <div class="theme-option-grid" role="toolbar" aria-label="Surface">
             ${Object.entries(SURFACES).map(([k, label]) => `
@@ -321,6 +341,46 @@
           <div class="theme-option-grid" role="toolbar" aria-label="Hero Grain">
             ${Object.entries(HERO_GRAINS).map(([k, label]) => `
               <button type="button" class="theme-btn" data-hero-grain-btn="${k}" aria-pressed="${k === activeHeroGrain}">
+                <span>${label}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="theme-section">
+          <div class="theme-section-title">Hero Halation</div>
+          <div class="theme-option-grid" role="toolbar" aria-label="Hero Halation">
+            ${Object.entries(HALATIONS).map(([k, label]) => `
+              <button type="button" class="theme-btn" data-halation-btn="${k}" aria-pressed="${k === activeHalation}">
+                <span>${label}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="theme-section">
+          <div class="theme-section-title">Hero Edge</div>
+          <div class="theme-option-grid" role="toolbar" aria-label="Hero Edge Roughness">
+            ${Object.entries(HERO_EDGES).map(([k, label]) => `
+              <button type="button" class="theme-btn" data-hero-edge-btn="${k}" aria-pressed="${k === activeHeroEdge}">
+                <span>${label}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="theme-section">
+          <div class="theme-section-title">Film Grain</div>
+          <div class="theme-option-grid" role="toolbar" aria-label="Film Grain">
+            ${Object.entries(FILM_GRAINS).map(([k, label]) => `
+              <button type="button" class="theme-btn" data-film-btn="${k}" aria-pressed="${k === activeFilm}">
+                <span>${label}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="theme-section">
+          <div class="theme-section-title">Cursor Shadow</div>
+          <div class="theme-option-grid" role="toolbar" aria-label="Cursor Shadow">
+            ${Object.entries(CURSOR_SHADOWS).map(([k, label]) => `
+              <button type="button" class="theme-btn" data-cursor-btn="${k}" aria-pressed="${k === activeCursor}">
                 <span>${label}</span>
               </button>
             `).join('')}
@@ -368,17 +428,38 @@
         applyTheme();
         return;
       }
-      const tBtn = e.target.closest('[data-texture-btn]');
-      if (tBtn) {
-        activeTexture = tBtn.dataset.textureBtn;
-        try { localStorage.setItem('alcove_theme_texture', activeTexture); } catch (err) { /* ignore */ }
-        applyTheme();
-        return;
-      }
       const sBtn = e.target.closest('[data-surface-btn]');
       if (sBtn) {
         activeSurface = sBtn.dataset.surfaceBtn;
         try { localStorage.setItem('alcove_theme_surface', activeSurface); } catch (err) { /* ignore */ }
+        applyTheme();
+        return;
+      }
+      const filmBtn = e.target.closest('[data-film-btn]');
+      if (filmBtn) {
+        activeFilm = filmBtn.dataset.filmBtn;
+        try { localStorage.setItem('alcove_theme_film', activeFilm); } catch (err) { /* ignore */ }
+        applyTheme();
+        return;
+      }
+      const curBtn = e.target.closest('[data-cursor-btn]');
+      if (curBtn) {
+        activeCursor = curBtn.dataset.cursorBtn;
+        try { localStorage.setItem('alcove_theme_cursor', activeCursor); } catch (err) { /* ignore */ }
+        applyTheme();
+        return;
+      }
+      const halBtn = e.target.closest('[data-halation-btn]');
+      if (halBtn) {
+        activeHalation = halBtn.dataset.halationBtn;
+        try { localStorage.setItem('alcove_theme_halation', activeHalation); } catch (err) { /* ignore */ }
+        applyTheme();
+        return;
+      }
+      const edgeBtn = e.target.closest('[data-hero-edge-btn]');
+      if (edgeBtn) {
+        activeHeroEdge = edgeBtn.dataset.heroEdgeBtn;
+        try { localStorage.setItem('alcove_theme_hero_edge', activeHeroEdge); } catch (err) { /* ignore */ }
         applyTheme();
         return;
       }

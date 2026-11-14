@@ -21,15 +21,18 @@
   let active = tracks[version];
   let pendingTime = null; // a seek waiting for the clip to load
 
+  const fetchClip = u => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); });
   let loading = null;
-  const load = () => loading || (loading = Promise.all(Object.values(tracks).map(a =>
-    fetch(a.dataset.src)
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+  const load = () => loading || (loading = Promise.all(Object.values(tracks).map(a => {
+    const want = a.dataset.src;
+    return fetchClip(want)
+      .catch(() => a.dataset.srcFallback ? fetchClip(a.dataset.srcFallback) : Promise.reject()) // a saved clip that will not load: use the authored one
       .then(b => URL.createObjectURL(b))
       .catch(() => a.dataset.src) // fall back to streaming the file directly
       // Never swap the source under a clip that is already playing.
-      .then(url => { if (!a.src || (a.paused && a !== active)) { a.preload = 'auto'; a.src = url; } })
-  )).then(() => { root.dataset.loaded = 'true'; sync(); }));
+      // (and skip a clip the editor replaced while this was loading: admin.js already set its source)
+      .then(url => { if (a.dataset.src === want && (!a.src || (a.paused && a !== active))) { a.preload = 'auto'; a.src = url; } });
+  })).then(() => { root.dataset.loaded = 'true'; sync(); }));
 
   // Start loading as the section approaches the viewport, or on first interaction.
   if ('IntersectionObserver' in window) {

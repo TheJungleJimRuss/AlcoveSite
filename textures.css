@@ -1,5 +1,5 @@
 /* ===== Tactile textures (ADR 0003) =====
-   Contract: <html data-texture="off|quiet|bold"> (missing = quiet); html[data-scheme="dark"]
+   Contract: html[data-scheme="dark"]
    switches to light tints.
    Paper and tape are REAL SCANS (grayscale photos): the layer's background-color comes from the
    active palette and the scan is multiplied onto it with background-blend-mode (inside the one
@@ -52,9 +52,6 @@
   --tex-edge: rgb(0 0 0 / 0.42);
   --tex-fold: rgb(0 0 0 / 0.62);
 }
-:root[data-texture="off"] { --tex-strength: 0; }
-:root[data-texture="quiet"] { --tex-strength: 1; }
-:root[data-texture="bold"] { --tex-strength: 1.6; }
 
 /* Page surface: brushed metal (the only surface; toolbar "Surface" picks its strength).
    body::before is a sheet of horizontal brushed streaks behind all content. It covers the whole
@@ -116,7 +113,7 @@ body::after {
   --card-edge: inset 0 1px 0 rgb(255 255 255 / 0.06);
   --card-grain: 0.65;
 }
-:root :is(.card, .roadmap-step, .faq-item) {
+:root :is(.card, .roadmap-step) {
   position: relative;
   isolation: isolate;
   border: 0;
@@ -124,7 +121,7 @@ body::after {
   background-color: var(--card-stock);
   box-shadow: var(--card-edge), var(--card-shadow);
 }
-:root :is(.card, .roadmap-step, .faq-item)::before {
+:root :is(.card, .roadmap-step)::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -194,14 +191,6 @@ body::after {
 /* Text distress and edge grain removed (2026-11-13): headings and the hero wordmark render clean. */
 .svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
-/* Off, reduced transparency, more contrast and forced colors: no texture layer at all */
-:root[data-texture="off"] :is(h1, h2)::after { display: none; }
-:root[data-texture="off"] .media-box.has-photo:not(.has-video)::before { background-image: none; -webkit-mask-image: none; mask-image: none; }
-:root[data-texture="off"] .media-box.has-photo:not(.has-video) { background-image: none; }
-:root[data-texture="off"] body::before,
-:root[data-texture="off"] body::after,
-:root[data-texture="off"] :is(.card, .roadmap-step, .faq-item)::before { display: none; }
-:root[data-texture="off"] h1.studio-wordmark { filter: none; }
 /* Hero grain: film grain on the Home hero wordmark only, not the photo (toolbar "Hero Grain",
    html[data-hero-grain]). The logo is mask-image'd, so a child layer is clipped to the letters.
    One alpha tile as a single mask, tinted by a palette token. Off by default. */
@@ -219,15 +208,133 @@ body::after {
   mask: var(--tex-film-img) 0 0 / var(--hero-grain-size) var(--hero-grain-size) repeat;
   opacity: var(--hero-grain-alpha);
 }
-:root:not([data-hero-grain="soft"], [data-hero-grain="strong"]) .logo-mark--hero::after,
-:root[data-texture="off"] .logo-mark--hero::after { display: none; }
+:root:not([data-hero-grain="soft"], [data-hero-grain="strong"]) .logo-mark--hero::after { display: none; }
+/* Hero halation (toolbar "Hero Halation", html[data-halation], ?halation=): the bloom film gets around bright
+   things, on the Home hero WORDMARK only (never the photo behind it). An SVG filter (#hero-halation-*, inline in
+   index.html) lays a very soft, wide blur of the wordmark itself under it, so the glow is the hero gradient's own
+   colours and follows the palette and the Gradient option, and softens the letters slightly.
+   Off by default. Removed under reduced transparency / increased contrast (see the fallback below). */
+:root[data-halation="soft"] { --hero-halation-filter: url(#hero-halation-soft); }
+:root[data-halation="strong"] { --hero-halation-filter: url(#hero-halation-strong); }
+/* Hero edge roughness (toolbar "Hero Edge", html[data-hero-edge], ?edge=, Site Defaults key heroEdge): an SVG
+   filter (#hero-edge-*, inline in index.html) displaces the wordmark's edges with fractal noise, like ink on
+   rough stock. Wordmark only; static. Runs before halation so the glow follows the rough shape. Off by default. */
+:root[data-hero-edge="subtle"] { --hero-edge-filter: url(#hero-edge-subtle); }
+:root[data-hero-edge="medium"] { --hero-edge-filter: url(#hero-edge-medium); }
+:root[data-hero-edge="rough"] { --hero-edge-filter: url(#hero-edge-rough); }
+/* Both unset -> empty value -> invalid at computed time -> filter: none. */
+:root:is([data-halation="soft"], [data-halation="strong"], [data-hero-edge="subtle"], [data-hero-edge="medium"], [data-hero-edge="rough"]) h1.studio-wordmark {
+  filter: var(--hero-edge-filter, ) var(--hero-halation-filter, );
+}
+/* Film grain (toolbar "Film grain", html[data-film], ?film=): a faint, animated grain over the whole site.
+   One fixed layer on html::after, so no page markup changes. The grain is the film-grain alpha tile as a single
+   mask tinted by a palette token. The layer is larger than the viewport and jumps between offsets in steps(), so
+   only a transform animates (no repaint). Off by default; static under reduced motion. */
+:root { --film-alpha: 0; --film-size: 256px; }
+:root[data-film="subtle"] { --film-alpha: 0.05; }
+:root[data-film="medium"] { --film-alpha: 0.075; --film-size: 288px; }
+:root[data-film="high"] { --film-alpha: 0.1; --film-size: 320px; }
+:root[data-film="subtle"]::after, :root[data-film="medium"]::after, :root[data-film="high"]::after {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  z-index: 9000;
+  pointer-events: none;
+  background-color: var(--text-main);
+  -webkit-mask: var(--tex-film-img) 0 0 / var(--film-size) var(--film-size) repeat;
+  mask: var(--tex-film-img) 0 0 / var(--film-size) var(--film-size) repeat;
+  opacity: var(--film-alpha);
+  animation: film-jitter 0.9s steps(1, end) infinite;
+}
+@keyframes film-jitter {
+  0%   { transform: translate(0, 0); }
+  12%  { transform: translate(-7%, 4%); }
+  25%  { transform: translate(5%, -9%); }
+  37%  { transform: translate(-11%, -3%); }
+  50%  { transform: translate(8%, 10%); }
+  62%  { transform: translate(-4%, 7%); }
+  75%  { transform: translate(10%, -5%); }
+  87%  { transform: translate(-9%, -10%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-film]::after { animation: none; }
+}
+/* Cursor shadow (toolbar "Cursor shadow", html[data-cursor-shadow], ?cursor=): the mouse pointer gets a drop
+   shadow. Browsers cannot shadow the system cursor, so Soft/Strong swap in SVG cursors (arrow + pointing hand) with
+   the shadow baked in (feDropShadow); generated by a one-off script, hotspots 5 3 (arrow) and 13 3 (hand fingertip).
+   Every "cursor: pointer" rule in the site CSS reads --cursor-pointer, so hover targets keep the hand. Text fields
+   keep the I-beam. Off by default (system cursors); back to system cursors under forced colors. */
+:root { --cursor-default: auto; --cursor-pointer: pointer; }
+:root[data-cursor-shadow="soft"] {
+  --cursor-default: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' x='-50%' y='-50%' width='200%' height='200%'%3E%3CfeDropShadow dx='1' dy='1.5' stdDeviation='1.1' flood-color='black' flood-opacity='0.35'/%3E%3C/filter%3E%3Cpath filter='url(%23s)' transform='translate(5 3)' d='M0 0V17.5L4.4 13.4L7.2 20L10 18.8L7.3 12.3H13Z' fill='black' stroke='white' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E") 5 3, default;
+  --cursor-pointer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' x='-50%' y='-50%' width='200%' height='200%'%3E%3CfeDropShadow dx='1' dy='1.5' stdDeviation='1.1' flood-color='black' flood-opacity='0.35'/%3E%3C/filter%3E%3Cpath filter='url(%23s)' transform='translate(6 3)' d='M6 1.6a1.5 1.5 0 0 1 3 0V9.4a1.5 1.5 0 0 1 3 .4a1.5 1.5 0 0 1 3 .5a1.5 1.5 0 0 1 3 .7V15c0 3.2-2 6.2-5.2 6.2H9.6c-2 0-3.2-1-4.2-2.5L1.4 13a1.5 1.5 0 0 1 2.4-1.8L6 13.8Z' fill='white' stroke='black' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E") 13 3, pointer;
+}
+:root[data-cursor-shadow="strong"] {
+  --cursor-default: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' x='-50%' y='-50%' width='200%' height='200%'%3E%3CfeDropShadow dx='2' dy='3.5' stdDeviation='2' flood-color='black' flood-opacity='0.55'/%3E%3C/filter%3E%3Cpath filter='url(%23s)' transform='translate(5 3)' d='M0 0V17.5L4.4 13.4L7.2 20L10 18.8L7.3 12.3H13Z' fill='black' stroke='white' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E") 5 3, default;
+  --cursor-pointer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cfilter id='s' x='-50%' y='-50%' width='200%' height='200%'%3E%3CfeDropShadow dx='2' dy='3.5' stdDeviation='2' flood-color='black' flood-opacity='0.55'/%3E%3C/filter%3E%3Cpath filter='url(%23s)' transform='translate(6 3)' d='M6 1.6a1.5 1.5 0 0 1 3 0V9.4a1.5 1.5 0 0 1 3 .4a1.5 1.5 0 0 1 3 .5a1.5 1.5 0 0 1 3 .7V15c0 3.2-2 6.2-5.2 6.2H9.6c-2 0-3.2-1-4.2-2.5L1.4 13a1.5 1.5 0 0 1 2.4-1.8L6 13.8Z' fill='white' stroke='black' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E") 13 3, pointer;
+}
+:root:is([data-cursor-shadow="soft"], [data-cursor-shadow="strong"]) body { cursor: var(--cursor-default); }
+:root:is([data-cursor-shadow="soft"], [data-cursor-shadow="strong"]) :is(a[href], summary, select, label[for]) { cursor: var(--cursor-pointer); }
+:root:is([data-cursor-shadow="soft"], [data-cursor-shadow="strong"]) :is(input:not([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), textarea, [contenteditable="true"], [contenteditable=""]) { cursor: text; }
+@media (forced-colors: active) {
+  :root { --cursor-default: auto !important; --cursor-pointer: pointer !important; }
+}
+
+/* Etched lines (2026-11-13): every rule, underline and frame that sits on the brushed metal is cut
+   INTO it instead of drawn in palette colour. A groove lit from above = a dark line (its upper wall in
+   shadow) with a 1px light lip under it (its lower wall catching the light). Tokens per scheme;
+   plain hairlines come back under reduced transparency / increased contrast / forced colours. */
+:root {
+  --etch-dark: rgb(40 34 28 / 0.34);
+  --etch-light: rgb(255 255 255 / 0.6);
+  --etch-groove: 0 1px 0 var(--etch-light);
+}
+:root[data-scheme="dark"] {
+  --etch-dark: rgb(0 0 0 / 0.6);
+  --etch-light: rgb(255 255 255 / 0.1);
+}
+/* Bar edges where the header / phone tab bar meet the metal, and the footer's top rule */
+.site-header, .site-footer { border-image: none; }
+.site-header { border-bottom: 1px solid var(--etch-dark); box-shadow: var(--etch-groove); }
+.site-footer { border-top: 1px solid var(--etch-dark); box-shadow: inset var(--etch-groove); }
+@media (max-width: 640px) {
+  .site-header nav { border-top: 1px solid var(--etch-dark); box-shadow: inset var(--etch-groove); }
+}
+/* Section rules */
+.page-header { border-bottom-color: var(--etch-dark); box-shadow: var(--etch-groove); }
+.closing-note { border-top-color: var(--etch-dark); box-shadow: inset var(--etch-groove); }
+/* Spec table rules: a 1px dark + 1px light groove drawn at the foot of each cell */
+.ab-specs :is(th, td) {
+  border-block-end: 0;
+  background-image: linear-gradient(to top, var(--etch-light) 0 1px, var(--etch-dark) 1px 2px, transparent 2px);
+}
+/* State marks: a deeper (2px) groove. Filter tab underline, and the master column head on the A/B deck */
+.filter-pill.active, .filter-pill.active:hover { border-bottom-color: var(--etch-dark); box-shadow: var(--etch-groove); }
+.ab-compare[data-version="memo"] .ab-specs thead [data-version="memo"],
+.ab-compare[data-version="master"] .ab-specs thead [data-version="master"] {
+  box-shadow: none;
+  background-image: linear-gradient(to top, var(--etch-light) 0 1px, var(--etch-dark) 1px 3px, transparent 3px);
+}
+/* Video frame: a recess cut around the clip */
+.media-box.has-video { border: 1px solid var(--etch-dark); box-shadow: var(--etch-groove); }
+
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
-  body::before, body::after, :is(.card, .roadmap-step, .faq-item)::before, :is(h1, h2)::after { display: none; }
+  body::before, body::after, :is(.card, .roadmap-step)::before, :is(h1, h2)::after, :root[data-film]::after { display: none; }
   h1.studio-wordmark { filter: none; }
   .hero-wordmark-viewport { box-shadow: none; }
   .logo-mark--hero::after { display: none; }
+  :root[data-halation] h1.studio-wordmark, :root[data-hero-edge] h1.studio-wordmark { filter: none; }
   .media-box.has-photo:not(.has-video)::before { background-image: none; -webkit-mask-image: none; mask-image: none; }
   .media-box.has-photo:not(.has-video) { background-image: none; }
+  .site-header, .site-footer, .site-header nav, .page-header, .closing-note, .filter-pill.active, .media-box.has-video { box-shadow: none; }
+  .site-header, .page-header { border-bottom-color: var(--border-color); }
+  .site-footer, .closing-note, .site-header nav { border-top-color: var(--border-color); }
+  .media-box.has-video { border-color: var(--border-color); }
+  .filter-pill.active, .filter-pill.active:hover { border-bottom-color: var(--accent-primary); }
+  .ab-specs :is(th, td) { background-image: none; border-block-end: 1px solid var(--border-color); }
+  .ab-compare[data-version] .ab-specs thead th[data-version] { background-image: none; }
+  .ab-compare[data-version="memo"] .ab-specs thead [data-version="memo"],
+  .ab-compare[data-version="master"] .ab-specs thead [data-version="master"] { box-shadow: inset 0 -2px 0 var(--accent-primary); }
 }
 
 /* Every sheet cut from a different part of the scan. Polaroid frames: a background cannot be
@@ -246,17 +353,17 @@ body::after {
 :nth-child(7n+6) > .media-box.has-photo:not(.has-video) { --paper-y: 120px; }
 :nth-child(7n) > .media-box.has-photo:not(.has-video) { --paper-y: 10px; }
 
-:is(.card, .roadmap-step, .faq-item):nth-child(4n+2) { --stock-turn: 90deg; }
-:is(.card, .roadmap-step, .faq-item):nth-child(4n+3) { --stock-turn: 180deg; }
-:is(.card, .roadmap-step, .faq-item):nth-child(4n) { --stock-turn: 270deg; }
-:is(.card, .roadmap-step, .faq-item):nth-child(5n+2) { --stock-x: 80px; }
-:is(.card, .roadmap-step, .faq-item):nth-child(5n+3) { --stock-x: 170px; }
-:is(.card, .roadmap-step, .faq-item):nth-child(5n+4) { --stock-x: 40px; }
-:is(.card, .roadmap-step, .faq-item):nth-child(5n) { --stock-x: 120px; }
-:is(.card, .roadmap-step, .faq-item):nth-child(3n+2) { --stock-y: 100px; }
-:is(.card, .roadmap-step, .faq-item):nth-child(3n) { --stock-y: 200px; }
-:root :is(.card, .roadmap-step, .faq-item) { overflow: clip; }
-:root :is(.card, .roadmap-step, .faq-item)::before {
+:is(.card, .roadmap-step):nth-child(4n+2) { --stock-turn: 90deg; }
+:is(.card, .roadmap-step):nth-child(4n+3) { --stock-turn: 180deg; }
+:is(.card, .roadmap-step):nth-child(4n) { --stock-turn: 270deg; }
+:is(.card, .roadmap-step):nth-child(5n+2) { --stock-x: 80px; }
+:is(.card, .roadmap-step):nth-child(5n+3) { --stock-x: 170px; }
+:is(.card, .roadmap-step):nth-child(5n+4) { --stock-x: 40px; }
+:is(.card, .roadmap-step):nth-child(5n) { --stock-x: 120px; }
+:is(.card, .roadmap-step):nth-child(3n+2) { --stock-y: 100px; }
+:is(.card, .roadmap-step):nth-child(3n) { --stock-y: 200px; }
+:root :is(.card, .roadmap-step) { overflow: clip; }
+:root :is(.card, .roadmap-step)::before {
   /* A centred square 3x the card's width: turning a wide, short rectangle by 90deg left its edges bare */
   inset: auto;
   inset-block-start: 50%;

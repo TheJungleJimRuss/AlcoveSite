@@ -20,3 +20,13 @@
 - **Site Content**: the marked text (headings, paragraphs, captions) an editor may change in place; plain text only. Booking form labels and Session Type names are not Site Content.
 - **Site Defaults**: the theme options (palette, font, texture, Surface, Gradient, hero grain) every visitor starts with; chosen in Admin mode. Tape and Cards are added once this copy is reconciled with the real repo. The public Theme Preview Toolbar is hidden from visitors.
 - **Content branch**: the repo branch Admin mode saves to; the developer reviews and merges it to main to publish. _Avoid_: draft, staging.
+- **Media slot**: a place on the site that shows one photo, video or audio clip (a photo, the session video with its poster, the A/B deck memo or master clip, the About portrait); an editor replaces its file in Edit mode.
+- **Song**: one entry in the Work page's song list: a title and an audio file, in an editor-chosen order. Songs have no genre; the genre filter is retired. _Avoid_: track, recording (in editor-facing wording).
+- **Media file**: an uploaded photo, video or audio file stored in the repo and saved to the Content branch with the text edits; replaced or removed files are deleted unless something else still uses them.
+
+## Work page
+
+- **Record player**: the Work page sampler, a flat top-down turntable (plinth, platter, record, tonearm) beside a Crate; replaces the old tape-deck sampler. The Voice Memo vs. Master A/B deck stays a tape deck.
+- **Crate**: the plastic milk crate of Sleeves beside the Record player (below it on phones); records tip forward one at a time to flip through it, one Sleeve per Song in the saved order.
+- **Sleeve**: one record in the Crate, a button showing a Song's title over a placeholder cover with a slot for real art; clicking the front Sleeve lifts it so its record slides out onto the platter. _Avoid_: track row, card.
+- **Tonearm**: the arm on the Record player; at rest, or on the record while playing (later also a slider to seek).

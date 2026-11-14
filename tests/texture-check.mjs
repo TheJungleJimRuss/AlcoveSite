@@ -60,18 +60,7 @@ async function open(query = '', ctxOpts = {}, file = 'index.html') {
   const { ctx, page, errors } = await open('?devtoolbar'); // the theme toolbar is dev-only: localhost + ?devtoolbar
   check(await strength(page) === '1', 'default --tex-strength is 1', `(got ${await strength(page)})`);
   check(errors.length === 0, 'no console/network errors on index.html', errors.join('; '));
-  // toolbar buttons: dispatch real clicks even if the dock is collapsed
-  for (const [mode, expected] of [['off', '0'], ['bold', '1.6'], ['quiet', '1']]) {
-    await page.locator(`[data-texture-btn="${mode}"]`).evaluate(b => b.click());
-    await page.waitForTimeout(100);
-    const attr = await page.evaluate(() => document.documentElement.dataset.texture);
-    check(attr === mode && await strength(page) === expected, `Texture button ${mode} sets data-texture and --tex-strength=${expected}`, `(attr=${attr}, strength=${await strength(page)})`);
-  }
-  await ctx.close();
-}
-for (const [mode, expected] of [['off', '0'], ['bold', '1.6']]) {
-  const { ctx, page } = await open(`?texture=${mode}`);
-  check(await strength(page) === expected, `?texture=${mode} gives --tex-strength ${expected}`, `(got ${await strength(page)})`);
+  check(await page.locator('[data-texture-btn]').count() === 0, 'toolbar has no Texture option');
   await ctx.close();
 }
 {
@@ -81,27 +70,14 @@ for (const [mode, expected] of [['off', '0'], ['bold', '1.6']]) {
   await ctx.close();
 }
 
-// Hero wordmark at ?texture=off: no mask on the h1 or the mark, and the wear overlay is not rendered
 {
-  const { ctx, page } = await open('?texture=off');
-  const r = await page.evaluate(() => {
-    const h1 = document.querySelector('h1.studio-wordmark'), mark = h1.querySelector('.logo-mark--hero');
-    const after = getComputedStyle(h1, '::after');
-    return { h1Mask: getComputedStyle(h1).maskImage, after: after.display, opacity: after.opacity, markMask: getComputedStyle(mark).webkitMaskImage };
-  });
-  check(r.h1Mask === 'none', 'hero h1 has no mask at ?texture=off', `(mask-image=${r.h1Mask})`);
-  check(r.after === 'none' || r.opacity === '0', 'hero wear overlay is invisible at ?texture=off', `(display=${r.after}, opacity=${r.opacity})`);
-  check(r.markMask !== 'none', 'hero logo mark keeps its own logo mask', `(${r.markMask.slice(0, 40)})`);
-  await ctx.close();
-}
-{
-  const { ctx, page } = await open('?texture=quiet');
+  const { ctx, page } = await open();
   const r = await page.evaluate(() => { const a = getComputedStyle(document.querySelector('h1.studio-wordmark'), '::after'); return { display: a.display, opacity: parseFloat(a.opacity) }; });
-  check(r.display !== 'block', 'hero has no wear overlay at quiet', `(display=${r.display})`);
+  check(r.display !== 'block', 'hero has no wear overlay by default', `(display=${r.display})`);
   await ctx.close();
 }
 
-// Hero logo: subtle grainy blur edge (no switch); clean at ?texture=off and under reduced transparency
+// Hero logo: subtle grainy blur edge (no switch); clean under reduced transparency
 const logoEdge = page => page.evaluate(() => ({ filter: getComputedStyle(document.querySelector('h1.studio-wordmark')).filter,
   def: !!document.querySelector('filter#logo-edge-grain feGaussianBlur') && !!document.querySelector('filter#logo-edge-grain feTurbulence'), ink: !!document.querySelector('#logo-edge-ink, #logo-edge-fuzz'),
   control: !!document.querySelector('[data-edge-btn]') }));
@@ -111,15 +87,9 @@ const pagePaper = page => page.evaluate(() => { const c = getComputedStyle(docum
 {
   const { ctx, page } = await open();
   const r = await logoEdge(page);
-  check(r.filter === 'none' && !r.def && !r.ink && !r.control, 'hero logo has no grainy edge filter (removed)', `(filter=${r.filter})`);
+  check(r.filter === 'none' && !r.def && !r.control, 'hero logo has no edge filter', `(filter=${r.filter})`);
   const p = await pagePaper(page);
   check(p.display !== 'none' && p.position === 'absolute' && p.height >= p.docH - 1 && /metal\.webp/.test(p.mask) && p.bg === 'none' && p.opacity > 0 && p.opacity <= 0.3, 'page surface is the brushed metal sheet (no paper), scrolling with the page', `(opacity=${p.opacity}, height=${p.height}/${p.docH})`);
-  await ctx.close();
-}
-{
-  const { ctx, page } = await open('?texture=off');
-  const r = await logoEdge(page), p = await pagePaper(page);
-  check(r.filter === 'none' && p.display === 'none', 'logo edge and page surface are off at ?texture=off', `(filter=${r.filter}, surface=${p.display})`);
   await ctx.close();
 }
 {
@@ -131,8 +101,8 @@ const pagePaper = page => page.evaluate(() => { const c = getComputedStyle(docum
   await ctx.close();
 }
 
-// Tape: a scanned strip multiplied onto the palette's tape colour, cut by its own alpha; flat at Off.
-// Polaroid frame: the scanned paper multiplied onto the frame colour; plain at Off.
+// Tape: a scanned strip multiplied onto the palette's tape colour, cut by its own alpha.
+// Polaroid frame: the scanned paper multiplied onto the frame colour.
 {
   const tape = page => page.evaluate(() => { const el = document.querySelector('.media-box.has-photo:not(.has-video)'); if (!el) return null;
     const c = getComputedStyle(el, '::before'), f = getComputedStyle(el); return { bg: c.backgroundImage, blend: c.backgroundBlendMode, mask: c.maskImage || c.webkitMaskImage, frame: f.backgroundImage, frameBlend: f.backgroundBlendMode }; });
@@ -141,14 +111,10 @@ const pagePaper = page => page.evaluate(() => { const c = getComputedStyle(docum
   check(t && /tape\.webp/.test(t.bg) && /tape\.webp/.test(t.mask) && t.blend === 'multiply', 'polaroid tape is the scanned strip with its own outline', `(blend=${t && t.blend})`);
   check(t && /paper\.webp/.test(t.frame) && /multiply/.test(t.frameBlend), 'polaroid frame carries the scanned paper', `(blend=${t && t.frameBlend})`);
   await ctx.close();
-  ({ ctx, page } = await open('?texture=off', {}, 'about.html'));
-  t = await tape(page);
-  check(t && t.bg === 'none' && t.mask === 'none' && t.frame === 'none', 'tape is a flat strip and the frame is plain at ?texture=off');
-  await ctx.close();
 }
 
 // Brushed metal is the default and only page surface (metal.webp sheet + fixed sheen); the
-// Surface control offers only its two strengths, a stale ?surface=paper falls back to metal; Off hides both layers
+// Surface control offers only its two strengths, a stale ?surface=paper falls back to metal; 
 {
   const surf = page => page.evaluate(() => { const b = getComputedStyle(document.body, '::before'), a = getComputedStyle(document.body, '::after');
     return { attr: document.documentElement.dataset.surface, mask: b.maskImage || b.webkitMaskImage, bg: b.backgroundImage, sheen: a.display !== 'none' && a.position === 'fixed' && /gradient/.test(a.backgroundImage), afterDisplay: a.display }; });
@@ -162,9 +128,9 @@ const pagePaper = page => page.evaluate(() => { const c = getComputedStyle(docum
   r = await surf(page);
   check(r.attr === 'metal' && r.sheen, '?surface=paper falls back to brushed metal', `(surface=${r.attr})`);
   await ctx.close();
-  ({ ctx, page } = await open('?surface=metal&texture=off'));
+  ({ ctx, page } = await open('?surface=metal'));
   r = await surf(page);
-  check(r.attr === 'metal' && r.afterDisplay === 'none', '?surface=metal works and Off hides the sheen', `(surface=${r.attr}, after=${r.afterDisplay})`);
+  check(r.attr === 'metal' && r.sheen, '?surface=metal works', `(surface=${r.attr}, after=${r.afterDisplay})`);
   await ctx.close();
 }
 
@@ -202,10 +168,6 @@ const pagePaper = page => page.evaluate(() => { const c = getComputedStyle(docum
   check(all.length > 0 && all.every(t => /^url\(/.test(t.bg) && t.display !== 'none'), 'every photo wears a scanned masking-tape strip', `(${all.length} photos)`);
   check(all.length < 3 || scans.size > 1, 'strips use more than one scan', `(${[...scans].join(',')})`);
   await ctx.close();
-  ({ ctx, page } = await open('?texture=off', {}, 'about.html'));
-  const off = await tapes(page);
-  check(off.every(t => t.bg === 'none' && t.mask === 'none'), 'Off leaves a flat tape strip', `(${off[0] && off[0].bg})`);
-  await ctx.close();
 }
 
 // Gradient intensity: full (default) sweeps the whole palette; flat collapses the wordmark gradient to the primary accent.
@@ -233,6 +195,106 @@ const pagePaper = page => page.evaluate(() => { const c = getComputedStyle(docum
   ({ ctx, page } = await open('?gradient=medium', {}, 'index.html'));
   g = await grad(page);
   check(g.attr === 'medium' && new Set(g.stops).size === 3, '?gradient= works', `(gradient=${g.attr})`);
+  await ctx.close();
+}
+
+// Film grain: off by default (no layer); Subtle/Medium add one fixed, click-through, animated layer over the page.
+{
+  const film = page => page.evaluate(() => { const c = getComputedStyle(document.documentElement, '::after');
+    return { attr: document.documentElement.dataset.film, content: c.content, pos: c.position, ptr: c.pointerEvents, anim: c.animationName, op: c.opacity }; });
+  let { ctx, page } = await open('?devtoolbar', {}, 'index.html');
+  let f = await film(page);
+  check(f.attr === 'off' && f.content !== '""', 'film grain is off by default: no layer', JSON.stringify(f));
+  await page.locator('[data-film-btn="subtle"]').evaluate(b => b.click()); await page.waitForTimeout(100);
+  f = await film(page);
+  check(f.attr === 'subtle' && f.pos === 'fixed' && f.ptr === 'none' && f.anim === 'film-jitter' && Number(f.op) > 0 && Number(f.op) <= 0.1, 'Subtle: fixed, click-through, animated, faint', JSON.stringify(f));
+  await ctx.close();
+  ({ ctx, page } = await open('?film=medium', {}, 'work.html'));
+  f = await film(page);
+  check(f.attr === 'medium' && f.anim === 'film-jitter' && Number(f.op) === 0.075, '?film= works on every page', JSON.stringify(f));
+  await ctx.close();
+  ({ ctx, page } = await open('?film=high', { reducedMotion: 'reduce' }, 'index.html'));
+  f = await film(page);
+  check(f.attr === 'high' && Number(f.op) === 0.1 && f.anim === 'none', 'reduced motion: grain stays, stops moving', JSON.stringify(f));
+  await ctx.close();
+}
+
+// Cursor shadow: off by default (system cursors); Soft/Strong swap in SVG cursors with a baked drop shadow, the hand
+// on pointer targets, the I-beam kept in text fields; ?cursor= works on every page.
+{
+  const cur = page => page.evaluate(() => {
+    const c = el => el ? getComputedStyle(el).cursor : null;
+    return { attr: document.documentElement.dataset.cursorShadow, body: c(document.body), link: c(document.querySelector('a[href]')),
+      btn: c(document.querySelector('button:not(:disabled)')), field: c(document.querySelector('input[type="text"], input[type="email"], textarea')) };
+  });
+  let { ctx, page, errors } = await open('?devtoolbar', {}, 'index.html');
+  let c = await cur(page);
+  check(c.attr === 'off' && c.body === 'auto' && c.link === 'pointer', 'cursor shadow is off by default: system cursors', JSON.stringify(c));
+  await page.locator('[data-cursor-btn="soft"]').evaluate(b => b.click()); await page.waitForTimeout(100);
+  c = await cur(page);
+  check(c.attr === 'soft' && /feDropShadow/.test(c.body) && /5 3, default/.test(c.body), 'Soft: shadowed arrow on the page', c.body.slice(-40));
+  check(/feDropShadow/.test(c.link) && /13 3, pointer/.test(c.link), 'Soft: shadowed hand on links');
+  await ctx.close();
+  ({ ctx, page, errors } = await open('?cursor=strong', {}, 'contact.html'));
+  c = await cur(page);
+  check(c.attr === 'strong' && /stdDeviation='2'/.test(c.body) && c.field === 'text', '?cursor= works on every page; text fields keep the I-beam', JSON.stringify({ attr: c.attr, field: c.field }));
+  check(errors.length === 0, 'no console errors with cursor shadow on', errors.join(' | '));
+  await ctx.close();
+  ({ ctx, page } = await open('?cursor=soft', { forcedColors: 'active' }, 'index.html'));
+  c = await cur(page);
+  check(c.body === 'auto', 'forced colors: system cursors', c.body.slice(0, 30));
+  await ctx.close();
+}
+
+// Hero halation: off by default; Soft/Strong put an SVG glow filter (a very soft blur of the wordmark itself, so it
+// keeps the gradient's colours) on the wordmark only; the hero photo gets nothing.
+{
+  const hal = page => page.evaluate(() => ({ attr: document.documentElement.dataset.halation,
+    word: getComputedStyle(document.querySelector('h1.studio-wordmark')).filter,
+    photo: getComputedStyle(document.querySelector('.hero-media')).filter, photoBefore: getComputedStyle(document.querySelector('.hero-media'), '::before').content,
+    defs: ['soft', 'strong'].every(k => document.querySelector('#hero-halation-' + k + ' feGaussianBlur')) }));
+  let { ctx, page } = await open('?devtoolbar', {}, 'index.html');
+  let h = await hal(page);
+  check(h.attr === 'off' && h.word === 'none', 'halation is off by default', JSON.stringify(h));
+  await page.locator('[data-halation-btn="soft"]').evaluate(b => b.click()); await page.waitForTimeout(100);
+  h = await hal(page);
+  check(h.attr === 'soft' && /#hero-halation-soft/.test(h.word) && h.defs, 'Soft: wordmark gets the soft-glow filter', JSON.stringify(h));
+  check(h.photo === 'none' && h.photoBefore === 'none', 'halation never touches the hero photo', JSON.stringify(h));
+  await ctx.close();
+  ({ ctx, page } = await open('?halation=strong', {}, 'index.html'));
+  h = await hal(page);
+  check(h.attr === 'strong' && /#hero-halation-strong/.test(h.word), '?halation= works', JSON.stringify(h));
+  const cdp = await ctx.newCDPSession(page);
+  await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] });
+  h = await hal(page);
+  check(h.word === 'none', 'reduced transparency: no halation', JSON.stringify(h));
+  await ctx.close();
+}
+
+// Hero edge roughness: off by default; Subtle/Medium/Rough put a displacement filter on the wordmark only,
+// and it chains with halation (edge first, then glow).
+{
+  const edge = page => page.evaluate(() => ({ attr: document.documentElement.dataset.heroEdge,
+    word: getComputedStyle(document.querySelector('h1.studio-wordmark')).filter,
+    photo: getComputedStyle(document.querySelector('.hero-media')).filter,
+    defs: ['subtle', 'medium', 'rough'].every(k => document.querySelector('#hero-edge-' + k + ' feDisplacementMap')) }));
+  let { ctx, page } = await open('?devtoolbar', {}, 'index.html');
+  let e = await edge(page);
+  check(e.attr === 'off' && e.word === 'none' && e.defs, 'hero edge is off by default', JSON.stringify(e));
+  await page.locator('[data-hero-edge-btn="medium"]').evaluate(b => b.click()); await page.waitForTimeout(100);
+  e = await edge(page);
+  check(e.attr === 'medium' && /#hero-edge-medium/.test(e.word) && e.photo === 'none', 'Medium: wordmark gets the edge filter, photo untouched', JSON.stringify(e));
+  await page.locator('[data-halation-btn="soft"]').evaluate(b => b.click()); await page.waitForTimeout(100);
+  e = await edge(page);
+  check(/#hero-edge-medium.*#hero-halation-soft/.test(e.word), 'edge and halation chain (edge first)', JSON.stringify(e));
+  await ctx.close();
+  ({ ctx, page } = await open('?edge=rough', {}, 'index.html'));
+  e = await edge(page);
+  check(e.attr === 'rough' && /#hero-edge-rough/.test(e.word), '?edge= works', JSON.stringify(e));
+  const cdp = await ctx.newCDPSession(page);
+  await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-contrast', value: 'more' }] });
+  e = await edge(page);
+  check(e.word === 'none', 'increased contrast: no edge roughness', JSON.stringify(e));
   await ctx.close();
 }
 

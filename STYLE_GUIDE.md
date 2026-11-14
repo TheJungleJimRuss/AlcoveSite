@@ -264,12 +264,12 @@ Used inside tight card rows, table rows, or scrubbers:
 - `padding: 0.4rem 0.85rem; font-size: 0.8rem;`
 
 ### 5.3 Filter Tabs (`.filter-pill`, `.filter-btn`)
-Clean typographic text tabs used for audio genre filtering:
+Clean typographic text tabs for switching between a few views or filters (the Work page no longer has a filter bar; songs are a plain list):
 ```html
-<div class="filter-bar" role="toolbar" aria-label="Genre Filters">
-  <button type="button" class="filter-pill active" aria-pressed="true">All</button>
-  <button type="button" class="filter-pill" aria-pressed="false">Indie Rock</button>
-  <button type="button" class="filter-pill" aria-pressed="false">Acoustic</button>
+<div class="filter-bar" role="toolbar" aria-label="Filters">
+  <button type="button" class="filter-pill active" aria-pressed="true">Option A</button>
+  <button type="button" class="filter-pill" aria-pressed="false">Option B</button>
+  <button type="button" class="filter-pill" aria-pressed="false">Option C</button>
 </div>
 ```
 - Superseded by the analog studio style: tactile toggle or button shapes (see ADR 0001); the flat text-tab rules below describe the pre-reskin baseline.
@@ -284,7 +284,6 @@ Clean typographic text tabs used for audio genre filtering:
     <div class="track-info">
       <strong>[Track Title]</strong>
       <span class="track-meta">
-        <span class="filter-pill">[Genre]</span>
         <span class="track-duration">2:45</span>
       </span>
     </div>

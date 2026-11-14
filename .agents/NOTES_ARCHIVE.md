@@ -1,6 +1,9 @@
 # Alcove Recording — notes archive
 History moved out of PROJECT_NOTES.md. Newest first. Read only when past context is needed.
 
+## 2026-11-13 — Admin media done (tickets 01-05)
+Replace photos, video, poster and A/B clips; add/remove/rename/reorder up to 20 Songs; genres retired; cleanup of unreferenced files; failure-safe Save order (files first, content.json last); ADR 0006 accepted, ADR 0004 amended (Pages deploys from `content`); docs for Seth in `docs/admin-token-setup.md`. Hardening pass added a path whitelist to stored (IndexedDB/draft) paths and uploads, and a live-region role on the media warning. Not done: the real large-upload test (`docs/large-upload-test.md`).
+
 ## 2026-11-12 — Booking form code complete
 Booking-form-content tickets 01-04 done, 05 code done: new field set, required Demo (1-3 audio/video, 250MB) uploaded browser-to-Drive in 8MB chunks, resume + Try again, `beforeunload` guard, honeypot/caps/origin allowlist, daily `cleanStaging`, idempotent `submitInquiry`. Supersedes the voice-memo, field-set and no-JS parts of the booking-submission spec. `npm run check` and the contrast check pass. Not done: Apps Script deployment and all live Google checks.
 

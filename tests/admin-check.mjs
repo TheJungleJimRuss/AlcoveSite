@@ -3,14 +3,16 @@
 // Run: node tests/admin-check.mjs   (needs `npx playwright install chromium` once)
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, truncate, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(fileURLToPath(import.meta.url), '..', '..');
-const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml' };
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.webm': 'video/webm', '.mp3': 'audio/mpeg' };
 // `content` overrides /content.json: undefined = serve the committed file, null = 404, string = body as-is.
 let content;
+const extra = {}; // path -> Buffer served in place of a file (media the mocked branch "received")
 const server = createServer(async (req, res) => {
   try {
     const path = new URL(req.url, 'http://x').pathname;
@@ -19,6 +21,7 @@ const server = createServer(async (req, res) => {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(content);
     }
+    if (extra[path]) { res.writeHead(200, { 'content-type': types[extname(path)] || 'application/octet-stream' }); return res.end(extra[path]); }
     const body = await readFile(join(root, path === '/' ? 'index.html' : decodeURIComponent(path)));
     res.writeHead(200, { 'content-type': types[extname(path)] || 'application/octet-stream' });
     res.end(body);
@@ -37,7 +40,7 @@ const check = (name, ok, detail = '') => {
 //   gh.file = { sha, text } the content.json on the content branch (absent: 404); gh.noBranch; gh.mainSha;
 //   gh.fail = { branch|file|put|main|ref: status }; gh.abortPut; gh.delayPut (ms); gh.putStatus (e.g. 409).
 const b64 = s => Buffer.from(s).toString('base64');
-const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization,content-type,accept,x-github-api-version', 'access-control-allow-methods': 'GET,PUT,POST,OPTIONS' };
+const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization,content-type,accept,x-github-api-version', 'access-control-allow-methods': 'GET,PUT,POST,DELETE,OPTIONS' };
 const REPO = '/repos/TheJungleJimRuss/AlcoveSite';
 async function mockGitHub(ctx, gh) {
   gh.calls = [];
@@ -52,6 +55,22 @@ async function mockGitHub(ctx, gh) {
     if (method === 'GET' && rel === '/branches/content') return fail.branch ? send(fail.branch, {}) : gh.noBranch ? send(404, { message: 'Branch not found' }) : send(200, { name: 'content' });
     if (method === 'GET' && rel === '/git/ref/heads/main') return fail.main ? send(fail.main, {}) : send(200, { object: { sha: gh.mainSha || 'mainhead1' } });
     if (method === 'POST' && rel === '/git/refs') { if (fail.ref) return send(fail.ref, {}); gh.noBranch = false; return send(201, {}); }
+    if (rel.startsWith('/contents/images/') || rel.startsWith('/contents/media/')) {   // media files: gh.files[rel] = Buffer; gh.failFile = status to fail every file PUT
+      if (method === 'DELETE') {   // gh.failDelete = status; gh.deleted lists removed paths; the sha must be the one GET returned
+        if (gh.failDelete) return send(gh.failDelete, { message: 'cannot delete' });
+        if (!gh.files || !gh.files[rel] || JSON.parse(call.body).sha !== 'filesha') return send(409, { message: 'sha mismatch' });
+        delete gh.files[rel]; (gh.deleted = gh.deleted || []).push(rel);
+        return send(200, { commit: {} });
+      }
+      if (method === 'GET') return gh.files && gh.files[rel] ? send(200, { sha: 'filesha' }) : send(404, { message: 'Not Found' });
+      if (method === 'PUT') {
+        if (gh.files && gh.files[rel]) return send(422, { message: 'sha wasn\'t supplied' });
+        if (gh.failFile) return send(gh.failFile, { message: 'file rejected' });
+        const b = JSON.parse(call.body);
+        (gh.files = gh.files || {})[rel] = Buffer.from(b.content, 'base64');
+        return send(201, { content: { sha: 'filesha' } });
+      }
+    }
     if (rel === '/contents/content.json' && method === 'GET') {
       if (fail.file) return send(fail.file, {});
       if (!gh.file || gh.noBranch) return send(404, { message: 'Not Found' });
@@ -71,7 +90,7 @@ async function mockGitHub(ctx, gh) {
 }
 
 // Opens a page with a console-error log. `probe` installs a per-frame sampler before any page script runs.
-async function open(path, { override, probe, reducedMotion, token, edit, width = 1280, height = 900, gh = {} } = {}) {
+async function open(path, { override, probe, init, reducedMotion, token, edit, width = 1280, height = 900, gh = {} } = {}) {
   content = override;
   const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion });
   await mockGitHub(ctx, gh);
@@ -86,11 +105,20 @@ async function open(path, { override, probe, reducedMotion, token, edit, width =
   if (edit) await ctx.addInitScript(() => { try { sessionStorage.setItem('alcove_admin_edit', '1'); } catch {} });
   page.on('console', m => m.type() === 'error' && errors.push(m.text()));
   page.on('pageerror', e => errors.push(e.message));
+  if (init) await ctx.addInitScript(init);
   if (probe) await page.addInitScript(probe);
   await page.goto(`${base}/${path}`);
   return { ctx, page, errors, requests, allReqs, gh };
 }
 const pages = ['index.html', 'work.html', 'about.html', 'contact.html'];
+
+const fxPage = await browser.newPage();   // makes small fixture images (solid colour, so a 3000px photo is only a few KB)
+const fixture = (w, h, type = 'image/jpeg') => fxPage.evaluate(async ([w, h, type]) => {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'); x.fillStyle = '#c0451f'; x.fillRect(0, 0, w, h); x.fillStyle = '#1f6f8c'; x.fillRect(0, 0, w / 2, h / 2);
+  const b = await new Promise(r => c.toBlob(r, type)); return Array.from(new Uint8Array(await b.arrayBuffer()));
+}, [w, h, type]).then(a => Buffer.from(a));
+const dims = buf => fxPage.evaluate(async b64 => { const r = await fetch('data:image/x;base64,' + b64); const bm = await createImageBitmap(await r.blob()); return [bm.width, bm.height]; }, buf.toString('base64'));
 
 // --- Slice 1: text keys on every page; booking form copy has none -------------------------------------------
 for (const p of pages) {
@@ -103,7 +131,7 @@ for (const p of pages) {
   check(`${p}: keys are unique (only site.* nav/footer keys repeat)`, dups.every(k => k.startsWith('site.')), JSON.stringify(dups));
   const texts = await page.$$eval('[data-edit-key^="site."]', els => els.map(e => [e.dataset.editKey, e.textContent]));
   check(`${p}: shared site.* keys carry identical text`, texts.every(([k, t]) => texts.filter(x => x[0] === k).every(x => x[1] === t)));
-  check(`${p}: nav labels, footer and buttons are keyed`, await page.evaluate(() => [...document.querySelectorAll('.site-header .nav-links a, .site-footer p, .btn-placeholder:not(.transport-btn), .filter-pill')].filter(e => !e.closest('#booking-form')).every(e => e.dataset.editKey || e.querySelector('[data-edit-key]'))));
+  check(`${p}: nav labels, footer and buttons are keyed`, await page.evaluate(() => [...document.querySelectorAll('.site-header .nav-links a, .site-footer p, .btn-placeholder:not(.transport-btn)')].filter(e => !e.closest('#booking-form')).every(e => e.dataset.editKey || e.querySelector('[data-edit-key]'))));
   check(`${p}: keyed elements hold plain text only`, keyed.every(k => k.kids === 0));
   await ctx.close();
 }
@@ -143,7 +171,7 @@ for (const p of pages) {
 
 // --- Slice 4: saved text and defaults apply on load with no visible flash -----------------------------------
 const H1 = 'Listen In', H1_NEW = 'Hear What We Made';
-const saved = JSON.stringify({ version: 1, text: { 'work.h1.listen-in': H1_NEW, 'work.h2.recent-recordings': '<b>Fresh</b> takes' }, defaults: { palette: 'seth-sage-coral-dark', gradient: 'flat', texture: 'off', surface: 'metal-subtle' } });
+const saved = JSON.stringify({ version: 1, text: { 'work.h1.listen-in': H1_NEW, 'work.h2.recent-recordings': '<b>Fresh</b> takes' }, defaults: { palette: 'seth-sage-coral-dark', gradient: 'flat', heroGrain: 'soft', surface: 'metal-subtle' } });
 // Samples every animation frame from document start; records frames where old text or old defaults were actually visible.
 const flashProbe = () => {
   window.__flash = [];
@@ -161,8 +189,8 @@ const flashProbe = () => {
   check('saved text replaces authored heading', (await page.locator('h1').innerText()) === H1_NEW);
   check('saved text is plain text, never markup', (await page.locator('[data-edit-key="work.h2.recent-recordings"]').innerText()) === '<b>Fresh</b> takes' && (await page.locator('[data-edit-key="work.h2.recent-recordings"] b').count()) === 0);
   check('untouched text stays authored', (await page.locator('[data-edit-key="work.h2.a-look-inside"]').innerText()) === 'A Look Inside');
-  const d = await page.evaluate(() => ({ g: document.documentElement.dataset.gradient, t: document.documentElement.dataset.texture, s: document.documentElement.dataset.surface, sc: document.documentElement.dataset.scheme }));
-  check('saved defaults set theme data-attributes', d.g === 'flat' && d.t === 'off' && d.s === 'metal-subtle' && d.sc === 'dark', JSON.stringify(d));
+  const d = await page.evaluate(() => ({ g: document.documentElement.dataset.gradient, t: document.documentElement.dataset.heroGrain, s: document.documentElement.dataset.surface, sc: document.documentElement.dataset.scheme }));
+  check('saved defaults set theme data-attributes', d.g === 'flat' && d.t === 'soft' && d.s === 'metal-subtle' && d.sc === 'dark', JSON.stringify(d));
   check('page visible after load', (await page.evaluate(() => getComputedStyle(document.body).visibility)) === 'visible');
   check('no flash of authored text or default theme', (await page.evaluate(() => window.__flash)).length === 0, JSON.stringify(await page.evaluate(() => window.__flash)));
   check('saved content raises no console errors', errors.length === 0, errors.join(' | '));
@@ -224,8 +252,8 @@ const adminReq = rs => rs.filter(u => /admin\.(js|css)/.test(u));
   await page.click('#alcove-admin .admin-toggle');
   await page.click('#alcove-admin .admin-signout');
   check('sign-out removes the token', (await page.evaluate(() => localStorage.getItem('alcove_admin_token'))) === null);
-  await page.reload();
-  await page.waitForTimeout(300);
+  await page.reload().catch(() => {});   // sign-out already reloads; tolerate the two reloads racing
+  await page.waitForTimeout(500);
   check('after sign-out the page is a visitor page again', (await page.locator('#alcove-admin').count()) === 0 && (await page.locator('#theme-dock').count()) === 0);
   await ctx.close();
 }
@@ -378,7 +406,7 @@ const draftCount = page => page.evaluate(() => Object.keys(localStorage).filter(
   check('PUT JSON is version 1, pretty-printed', file.version === 1 && text.startsWith('{\n  "version": 1,') && text.endsWith('\n'), text.slice(0, 40));
   check('save merges edit over existing text and keeps other keys and defaults', file.text['work.h1.listen-in'] === 'Hello There' && file.text['work.h2.recent-recordings'] === 'Kept from branch' && file.defaults.palette === 'seth-sage-coral', text);
   check('PUT touches only this page\'s edited keys', Object.keys(file.text).length === 2);
-  check('success message says changes go live after the developer merges', (await page.textContent(note)).includes('Saved to the content branch. Changes go live after the developer merges to main.'));
+  check('success message says changes go live in a minute or two', (await page.textContent(note)).includes('Saved to the content branch. Changes go live in a minute or two'));
   check('success clears this page\'s drafts and the count', (await draftCount(page)) === 0 && (await page.textContent('#alcove-admin .admin-toggle')).includes('0') && await page.locator(saveBtn).isDisabled());
   await replaceText(page, H1SEL, 'Another'); await page.keyboard.press('Escape');
   await page.click('#alcove-admin .admin-changes li button');
@@ -520,7 +548,7 @@ for (const [name, extra, re1, re2] of failCases) {
 
 // --- Ticket 04: Site Defaults panel ---------------------------------------------------------------------------
 const sel = n => `#alcove-admin select[name="${n}"]`;
-const optNames = ['palette', 'font', 'texture', 'surface', 'gradient', 'heroGrain'];
+const optNames = ['palette', 'font', 'surface', 'gradient', 'heroGrain', 'halation', 'heroEdge', 'filmGrain', 'cursorShadow'];
 const defaultsDraft = page => page.evaluate(() => { try { return JSON.parse(localStorage.getItem('alcove_admin_draft:defaults')); } catch { return null; } });
 const scheme = page => page.evaluate(() => document.documentElement.dataset.scheme);
 {
@@ -532,10 +560,10 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
     for (const k of Object.keys(o)) { const s = document.querySelector(`#alcove-admin select[name="${k}"]`); out[k] = s ? { got: [...s.options].map(x => x.value), want: Object.keys(o[k].values), value: s.value } : null; }
     return out;
   });
-  check('panel lists exactly the six existing toolbar options (palette, font, texture, surface, gradient, hero grain)', optNames.every(n => lists[n]) && Object.keys(lists).length === 6, JSON.stringify(Object.keys(lists)));
+  check('panel lists exactly the nine toolbar options (palette, font, surface, gradient, hero grain, hero halation, hero edge, film grain, cursor shadow)', optNames.every(n => lists[n]) && Object.keys(lists).length === 9, JSON.stringify(Object.keys(lists)));
   check('each option offers the toolbar\'s choices (shared definitions)', optNames.every(n => JSON.stringify(lists[n].got) === JSON.stringify(lists[n].want)));
   check('no Tape or Cards option', (await page.locator('#alcove-admin select[name="tape"], #alcove-admin select[name="cards"]').count()) === 0);
-  check('current saved default is selected (palette from the branch file, others built-in)', lists.palette.value === 'seth-sage-coral' && lists.gradient.value === 'full' && lists.texture.value === 'quiet' && lists.surface.value === 'metal' && lists.font.value === 'retro-display' && lists.heroGrain.value === 'off', JSON.stringify(lists));
+  check('current saved default is selected (palette from the branch file, others built-in)', lists.palette.value === 'seth-sage-coral' && lists.gradient.value === 'full' && lists.surface.value === 'metal' && lists.font.value === 'retro-display' && lists.heroGrain.value === 'off', JSON.stringify(lists));
   check('theme toolbar is not shown while unlocked', (await page.locator('#theme-dock').count()) === 0);
   check('no selection yet: Save disabled, Revert to saved disabled', await page.locator(saveBtn).isDisabled() && await page.locator('#alcove-admin .admin-defaults-revert').isDisabled());
   await page.selectOption(sel('palette'), 'seth-olive-orange-dark');
@@ -562,7 +590,7 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   const { ctx, page } = await unlocked('work.html', { gh });
   await editAndOpen(page);
   await page.selectOption(sel('palette'), 'seth-olive-orange-dark');
-  await page.selectOption(sel('texture'), 'bold');
+  await page.selectOption(sel('heroGrain'), 'strong');
   check('count adds text and defaults changes', (await page.textContent(saveBtn)).includes('3 changes'), await page.textContent(saveBtn));
   await page.click(saveBtn);
   await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
@@ -570,7 +598,7 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   const body = JSON.parse(put[0].body);
   const file = JSON.parse(Buffer.from(body.content, 'base64').toString('utf8'));
   check('one PUT to the content branch with the sha just read', put.length === 1 && body.branch === 'content' && body.sha === 'sha-branch-1');
-  check('PUT carries defaults under "defaults", changed options only, over the existing ones', JSON.stringify(file.defaults) === JSON.stringify({ palette: 'seth-olive-orange-dark', texture: 'bold' }), JSON.stringify(file.defaults));
+  check('PUT carries defaults under "defaults", changed options only, over the existing ones', JSON.stringify(file.defaults) === JSON.stringify({ palette: 'seth-olive-orange-dark', heroGrain: 'strong' }), JSON.stringify(file.defaults));
   check('PUT carries the text edit too', file.text['work.h1.listen-in'] === 'Hello There' && file.text['work.h2.recent-recordings'] === 'Kept from branch');
   check('after save: count 0, defaults draft cleared, preview kept', (await page.textContent('#alcove-admin .admin-toggle')).includes('0') && (await defaultsDraft(page)) === null && (await scheme(page)) === 'dark' && await page.locator('#alcove-admin .admin-defaults-revert').isDisabled());
   await page.selectOption(sel('palette'), 'seth-sage-coral');
@@ -579,12 +607,12 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   await page.reload();
   await page.waitForSelector('#alcove-admin');
   await openPanel(page);
-  check('editor reload applies the saved defaults and shows them selected', (await scheme(page)) === 'dark' && (await page.inputValue(sel('texture'))) === 'bold' && (await page.evaluate(() => document.documentElement.dataset.texture)) === 'bold');
+  check('editor reload applies the saved defaults and shows them selected', (await scheme(page)) === 'dark' && (await page.inputValue(sel('heroGrain'))) === 'strong' && (await page.evaluate(() => document.documentElement.dataset.heroGrain)) === 'strong');
   await ctx.close();
   // A visitor loading the committed file gets the same defaults, applied before first paint, with no toolbar or admin UI.
   const v = await open('work.html', { override: gh.file.text, probe: () => { window.__dark = []; const t = () => { const h = document.documentElement; if (document.body && h.dataset.scheme && h.dataset.scheme !== 'dark') window.__dark.push(h.dataset.scheme); requestAnimationFrame(t); }; requestAnimationFrame(t); } });
   await v.page.waitForTimeout(300);
-  check('visitor: saved defaults applied, never shown the old palette', (await scheme(v.page)) === 'dark' && (await v.page.evaluate(() => document.documentElement.dataset.texture)) === 'bold' && (await v.page.evaluate(() => window.__dark)).length === 0);
+  check('visitor: saved defaults applied, never shown the old palette', (await scheme(v.page)) === 'dark' && (await v.page.evaluate(() => document.documentElement.dataset.heroGrain)) === 'strong' && (await v.page.evaluate(() => window.__dark)).length === 0);
   check('visitor: still no toolbar or admin panel', (await v.page.locator('#theme-dock, #alcove-admin').count()) === 0);
   await v.ctx.close();
 }
@@ -617,7 +645,7 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   });
   check('phone: theme toolbar is gone, so it cannot overlap the panel or tab bar', g.dock === 0, JSON.stringify(g));
   check('phone: open panel sits above the tab bar and inside the screen', g.pb <= g.nt + 0.5 && g.pt >= 0 && g.pl >= 0 && g.pr <= g.w && g.sw <= g.w, JSON.stringify(g));
-  check('phone: six selects, each a 44px tap target', g.n === 6 && g.minSel >= 44, JSON.stringify(g));
+  check('phone: nine selects, each a 44px tap target', g.n === 9 && g.minSel >= 44, JSON.stringify(g));
   const last = sel('heroGrain');
   await page.locator(last).scrollIntoViewIfNeeded();
   check('phone: last option scrolls into view and is operable', await page.locator(last).isVisible() && (await page.locator(last).boundingBox()).y + 44 <= 780);
@@ -640,7 +668,7 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
     const a = document.querySelector('#alcove-admin');
     return { tag: a.tagName, label: a.getAttribute('aria-label'), status: [...a.querySelectorAll('[role="status"]')].length, toggleName: a.querySelector('.admin-toggle').getAttribute('aria-controls'), legend: !!a.querySelector('fieldset > legend'), unlabelled: [...a.querySelectorAll('select')].filter(x => !x.closest('label')).length };
   });
-  check('panel is a labelled region, two status messages, defaults in a fieldset, every select labelled', s.tag === 'ASIDE' && !!s.label && s.status === 2 && s.legend && s.unlabelled === 0, JSON.stringify(s));
+  check('panel is a labelled region, three status messages, defaults in a fieldset, every select labelled', s.tag === 'ASIDE' && !!s.label && s.status === 3 && s.legend && s.unlabelled === 0, JSON.stringify(s));
   await page.focus('#alcove-admin .admin-toggle');
   await page.keyboard.press('Enter');
   check('keyboard: Enter on the toggle opens the panel', (await page.getAttribute('#alcove-admin .admin-toggle', 'aria-expanded')) === 'true');
@@ -654,19 +682,18 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
 }
 
 
-// --- Edit mode: any visible text, buttons and genre names ------------------------------------------------------
+// --- Edit mode: any visible text and buttons ------------------------------------------------------
 const SW = '#alcove-admin .admin-edit-switch';
 {
   const { ctx, page } = await unlocked('work.html', { edit: false });
   check('edit switch is a labelled switch, off by default', (await page.getAttribute(SW, 'role')) === 'switch' && (await page.getAttribute(SW, 'aria-checked')) === 'false' && (await page.textContent(SW)).trim() === 'Edit mode: off');
   check('off: nothing is outlined, editable or a tab stop', (await page.locator('[contenteditable], [data-admin-edit]').count()) === 0 && (await page.$$eval('[data-edit-key]', els => els.every(e => !e.hasAttribute('tabindex')))));
-  // site behaves normally: genre filter, Play Preview, nav
-  await page.click('.filter-pill[data-genre="punk"]');
-  check('off: genre filter works', (await page.$$eval('.track-row', r => r.filter(x => getComputedStyle(x).display !== 'none').length)) === 1);
-  await page.click('.filter-pill[data-genre="all"]');
-  await page.click('.track-row[data-genre="indie"] .play-btn');
-  check('off: Play Preview button runs its action (shows Pause)', (await page.textContent('.track-row[data-genre="indie"] .play-btn')).includes('Pause') && (await page.getAttribute('.track-row[data-genre="indie"] .play-btn', 'data-playing')) === 'true');
-  await page.click('.track-row[data-genre="indie"] .play-btn');
+  // site behaves normally: the Crate plays, nav links navigate; genres are retired
+  check('off: no genre tabs and no song editor', (await page.locator('.filter-pill, [data-genre], .sleeve-genre, .admin-songs:visible').count()) === 0);
+  await page.click('.sleeve[data-src*="track-1"]');
+  await page.waitForFunction(() => document.querySelector('.record-player').dataset.playing === 'true', null, { timeout: 4000 }); // the arm swings in first
+  check('off: clicking a sleeve runs its action (loads the record and plays)', (await page.getAttribute('.sleeve[data-src*="track-1"]', 'aria-pressed')) === 'true' && (await page.getAttribute('.record-player', 'data-playing')) === 'true');
+  await page.click('.sleeve[data-src*="track-1"]');
   await page.click('.site-header .nav-links a[data-edit-key="site.nav.about"]');
   await page.waitForURL(/about\.html/);
   check('off: nav link still navigates', true);
@@ -684,53 +711,28 @@ const SW = '#alcove-admin .admin-edit-switch';
 }
 {
   const { ctx, page } = await unlocked('work.html');
-  // on: clicking a button's text edits instead of running the action
-  await page.click('.track-row[data-genre="indie"] .play-label');
-  check('on: clicking Play Preview text does not play', (await page.getAttribute('.track-row[data-genre="indie"] .play-btn', 'data-playing')) !== 'true' && (await page.evaluate(() => document.activeElement.matches('.play-label'))));
-  await page.click('.filter-pill[data-genre="punk"]');
-  check('on: clicking a genre tab edits instead of filtering', (await page.$$eval('.track-row', r => r.filter(x => getComputedStyle(x).display !== 'none').length)) === 4);
+  // on: song titles are not text keys (the songs list owns them); the Crate still works
+  check('on: sleeve titles are not text-editable keys (songs are edited in the Songs list)', (await page.locator('.sleeve [data-edit-key], .sleeve [contenteditable]').count()) === 0);
   const url = page.url();
   await page.click('.site-header .nav-links a[data-edit-key="site.nav.about"]');
   await page.waitForTimeout(500);
   check('on: clicking a nav label does not navigate', page.url() === url);
-  const pad = await page.$eval('.track-row[data-genre="indie"] .play-btn', b => { const r = b.getBoundingClientRect(); return [r.left + 3, r.top + r.height / 2]; });
-  await page.mouse.click(pad[0], pad[1]);
-  check('on: clicking the button padding focuses its text, still no action', (await page.getAttribute('.track-row[data-genre="indie"] .play-btn', 'data-playing')) !== 'true');
   check('on: the A/B slide (no text of its own) keeps working', await (async () => { await page.click('.ab-slide'); return (await page.getAttribute('.ab-slide', 'aria-checked')) === 'true'; })());
   check('on: A/B slide labels are not inside aria-hidden while editable', (await page.locator('.ab-slide-labels[aria-hidden="true"]').count()) === 0);
   check('A/B switch name comes from visible text, not a copied aria-label', (await page.getAttribute('.ab-slide', 'aria-label')) === null && (await page.getAttribute('.ab-slide', 'aria-labelledby')) === 'ab-master-name');
   await ctx.close();
 }
 {
-  // Rename a song and a genre tab; Save PUT carries the keys; reload shows them; filter still keys off data-genre.
+  // Text edits on Work still save under their own keys alongside songs (songs have their own tests below).
   const gh = { file: { sha: 's0', text: JSON.stringify({ version: 1, text: {}, defaults: {} }) } };
   const { ctx, page } = await unlocked('work.html', { gh });
-  const TITLE = '.track-row[data-genre="pop"] strong', TAB = '.filter-pill[data-genre="pop"]';
-  await replaceText(page, TITLE, 'My Bedroom Banger'); await page.keyboard.press('Escape');
-  await replaceText(page, TAB, 'Dream Pop'); await page.keyboard.press('Escape');
   await replaceText(page, '.ab-strip[data-edit-key="work.ab.mic.name"]', 'Microphone'); await page.keyboard.press('Escape');
   await openPanel(page);
   await page.click(saveBtn);
   await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
   const sent = JSON.parse(Buffer.from(JSON.parse(puts(gh)[0].body).content, 'base64').toString('utf8'));
-  check('Save PUT carries the song title, genre label and A/B label under their own keys', sent.text['work.track.pop.title'] === 'My Bedroom Banger' && sent.text['work.tab.pop'] === 'Dream Pop' && sent.text['work.ab.mic.name'] === 'Microphone' && Object.keys(sent.text).length === 3, JSON.stringify(sent.text));
-  await page.click(SW); // edit off, so the tab is an ordinary filter again
-  await page.click('#alcove-admin .admin-toggle');
-  await page.evaluate(sel => document.querySelector(sel).scrollIntoView({ block: 'center' }), TAB);
-  await page.click(TAB);
-  check('after renaming, the renamed genre tab still filters by data-genre', (await page.$$eval('.track-row', r => r.filter(x => getComputedStyle(x).display !== 'none').map(x => x.dataset.genre))).join() === 'pop');
-  await page.click('.filter-pill[data-genre="all"]');
-  await page.evaluate(() => sessionStorage.setItem('alcove_admin_edit', '0'));
+  check('Save PUT carries the A/B label under its own key and no song data when songs are untouched', sent.text['work.ab.mic.name'] === 'Microphone' && Object.keys(sent.text).length === 1 && !('songs' in sent), JSON.stringify(sent));
   await ctx.close();
-  // Fresh visitor sees the saved wording and the filter works
-  const v = await open('work.html', { override: JSON.stringify(sent) });
-  check('visitor reload shows the renamed title and tab', (await v.page.textContent(TITLE)) === 'My Bedroom Banger' && (await v.page.textContent(TAB)) === 'Dream Pop');
-  await v.page.click(TAB);
-  check('visitor: renamed tab filters to its tracks', (await v.page.$$eval('.track-row', r => r.filter(x => getComputedStyle(x).display !== 'none').length)) === 1);
-  await v.page.click('.track-row[data-genre="pop"] .play-btn');
-  await v.page.waitForTimeout(200);
-  check('visitor: deck names the renamed song when playing', /My Bedroom Banger/.test(await v.page.textContent('.audio-widget .deck-label')));
-  await v.ctx.close();
 }
 {
   const { ctx, page } = await unlocked('index.html');
@@ -743,6 +745,962 @@ const SW = '#alcove-admin .admin-edit-switch';
   await c.ctx.close();
 }
 
+// --- Admin media, ticket 01: replace photos end-to-end ------------------------------------------------------
+const PORTRAIT = 'about.photo.portrait', HERO = 'index.photo.hero';
+const input = key => `input.admin-replace-input[data-for="${key}"]`;
+const imgOf = key => `[data-media-slot="${key}"]`;
+const photo = await fixture(3000, 1500);
+const jpegFile = { name: '../../Seth Portrait!!.JPG', mimeType: 'image/jpeg', buffer: photo };
+const fileCalls = gh => puts(gh).filter(c => c.path.startsWith('/contents/images/'));
+const contentPuts = gh => puts(gh).filter(c => c.path === '/contents/content.json');
+const mediaErr = '#alcove-admin .admin-media-error';
+{
+  // every photo has a stable, unique key; the booking page has none
+  for (const [p, n] of [['index.html', 11], ['work.html', 6], ['about.html', 4]]) {
+    const { ctx, page } = await open(p);
+    const keys = await page.$$eval('[data-media-slot]', e => e.map(x => x.dataset.mediaSlot));
+    check(`${p}: ${n} photo Media slots with unique keys`, keys.length === n && new Set(keys).size === n && keys.every(k => k.startsWith(p.replace('.html', '') + '.photo.')), JSON.stringify(keys));
+    await ctx.close();
+  }
+  const c = await open('contact.html', { token: TOKEN, edit: true }); await c.page.waitForSelector('#alcove-admin');
+  check('contact: no Media slots, no Replace controls (booking form untouched)', (await c.page.locator('[data-media-slot], .admin-replace, input.admin-replace-input').count()) === 0);
+  await c.ctx.close();
+}
+{
+  // Replace controls follow Edit mode
+  const off = await open('about.html', { token: TOKEN, edit: false }); await off.page.waitForSelector('#alcove-admin');
+  check('Edit mode off: no Replace controls', (await off.page.locator('.admin-replace').count()) === 0);
+  await off.page.click('#alcove-admin .admin-edit-switch');
+  check('Edit mode on: a labelled Replace button on every photo slot', (await off.page.locator('button.admin-replace').count()) === 4 && (await off.page.$$eval('button.admin-replace', b => b.every(x => /replace/i.test(x.getAttribute('aria-label') || x.textContent)))));
+  await off.page.click('#alcove-admin .admin-edit-switch');
+  check('Edit mode switched off again removes the controls', (await off.page.locator('.admin-replace').count()) === 0);
+  await off.ctx.close();
+  const vis = await open('about.html');
+  check('visitor: no Replace controls', (await vis.page.locator('.admin-replace').count()) === 0);
+  await vis.ctx.close();
+  const ph = await unlocked('about.html', { width: 375, height: 800 });
+  check('phone: Replace is a 44px tap target', (await ph.page.$$eval('button.admin-replace', b => b.every(x => x.getBoundingClientRect().height >= 44 && x.getBoundingClientRect().width >= 44))));
+  await ph.ctx.close();
+  const kb = await unlocked('about.html');
+  await kb.page.waitForSelector('button.admin-replace');
+  await kb.page.focus('button.admin-replace');
+  const chooser = kb.page.waitForEvent('filechooser', { timeout: 3000 });
+  await kb.page.keyboard.press('Enter');
+  check('Replace opens the file chooser from the keyboard', !!(await chooser.catch(() => null)));
+  await kb.ctx.close();
+}
+{
+  // stage -> preview -> save order -> reload
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page, errors, allReqs } = await unlocked('about.html', { gh });
+  const before = await page.getAttribute(imgOf(PORTRAIT), 'src');
+  const alt = await page.getAttribute(imgOf(PORTRAIT), 'alt');
+  await page.setInputFiles(input(PORTRAIT), jpegFile);
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:') && document.querySelector(s).complete, imgOf(PORTRAIT));
+  const nat = await page.$eval(imgOf(PORTRAIT), i => [i.naturalWidth, i.naturalHeight]);
+  check('photo is previewed in place, shrunk to 2000px on the long edge', nat[0] === 2000 && nat[1] === 1000, JSON.stringify(nat));
+  check('alt text is kept', (await page.getAttribute(imgOf(PORTRAIT), 'alt')) === alt);
+  check('staged photo counts as a change', (await page.textContent(saveBtn)).includes('1 change') && fileCalls(gh).length === 0 && gh.calls.every(c => c.method === 'GET' || c.method === 'OPTIONS'));
+  await openPanel(page);
+  check('panel lists the staged photo', (await page.locator('#alcove-admin .admin-changes li').count()) === 1);
+  await page.click('#alcove-admin .admin-changes li button');
+  check('revert restores the authored photo and clears the count', (await page.getAttribute(imgOf(PORTRAIT), 'src')) === before && (await page.textContent(saveBtn)).trim() === 'Save');
+  await page.setInputFiles(input(PORTRAIT), jpegFile);
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:'), imgOf(PORTRAIT));
+  await replaceText(page, H1SEL.replace('work.h1.listen-in', 'about.h1.about-alcove'), 'About Us'); await page.keyboard.press('Escape');
+  check('text and photo drafts count together', (await page.textContent(saveBtn)).includes('2 changes'));
+  await page.click(saveBtn);
+  await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
+  const order = gh.calls.filter(c => c.method === 'PUT').map(c => c.path);
+  const imgPath = order[0];
+  check('Save sends the file PUT first, then the content.json PUT', order.length === 2 && /^\/contents\/images\/seth-portrait-[0-9a-f]{8}\.jpg$/.test(imgPath) && order[1] === '/contents/content.json', JSON.stringify(order));
+  const fb = JSON.parse(fileCalls(gh)[0].body);
+  check('file PUT targets branch content', fb.branch === 'content' && typeof fb.message === 'string' && !fb.sha);
+  const d = await dims(Buffer.from(fb.content, 'base64'));
+  check('uploaded bytes are the shrunk photo (2000x1000), not the original', d[0] === 2000 && d[1] === 1000, JSON.stringify(d));
+  const file = JSON.parse(Buffer.from(JSON.parse(contentPuts(gh)[0].body).content, 'base64').toString('utf8'));
+  const rel = imgPath.replace('/contents/', '');
+  check('content.json maps the slot key to the new repo path, keeping text', file.media && file.media[PORTRAIT] === rel && file.text['about.h1.about-alcove'] === 'About Us' && file.text['work.h1.listen-in'] === 'Branch Title', JSON.stringify(file));
+  check('save clears the staged count', (await page.textContent(saveBtn)).trim() === 'Save' && (await page.getAttribute(imgOf(PORTRAIT), 'src')) !== before);
+  check('token goes only to api.github.com', allReqs.every(r => !r.auth || new URL(r.url).host === 'api.github.com') && allReqs.every(r => !(r.url + (r.body || '')).includes('TESTTOKEN')));
+  check('replacing a photo raises no console errors', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+  // visitor after reload: new photo applied, others untouched
+  extra['/' + rel] = gh.files[imgPath];
+  const v = await open('about.html', { override: gh.file.text });
+  await v.page.waitForFunction(s => document.querySelector(s).complete, imgOf(PORTRAIT));
+  check('visitor sees the new photo in the slot', (await v.page.$eval(imgOf(PORTRAIT), i => i.getAttribute('src'))) === rel && (await v.page.$eval(imgOf(PORTRAIT), i => i.naturalWidth)) === 2000);
+  check('other photos keep their authored files', (await v.page.$$eval('[data-media-slot]:not([data-media-slot="about.photo.portrait"])', e => e.every(i => /studio-/.test(i.getAttribute('src'))))));
+  check('replaced portrait is no longer marked as a placeholder slot', (await v.page.locator('.photo-slot').count()) === 0);
+  check('visitor reload raises no console errors', v.errors.length === 0, v.errors.join(' | '));
+  await v.ctx.close();
+  // the admin reloading sees it too (from the branch file)
+  const a = await unlocked('about.html', { gh: { file: gh.file } });
+  check('editor reload shows the saved photo', (await a.page.$eval(imgOf(PORTRAIT), i => i.getAttribute('src'))) === rel);
+  await a.ctx.close();
+  delete extra['/' + rel];
+}
+{
+  // bad media entries fall back to the authored photo
+  const orig = 'images/portrait-placeholder.svg';
+  for (const [label, media] of [
+    ['path traversal', { [PORTRAIT]: '../secret.jpg' }], ['absolute URL', { [PORTRAIT]: 'https://evil.example/x.jpg' }], ['javascript url', { [PORTRAIT]: 'javascript:alert(1)' }],
+    ['non-string', { [PORTRAIT]: 5 }], ['media is an array', [PORTRAIT]], ['file not found on the server', { [PORTRAIT]: 'images/gone-12345678.jpg' }], ['unknown slot', { 'nope.photo.x': 'images/x-12345678.jpg' }]]) {
+    const { ctx, page, errors } = await open('about.html', { override: JSON.stringify({ version: 1, text: {}, defaults: {}, media }) });
+    await page.waitForTimeout(250);
+    const src = await page.getAttribute(imgOf(PORTRAIT), 'src');
+    check(`bad media (${label}): authored photo stays`, src === orig, src);
+    check(`bad media (${label}): page visible`, (await page.evaluate(() => getComputedStyle(document.body).visibility)) === 'visible');
+    await ctx.close();
+  }
+}
+{
+  // hero photo is a CSS background: the slot gets the file through the loader / admin, not inline markup
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page } = await unlocked('index.html', { gh });
+  check('hero slot has a Replace control', (await page.locator('button.admin-replace[data-for="' + HERO + '"]').count()) === 1);
+  await page.setInputFiles(input(HERO), { name: 'hero.jpg', mimeType: 'image/jpeg', buffer: photo });
+  await page.waitForFunction(s => getComputedStyle(document.querySelector(s)).backgroundImage.includes('blob:'), imgOf(HERO));
+  check('hero preview shows the new photo as its background', true);
+  await openPanel(page); await page.click(saveBtn);
+  await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
+  const rel = JSON.parse(Buffer.from(JSON.parse(contentPuts(gh)[0].body).content, 'base64').toString('utf8')).media[HERO];
+  check('hero saved under images/ with a slug+hash name', /^images\/hero-[0-9a-f]{8}\.jpg$/.test(rel), rel);
+  await ctx.close();
+  extra['/' + rel] = gh.files['/contents/' + rel];
+  const v = await open('index.html', { override: gh.file.text });
+  await v.page.waitForTimeout(300);
+  check('visitor: hero background is the saved file', (await v.page.$eval(imgOf(HERO), e => getComputedStyle(e).backgroundImage)).includes(rel));
+  check('visitor: hero has no inline style attribute markup beyond the applied property', (await v.page.$eval(imgOf(HERO), e => e.getAttribute('style') || '')).length < 200);
+  await v.ctx.close();
+  delete extra['/' + rel];
+}
+{
+  // rejections: no staging, no request
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page } = await unlocked('about.html', { gh });
+  const tmp = await mkdtemp(join(tmpdir(), 'alcove-')), hugePath = join(tmp, 'huge.jpg');
+  const cap = await page.evaluate(() => window.AlcoveAdmin && window.AlcoveAdmin.MAX_MEDIA_BYTES);
+  check('size cap is one exported constant of 90 MB', cap === 90 * 1024 * 1024, String(cap));
+  await writeFile(hugePath, ''); await truncate(hugePath, cap + 1);
+  const before = await page.getAttribute(imgOf(PORTRAIT), 'src');
+  const bad = [
+    ['over the size cap', hugePath, /too large|90 ?MB/i],
+    ['wrong type (text)', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') }, /photo|image|type/i],
+    ['wrong type (audio)', { name: 'song.mp3', mimeType: 'audio/mpeg', buffer: Buffer.alloc(100) }, /photo|image|type/i],
+    ['claims to be a photo but is not', { name: 'fake.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('not really a jpeg') }, /read|open|photo|image/i],
+  ];
+  for (const [label, f, re] of bad) {
+    await page.setInputFiles(input(PORTRAIT), f);
+    await page.waitForFunction(s => (document.querySelector(s)?.textContent || '').length > 0, mediaErr);
+    const msg = await page.textContent(mediaErr);
+    check(`${label}: clear message`, re.test(msg), msg);
+    check(`${label}: nothing staged, photo unchanged, no request`, (await page.getAttribute(imgOf(PORTRAIT), 'src')) === before && (await page.textContent(saveBtn)).trim() === 'Save' && gh.calls.every(c => c.method === 'GET'));
+    await page.setInputFiles(input(PORTRAIT), []);
+  }
+  await page.setInputFiles(input(PORTRAIT), jpegFile);
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:'), imgOf(PORTRAIT));
+  await rm(tmp, { recursive: true, force: true });
+  check('a good photo after a rejection clears the error', (await page.textContent(mediaErr)) === '');
+  await ctx.close();
+}
+{
+  // reload keeps the staged photo (IndexedDB) and warns before leaving
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page, dialogs } = await unlocked('about.html', { gh });
+  await page.setInputFiles(input(PORTRAIT), jpegFile);
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:'), imgOf(PORTRAIT));
+  await page.reload();
+  await page.waitForSelector('#alcove-admin');
+  check('beforeunload warning while a photo is staged', dialogs.includes('beforeunload'), JSON.stringify(dialogs));
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:'), imgOf(PORTRAIT), { timeout: 4000 }).catch(() => {});
+  check('staged photo survives a reload and still counts', (await page.getAttribute(imgOf(PORTRAIT), 'src')).startsWith('blob:') && (await page.textContent(saveBtn)).includes('1 change'));
+  await openPanel(page); await page.click(saveBtn); await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
+  check('a restored photo saves normally', fileCalls(gh).length === 1 && contentPuts(gh).length === 1);
+  await page.reload(); await page.waitForSelector('#alcove-admin');
+  check('after Save the staged copy is gone', (await page.textContent(saveBtn)).trim() === 'Save');
+  await ctx.close();
+}
+{
+  // no IndexedDB: still stages in memory, tells the editor, and saves
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page } = await unlocked('about.html', { gh, init: () => { Object.defineProperty(window, 'indexedDB', { value: { open() { throw new Error('blocked'); } } }); } });
+  await page.setInputFiles(input(PORTRAIT), jpegFile);
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:'), imgOf(PORTRAIT));
+  await openPanel(page);
+  check('IndexedDB unavailable: editor is told to re-pick after a reload', /reload|again|re-?pick/i.test(await page.textContent('#alcove-admin .admin-media-warning')));
+  check('the media warning and error are live regions', (await page.getAttribute('#alcove-admin .admin-media-warning', 'role')) === 'status' && (await page.getAttribute('#alcove-admin .admin-media-error', 'role')) === 'alert');
+  await page.click(saveBtn); await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
+  check('IndexedDB unavailable: Save still works', fileCalls(gh).length === 1 && contentPuts(gh).length === 1);
+  await ctx.close();
+}
+{
+  // a failed file upload stops Save: content.json never written, file named, draft kept
+  const gh = { file: { ...BRANCH_FILE }, failFile: 500 };
+  const { ctx, page } = await unlocked('about.html', { gh });
+  await page.setInputFiles(input(PORTRAIT), jpegFile);
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:'), imgOf(PORTRAIT));
+  await openPanel(page); await page.click(saveBtn);
+  await page.waitForFunction(s => /could not|error|failed/i.test(document.querySelector(s)?.textContent || ''), note);
+  const msg = await page.textContent(note);
+  check('failed upload: message names the file', /seth-portrait-[0-9a-f]{8}\.jpg/.test(msg), msg);
+  check('failed upload: content.json is not written', contentPuts(gh).length === 0);
+  check('failed upload: photo still staged and Save usable', (await page.textContent(saveBtn)).includes('1 change') && !(await page.locator(saveBtn).isDisabled()));
+  gh.failFile = 0;
+  await page.click(saveBtn); await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
+  check('retry after a failed upload succeeds', fileCalls(gh).length >= 1 && contentPuts(gh).length === 1);
+  await ctx.close();
+}
+{
+  // conflict on a staged slot keeps the draft and writes nothing
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page } = await unlocked('about.html', { gh });
+  await page.setInputFiles(input(PORTRAIT), jpegFile);
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:'), imgOf(PORTRAIT));
+  gh.file = { sha: 'sha-branch-2', text: JSON.stringify({ version: 1, text: {}, defaults: {}, media: { [PORTRAIT]: 'images/someone-else-12345678.jpg' } }) };
+  await openPanel(page); await page.click(saveBtn);
+  await page.waitForSelector(note + ' button');
+  check('conflict on a staged slot: nothing uploaded, message offers reload, draft kept', puts(gh).length === 0 && /changed/i.test(await page.textContent(note)) && (await page.textContent(saveBtn)).includes('1 change'));
+  await ctx.close();
+}
+{
+  // another slot changed on the branch is not a conflict: merge media maps
+  const gh = { file: { sha: 'sha-m1', text: JSON.stringify({ version: 1, text: {}, defaults: {}, media: { 'about.photo.the-piano-and-desk-area': 'images/piano-aaaaaaaa.jpg' } }) } };
+  const { ctx, page } = await unlocked('about.html', { gh });
+  await page.setInputFiles(input(PORTRAIT), jpegFile);
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:'), imgOf(PORTRAIT));
+  await openPanel(page); await page.click(saveBtn);
+  await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
+  const media = JSON.parse(Buffer.from(JSON.parse(contentPuts(gh)[0].body).content, 'base64').toString('utf8')).media;
+  check('saving keeps media entries for other slots', media['about.photo.the-piano-and-desk-area'] === 'images/piano-aaaaaaaa.jpg' && !!media[PORTRAIT], JSON.stringify(media));
+  await ctx.close();
+}
+{
+  // PNG keeps its type; SVG passes through; small photos are not enlarged
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page } = await unlocked('about.html', { gh });
+  await page.setInputFiles(input(PORTRAIT), { name: 'logo.png', mimeType: 'image/png', buffer: await fixture(400, 300, 'image/png') });
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:') && document.querySelector(s).complete, imgOf(PORTRAIT));
+  check('small photo is not enlarged', JSON.stringify(await page.$eval(imgOf(PORTRAIT), i => [i.naturalWidth, i.naturalHeight])) === '[400,300]');
+  await openPanel(page); await page.click(saveBtn); await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
+  check('PNG stays a .png', /^\/contents\/images\/logo-[0-9a-f]{8}\.png$/.test(fileCalls(gh)[0].path));
+  await ctx.close();
+}
+
+// --- Admin media, ticket 02: replace audio and video slots ---------------------------------------------------
+const VIDEO = 'work.video.session', POSTER = 'work.video.poster', MEMO = 'work.ab.memo', MASTER = 'work.ab.master';
+const clipEl = k => `[data-media-clip="${k}"]`;
+const wavBytes = (seconds, rate = 8000, freq = 440) => {
+  const n = Math.round(seconds * rate), b = Buffer.alloc(44 + n);
+  b.write('RIFF', 0); b.writeUInt32LE(36 + n, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22);
+  b.writeUInt32LE(rate, 24); b.writeUInt32LE(rate, 28); b.writeUInt16LE(1, 32); b.writeUInt16LE(8, 34); b.write('data', 36); b.writeUInt32LE(n, 40);
+  for (let i = 0; i < n; i++) b[44 + i] = 128 + Math.round(100 * Math.sin(2 * Math.PI * freq * i / rate));
+  return b;
+};
+const memoWav = wavBytes(1.0, 8000, 300), masterWav = wavBytes(1.5, 8000, 600);
+const memoFile = { name: 'My Rough Memo!!.WAV', mimeType: 'audio/wav', buffer: memoWav };
+const masterFile = { name: 'final-mix.wav', mimeType: 'audio/x-wav', buffer: masterWav };
+const videoBytes = await readFile(join(root, 'media', 'placeholder-session.webm'));
+const videoFile = { name: 'Session Tour.webm', mimeType: 'video/webm', buffer: videoBytes };
+const mediaFileCalls = gh => puts(gh).filter(c => c.path.startsWith('/contents/media/'));
+const savedContent = gh => JSON.parse(Buffer.from(JSON.parse(contentPuts(gh).at(-1).body).content, 'base64').toString('utf8'));
+const saveDone = page => page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
+const deckReady = (page, k) => page.waitForFunction(s => { const a = document.querySelector(s); return a.src.startsWith('blob:') && a.readyState >= 1; }, clipEl(k));
+{
+  // slots exist on Work with stable unique keys; other pages have none
+  const { ctx, page } = await open('work.html');
+  const clips = await page.$$eval('[data-media-clip]', e => e.map(x => [x.dataset.mediaClip, x.tagName]));
+  const posters = await page.$$eval('[data-media-poster]', e => e.map(x => [x.dataset.mediaPoster, x.tagName]));
+  check('work: session video, A/B memo and A/B master are clip slots', JSON.stringify(clips.sort()) === JSON.stringify([[MASTER, 'AUDIO'], [MEMO, 'AUDIO'], [VIDEO, 'VIDEO']].sort()), JSON.stringify(clips));
+  check('work: video poster is its own slot', JSON.stringify(posters) === JSON.stringify([[POSTER, 'VIDEO']]), JSON.stringify(posters));
+  check('work: the six photo slots are unchanged', (await page.locator('[data-media-slot]').count()) === 6);
+  await ctx.close();
+  for (const p of ['index.html', 'about.html', 'contact.html']) {
+    const o = await open(p);
+    check(`${p}: no clip slots`, (await o.page.locator('[data-media-clip], [data-media-poster]').count()) === 0);
+    await o.ctx.close();
+  }
+}
+{
+  // Replace controls follow Edit mode; labelled; 44px on phones
+  const off = await open('work.html', { token: TOKEN, edit: false }); await off.page.waitForSelector('#alcove-admin');
+  check('Edit mode off: no clip Replace controls', (await off.page.locator('input.admin-replace-input[data-for^="work.video"], input.admin-replace-input[data-for^="work.ab"]').count()) === 0);
+  await off.page.click('#alcove-admin .admin-edit-switch');
+  const labels = {};
+  for (const k of [VIDEO, POSTER, MEMO, MASTER]) labels[k] = await off.page.getAttribute(`button.admin-replace[data-for="${k}"]`, 'aria-label');
+  check('Edit mode on: a labelled Replace button for video, poster, memo and master', [VIDEO, POSTER, MEMO, MASTER].every(k => /replace/i.test(labels[k] || '')) && new Set(Object.values(labels)).size === 4, JSON.stringify(labels));
+  check('clip file inputs accept only their types', /mp4/.test(await off.page.getAttribute(input(VIDEO), 'accept')) && !/audio/.test(await off.page.getAttribute(input(VIDEO), 'accept')) && /mp3|mpeg/.test(await off.page.getAttribute(input(MEMO), 'accept')) && !/video\/mp4/.test(await off.page.getAttribute(input(MEMO), 'accept')) && /image/.test(await off.page.getAttribute(input(POSTER), 'accept')));
+  await off.page.click('#alcove-admin .admin-edit-switch');
+  check('Edit mode switched off removes clip controls', (await off.page.locator('.admin-replace').count()) === 0);
+  await off.ctx.close();
+  const ph = await unlocked('work.html', { width: 375, height: 800 });
+  check('phone: clip Replace buttons are 44px targets', (await ph.page.$$eval('button.admin-replace[data-for^="work.video"], button.admin-replace[data-for^="work.ab"]', b => b.length === 4 && b.every(x => x.getBoundingClientRect().height >= 44 && x.getBoundingClientRect().width >= 44))));
+  await ph.ctx.close();
+}
+{
+  // A/B memo and master are independent; previews play before Save; Save order; reload; visitor
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page, errors, allReqs } = await unlocked('work.html', { gh });
+  const masterBefore = await page.getAttribute(clipEl(MASTER), 'data-src');
+  await page.evaluate(() => document.querySelector('.ab-compare').scrollIntoView());
+  await deckReady(page, MEMO); await deckReady(page, MASTER);
+  await page.setInputFiles(input(MEMO), memoFile);
+  await page.waitForFunction(s => document.querySelector(s).src.startsWith('blob:') && document.querySelector(s).duration > 0.9 && document.querySelector(s).duration < 1.1, clipEl(MEMO), { timeout: 5000 });
+  check('staged memo previews in the deck (its own 1.0s clip loaded)', true);
+  check('master is untouched by replacing the memo', (await page.getAttribute(clipEl(MASTER), 'data-src')) === masterBefore && (await page.evaluate(s => document.querySelector(s).duration, clipEl(MASTER))) > 5);
+  check('staged clip counts as a change; no request yet', (await page.textContent(saveBtn)).includes('1 change') && mediaFileCalls(gh).length === 0 && gh.calls.every(c => c.method === 'GET' || c.method === 'OPTIONS'));
+  await page.click('.ab-play');
+  await page.waitForFunction(s => document.querySelector(s).currentTime > 0.2, clipEl(MEMO), { timeout: 5000 });
+  check('the staged memo plays in place before Save', true);
+  await page.click('.ab-play');
+  await openPanel(page);
+  check('panel lists the staged clip by name of slot', /memo/i.test(await page.textContent('#alcove-admin .admin-changes li')));
+  await page.setInputFiles(input(MASTER), masterFile);
+  await page.waitForFunction(s => { const a = document.querySelector(s); return a.src.startsWith('blob:') && a.duration > 1.4 && a.duration < 1.6; }, clipEl(MASTER), { timeout: 5000 });
+  check('master is replaced independently and previews', (await page.textContent(saveBtn)).includes('2 changes'));
+  // switch keeps the playhead with replaced clips
+  await page.evaluate(() => { document.querySelector('.ab-player audio[data-version="memo"]').currentTime = 0.5; });
+  await page.click('.ab-slide');
+  const t = await page.evaluate(() => document.querySelector('.ab-player audio[data-version="master"]').currentTime);
+  check('switching with replaced clips keeps the playhead', Math.abs(t - 0.5) < 0.1, String(t));
+  await page.click('#alcove-admin .admin-changes li button');
+  check('revert drops the staged memo and restores the authored clip', (await page.textContent(saveBtn)).includes('1 change') && (await page.getAttribute(clipEl(MEMO), 'data-src')) === 'media/voice-memo-rough.wav');
+  await page.setInputFiles(input(MEMO), memoFile);
+  await page.waitForFunction(s => { const a = document.querySelector(s); return a.src.startsWith('blob:') && a.duration < 1.1; }, clipEl(MEMO), { timeout: 5000 });
+  await page.click(saveBtn);
+  await saveDone(page);
+  const fc = gh.calls.filter(c => c.method === 'PUT').map(c => c.path);
+  const mp = mediaFileCalls(gh);
+  check('Save sends both files first, content.json last', mp.length === 2 && fc.length === 3 && fc[2] === '/contents/content.json', JSON.stringify(fc));
+  check('clip names are sanitized, hashed, under media/, extension kept', mp.every(c => /^\/contents\/media\/(my-rough-memo|final-mix)-[0-9a-f]{8}\.wav$/.test(c.path)), JSON.stringify(mp.map(c => c.path)));
+  const b = JSON.parse(mp[0].body);
+  check('file PUT targets the content branch', b.branch === 'content' && typeof b.content === 'string');
+  const up = Object.entries(gh.files).filter(([p]) => p.startsWith('/contents/media/'));
+  check('uploaded bytes are the chosen clips, unchanged', up.some(([p, x]) => /my-rough/.test(p) && x.equals(memoWav)) && up.some(([p, x]) => /final-mix/.test(p) && x.equals(masterWav)));
+  const file = savedContent(gh);
+  const memoRel = file.media[MEMO], masterRel = file.media[MASTER];
+  check('content.json maps both keys to media/ paths, keeping text', /^media\/my-rough-memo-[0-9a-f]{8}\.wav$/.test(memoRel) && /^media\/final-mix-[0-9a-f]{8}\.wav$/.test(masterRel) && file.text['work.h1.listen-in'] === 'Branch Title', JSON.stringify(file));
+  check('token only to api.github.com; no console errors', allReqs.every(r => !r.auth || new URL(r.url).host === 'api.github.com') && errors.length === 0, errors.join(' | '));
+  await ctx.close();
+  // visitor: the deck loads and plays the saved clips
+  extra['/' + memoRel] = memoWav; extra['/' + masterRel] = masterWav;
+  const v = await open('work.html', { override: gh.file.text });
+  check('visitor: deck clips point at the saved files', (await v.page.getAttribute(clipEl(MEMO), 'data-src')) === memoRel && (await v.page.getAttribute(clipEl(MASTER), 'data-src')) === masterRel);
+  await v.page.evaluate(() => document.querySelector('.ab-compare').scrollIntoView());
+  await deckReady(v.page, MEMO); await deckReady(v.page, MASTER);
+  check('visitor: replaced clips load whole as blobs and are the new lengths', (await v.page.evaluate(() => [...document.querySelectorAll('.ab-player audio')].map(a => Math.round(a.duration * 10) / 10))).join() === '1,1.5');
+  await v.page.click('.ab-play');
+  await v.page.waitForFunction(() => document.querySelector('.ab-player audio[data-version="memo"]').currentTime > 0.2);
+  await v.page.click('.ab-slide');
+  await v.page.waitForFunction(() => { const m = document.querySelector('.ab-player audio[data-version="master"]'); return !m.paused && m.currentTime > 0.3; });
+  check('visitor: deck plays and switches with the replaced clips', true);
+  check('visitor: no console errors', v.errors.length === 0, v.errors.join(' | '));
+  await v.ctx.close();
+  // editor reload shows them as well
+  const a = await unlocked('work.html', { gh: { file: gh.file } });
+  check('editor reload: deck clips are the saved files', (await a.page.getAttribute(clipEl(MEMO), 'data-src')) === memoRel);
+  await a.ctx.close();
+  delete extra['/' + memoRel]; delete extra['/' + masterRel];
+}
+{
+  // session video + poster: stage, preview, Save, visitor
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page, errors } = await unlocked('work.html', { gh });
+  const posterBefore = await page.getAttribute(clipEl(VIDEO), 'poster');
+  await page.setInputFiles(input(VIDEO), videoFile);
+  await page.waitForFunction(s => { const v = document.querySelector(s); return v.src.startsWith('blob:') && v.readyState >= 1 && v.videoWidth > 0; }, clipEl(VIDEO), { timeout: 8000 });
+  check('staged video previews in place (blob source, metadata loaded)', true);
+  await page.evaluate(s => { const v = document.querySelector(s); v.muted = true; return v.play(); }, clipEl(VIDEO));
+  await page.waitForFunction(s => document.querySelector(s).currentTime > 0.2, clipEl(VIDEO), { timeout: 8000 });
+  check('staged video plays in place before Save', true);
+  await page.setInputFiles(input(POSTER), jpegFile);
+  await page.waitForFunction(s => (document.querySelector(s).getAttribute('poster') || '').startsWith('blob:'), clipEl(VIDEO));
+  check('staged poster shows in place', (await page.getAttribute(clipEl(VIDEO), 'poster')) !== posterBefore && (await page.textContent(saveBtn)).includes('2 changes'));
+  await openPanel(page);
+  check('panel lists video and poster', (await page.locator('#alcove-admin .admin-changes li').count()) === 2);
+  await page.click(saveBtn); await saveDone(page);
+  const fc = gh.calls.filter(c => c.method === 'PUT').map(c => c.path);
+  check('Save: video (media/) and poster (images/) first, content.json last', fc.length === 3 && fc[2] === '/contents/content.json' && fc.slice(0, 2).some(p => /^\/contents\/media\/session-tour-[0-9a-f]{8}\.webm$/.test(p)) && fc.slice(0, 2).some(p => /^\/contents\/images\/seth-portrait-[0-9a-f]{8}\.jpg$/.test(p)), JSON.stringify(fc));
+  const up = Object.entries(gh.files);
+  check('video uploaded unchanged; poster shrunk like a photo', up.some(([p, x]) => /session-tour/.test(p) && x.equals(videoBytes)) && (await dims(up.find(([p]) => /images/.test(p))[1])).join() === '2000,1000');
+  const file = savedContent(gh);
+  check('content.json maps video and poster keys', /^media\/session-tour-[0-9a-f]{8}\.webm$/.test(file.media[VIDEO]) && /^images\/.+\.jpg$/.test(file.media[POSTER]), JSON.stringify(file.media));
+  check('no console errors', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+  for (const [p, x] of up) extra['/' + p.replace('/contents/', '')] = x;
+  const v = await open('work.html', { override: gh.file.text });
+  check('visitor: video src and poster are the saved files', (await v.page.getAttribute(clipEl(VIDEO), 'src')) === file.media[VIDEO] && (await v.page.getAttribute(clipEl(VIDEO), 'poster')) === file.media[POSTER]);
+  await v.page.waitForFunction(s => document.querySelector(s).readyState >= 1, clipEl(VIDEO), { timeout: 8000 });
+  check('visitor: saved video loads; no console errors', v.errors.length === 0, v.errors.join(' | '));
+  await v.ctx.close();
+  for (const [p] of up) delete extra['/' + p.replace('/contents/', '')];
+}
+{
+  // big clip: uploaded intact through the chunked encoder
+  const big = Buffer.alloc(2 * 1024 * 1024 + 12345); for (let i = 0; i < big.length; i++) big[i] = (i * 31 + (i >> 8)) & 255;
+  Buffer.from(wavBytes(0.2).subarray(0, 44)).copy(big, 0);
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await page.setInputFiles(input(MEMO), { name: 'long.wav', mimeType: 'audio/wav', buffer: big });
+  await page.waitForFunction(s => document.querySelector(s).getAttribute('data-src').startsWith('blob:'), clipEl(MEMO));
+  await openPanel(page); await page.click(saveBtn); await saveDone(page);
+  const up = Object.entries(gh.files)[0];
+  check('2MB clip arrives byte-identical (chunk boundaries)', up && up[1].length === big.length && up[1].equals(big));
+  await ctx.close();
+}
+{
+  // rejections: wrong type, wrong kind, oversize: no staging and no request
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  const tmp = await mkdtemp(join(tmpdir(), 'alcove-')), hugePath = join(tmp, 'huge.wav');
+  await writeFile(hugePath, ''); await truncate(hugePath, 90 * 1024 * 1024 + 1);
+  const bad = [
+    [MEMO, 'over the size cap (audio)', hugePath, /too large|90 ?MB/i],
+    [VIDEO, 'over the size cap (video)', join(tmp, 'huge.mp4'), /too large|90 ?MB/i],
+    [MEMO, 'text file as audio', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') }, /audio|MP3|type/i],
+    [MEMO, 'photo as audio', { name: 'pic.jpg', mimeType: 'image/jpeg', buffer: Buffer.alloc(50) }, /audio|MP3|type/i],
+    [MASTER, 'mp4 video as audio', { name: 'clip.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(50) }, /audio|MP3|type/i],
+    [MASTER, 'extension lies about audio (exe)', { name: 'song.exe', mimeType: 'audio/mpeg', buffer: Buffer.alloc(50) }, /audio|MP3|type/i],
+    [VIDEO, 'mp3 as video', { name: 'song.mp3', mimeType: 'audio/mpeg', buffer: Buffer.alloc(50) }, /video|MP4|WebM|type/i],
+    [VIDEO, 'photo as video', { name: 'pic.png', mimeType: 'image/png', buffer: Buffer.alloc(50) }, /video|MP4|WebM|type/i],
+    [POSTER, 'video as poster', { name: 'clip.webm', mimeType: 'video/webm', buffer: Buffer.alloc(50) }, /photo|image|type/i],
+  ];
+  await writeFile(join(tmp, 'huge.mp4'), ''); await truncate(join(tmp, 'huge.mp4'), 90 * 1024 * 1024 + 1);
+  for (const [k, label, f, re] of bad) {
+    const before = await page.evaluate(s => document.querySelector(s).getAttribute('data-src') || document.querySelector(s).getAttribute('src') || document.querySelector(s).getAttribute('poster'), clipEl(k) + ',[data-media-poster="' + k + '"]');
+    await page.setInputFiles(input(k), f);
+    await page.waitForFunction(s => (document.querySelector(s)?.textContent || '').length > 0, mediaErr);
+    const msg = await page.textContent(mediaErr);
+    check(`${label}: clear message`, re.test(msg), msg);
+    const after = await page.evaluate(s => document.querySelector(s).getAttribute('data-src') || document.querySelector(s).getAttribute('src') || document.querySelector(s).getAttribute('poster'), clipEl(k) + ',[data-media-poster="' + k + '"]');
+    check(`${label}: nothing staged, slot unchanged, no request`, after === before && (await page.textContent(saveBtn)).trim() === 'Save' && gh.calls.every(c => c.method === 'GET'));
+    await page.setInputFiles(input(k), []);
+  }
+  await page.setInputFiles(input(MEMO), memoFile);
+  await page.waitForFunction(s => document.querySelector(s).getAttribute('data-src').startsWith('blob:'), clipEl(MEMO));
+  check('a good clip after a rejection clears the error', (await page.textContent(mediaErr)) === '');
+  await rm(tmp, { recursive: true, force: true });
+  await ctx.close();
+}
+{
+  // a failed clip upload names the file, writes no content.json, keeps the draft; retry works
+  const gh = { file: { ...BRANCH_FILE }, failFile: 500 };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await page.setInputFiles(input(MEMO), memoFile);
+  await page.waitForFunction(s => document.querySelector(s).getAttribute('data-src').startsWith('blob:'), clipEl(MEMO));
+  await openPanel(page); await page.click(saveBtn);
+  await page.waitForFunction(s => /could not|error|failed/i.test(document.querySelector(s)?.textContent || ''), note);
+  const msg = await page.textContent(note);
+  check('failed clip upload: message names the file', /my-rough-memo-[0-9a-f]{8}\.wav/.test(msg), msg);
+  check('failed clip upload: content.json not written, draft kept', contentPuts(gh).length === 0 && (await page.textContent(saveBtn)).includes('1 change'));
+  gh.failFile = 0;
+  await page.click(saveBtn); await saveDone(page);
+  check('retry after a failed clip upload succeeds', mediaFileCalls(gh).length >= 1 && contentPuts(gh).length === 1);
+  await ctx.close();
+}
+{
+  // a progress note names the file while uploading
+  const gh = { file: { ...BRANCH_FILE }, delayPut: 600 };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await page.setInputFiles(input(MASTER), masterFile);
+  await page.waitForFunction(s => document.querySelector(s).getAttribute('data-src').startsWith('blob:'), clipEl(MASTER));
+  await openPanel(page);
+  await page.evaluate(s => { window.__notes = []; new MutationObserver(() => window.__notes.push(document.querySelector(s).textContent)).observe(document.querySelector(s), { childList: true, characterData: true, subtree: true }); }, note);
+  await page.click(saveBtn);
+  await saveDone(page);
+  const seen = await page.evaluate(() => window.__notes);
+  check('upload progress names the file and its position', seen.some(t => /Uploading.*1 of 1.*final-mix-[0-9a-f]{8}\.wav/.test(t)), JSON.stringify(seen));
+  await ctx.close();
+}
+{
+  // a staged clip survives a reload (IndexedDB holds the Blob) and saves
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await page.setInputFiles(input(MEMO), memoFile);
+  await page.waitForFunction(s => document.querySelector(s).getAttribute('data-src').startsWith('blob:'), clipEl(MEMO));
+  await page.reload(); await page.waitForSelector('#alcove-admin');
+  await page.waitForFunction(s => document.querySelector(s).getAttribute('data-src').startsWith('blob:'), clipEl(MEMO), { timeout: 4000 }).catch(() => {});
+  check('staged clip survives a reload and still counts', (await page.getAttribute(clipEl(MEMO), 'data-src')).startsWith('blob:') && (await page.textContent(saveBtn)).includes('1 change'));
+  await openPanel(page); await page.click(saveBtn); await saveDone(page);
+  check('a restored clip saves normally', mediaFileCalls(gh).length === 1 && contentPuts(gh).length === 1);
+  await ctx.close();
+}
+{
+  // conflict on a staged clip slot keeps the draft and writes nothing
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await page.setInputFiles(input(MASTER), masterFile);
+  await page.waitForFunction(s => document.querySelector(s).getAttribute('data-src').startsWith('blob:'), clipEl(MASTER));
+  gh.file = { sha: 'sha-branch-2', text: JSON.stringify({ version: 1, text: {}, defaults: {}, media: { [MASTER]: 'media/someone-else-12345678.wav' } }) };
+  await openPanel(page); await page.click(saveBtn);
+  await page.waitForSelector(note + ' button');
+  check('conflict on a staged clip: nothing uploaded, draft kept', puts(gh).length === 0 && (await page.textContent(saveBtn)).includes('1 change'));
+  await ctx.close();
+}
+{
+  // loader: bad clip paths fall back to the authored files
+  const orig = { [VIDEO]: 'media/placeholder-session.webm', [MEMO]: 'media/voice-memo-rough.wav' };
+  for (const [label, media] of [
+    ['traversal', { [MEMO]: 'media/../content.json' }], ['dotdot inside name', { [MEMO]: 'media/a..b-12345678.wav' }],
+    ['external URL', { [MEMO]: 'https://evil.example/x.wav' }], ['protocol-relative', { [MEMO]: '//evil.example/x.wav' }],
+    ['disallowed extension', { [MEMO]: 'media/run-12345678.exe' }], ['wrong folder', { [MEMO]: 'images/x-12345678.wav' }],
+    ['image path in a clip slot', { [VIDEO]: 'images/x-12345678.jpg' }], ['non-string', { [MEMO]: 7 }], ['file not found', { [MEMO]: 'media/gone-12345678.wav' }]]) {
+    const { ctx, page } = await open('work.html', { override: JSON.stringify({ version: 1, text: {}, defaults: {}, media }) });
+    await page.waitForTimeout(150);
+    const m = await page.getAttribute(clipEl(MEMO), 'data-src'), vsrc = await page.getAttribute(clipEl(VIDEO), 'src');
+    check(`bad clip media (${label}): authored files stay`, vsrc === orig[VIDEO] && m === orig[MEMO] || (label === 'file not found' && m === 'media/gone-12345678.wav'), `${m} ${vsrc}`);
+    check(`bad clip media (${label}): page visible`, (await page.evaluate(() => getComputedStyle(document.body).visibility)) === 'visible');
+    await ctx.close();
+  }
+  // a missing saved clip still plays the authored one
+  const { ctx, page } = await open('work.html', { override: JSON.stringify({ version: 1, text: {}, defaults: {}, media: { [MEMO]: 'media/gone-12345678.wav' } }) });
+  await page.evaluate(() => document.querySelector('.ab-compare').scrollIntoView());
+  await deckReady(page, MEMO);
+  check('missing saved clip: deck still loads the authored memo', (await page.evaluate(s => document.querySelector(s).duration, clipEl(MEMO))) > 5);
+  await ctx.close();
+}
+
+// --- Admin media, ticket 03: Songs on Work (add, remove, rename, reorder; genres retired) -------------------------
+const AUTHORED = ['Indie Rock Demo', 'Bedroom Pop Single', 'Acoustic Folk Song', 'Alternative & Punk Track'];
+const F1 = 'media/track-1-indie.wav', F2 = 'media/track-2-bedroom-pop.wav', F3 = 'media/track-3-acoustic.wav', F4 = 'media/track-4-punk.wav';
+const withSongs = songs => JSON.stringify({ version: 1, text: {}, defaults: {}, songs });
+const crateTitles = page => page.$$eval('.sleeve .sleeve-title', t => t.map(x => x.textContent));
+const crateSrcs = page => page.$$eval('.sleeve', t => t.map(x => x.dataset.src));
+const rowTitles = page => page.$$eval('.admin-songs .admin-song .admin-song-title', t => t.map(x => x.value));
+const SG = '.admin-songs', ROW = n => `${SG} .admin-song:nth-child(${n})`;
+const songNote = page => page.textContent(`${SG} .admin-song-msg`);
+const addSong = async (page, title, file) => {
+  await page.fill(`${SG} .admin-song-new-title`, title);
+  await page.setInputFiles(`${SG} .admin-song-new-file`, file);
+  await page.click(`${SG} .admin-song-add`);
+};
+const songFile = { name: 'My New Jam!!.WAV', mimeType: 'audio/wav', buffer: wavBytes(1.0, 8000, 500) };
+const songsOf = gh => savedContent(gh).songs;
+const branchWith = (songs, sha = 'sha-songs-1') => ({ sha, text: JSON.stringify({ version: 1, text: {}, defaults: {}, ...(songs ? { songs } : {}) }) });
+{
+  // visitor: saved Songs build the Crate in the saved order; titles are text only; player and labels follow
+  const evil = '<img src=x onerror=alert(1)> Zed';
+  const { ctx, page, errors } = await open('work.html', { override: withSongs([{ title: evil, file: F3 }, { title: 'Alpha', file: F1 }]) });
+  check('saved songs replace the authored Crate, in the saved order', (await crateTitles(page)).join('|') === `${evil}|Alpha` && (await crateSrcs(page)).join() === `${F3},${F1}`, JSON.stringify(await crateTitles(page)));
+  check('song titles are text only (no markup injected)', (await page.locator('.sleeve img, .sleeve b, .sleeve-title *').count()) === 0 && (await page.evaluate(() => window.__injected)) === undefined);
+  check('the count follows the list', (await page.textContent('.rp-count')) === '1 of 2');
+  check('no genre tabs, labels or attributes', (await page.locator('.filter-pill, .filter-bar, [data-genre], .sleeve-genre').count()) === 0);
+  check('each sleeve has an accessible name from its title', (await page.getByRole('button', { name: /Alpha/ }).count()) === 1);
+  await page.click('.rp-next'); await page.waitForTimeout(100);
+  await page.click(`.sleeve[data-src="${F1}"]`);
+  await page.waitForFunction(() => document.querySelector('.record-player').dataset.playing === 'true', null, { timeout: 5000 });
+  check('the player plays the song and names it by its title', (await page.getAttribute('#audio-player', 'data-track')) === F1 && /Now playing: Alpha/.test(await page.textContent('.rp-status')) && (await page.textContent('.rp-label-text')).includes('Alpha'));
+  check('visitor: no console errors, page visible', errors.length === 0 && (await page.evaluate(() => getComputedStyle(document.body).visibility)) === 'visible', errors.join(' | '));
+  await ctx.close();
+}
+{
+  // malformed or unsafe song data falls back to the authored list, silently
+  const ok = { title: 'T', file: F1 };
+  const cases = [['not an array', 'x'], ['object', { a: 1 }], ['empty list', []], ['21 songs', Array.from({ length: 21 }, (_, i) => ({ title: 'S' + i, file: F1 }))],
+    ['item not an object', ['x']], ['null item', [null]], ['title not a string', [{ title: 7, file: F1 }]], ['empty title', [{ title: '   ', file: F1 }]], ['huge title', [{ title: 'x'.repeat(500), file: F1 }]],
+    ['traversal', [ok, { title: 'T', file: 'media/../content.json' }]], ['dotdot in name', [{ title: 'T', file: 'media/a..b-12345678.wav' }]], ['external URL', [{ title: 'T', file: 'https://evil.example/x.wav' }]],
+    ['protocol-relative', [{ title: 'T', file: '//evil.example/x.wav' }]], ['bad extension', [{ title: 'T', file: 'media/x.exe' }]], ['video extension', [{ title: 'T', file: 'media/x.mp4' }]], ['images folder', [{ title: 'T', file: 'images/x.wav' }]],
+    ['missing file', [{ title: 'T' }]], ['one bad among good', [ok, { title: 'T', file: 'media/x.php' }]]];
+  for (const [label, songs] of cases) {
+    const { ctx, page, errors } = await open('work.html', { override: JSON.stringify({ version: 1, text: {}, defaults: {}, songs }) });
+    check(`bad songs (${label}): the authored list stays`, (await crateTitles(page)).join('|') === AUTHORED.join('|') && (await page.getAttribute('.sleeve', 'data-src')) === F1 && errors.length === 0, JSON.stringify(await crateTitles(page)) + errors.join());
+    check(`bad songs (${label}): page visible`, (await page.evaluate(() => getComputedStyle(document.body).visibility)) === 'visible');
+    await ctx.close();
+  }
+  const twenty = Array.from({ length: 20 }, (_, i) => ({ title: 'Song ' + (i + 1), file: F1 }));
+  const { ctx, page } = await open('work.html', { override: withSongs(twenty) });
+  check('exactly 20 saved songs are accepted', (await page.locator('.sleeve').count()) === 20);
+  await ctx.close();
+  const e = await open('work.html', { override: withSongs([{ title: 'Edge', file: 'media/a.b_c-1.OGG'.toLowerCase() }]) });
+  check('ogg, m4a, mp3, webm audio paths are accepted', (await e.page.locator('.sleeve').count()) === 1);
+  await e.ctx.close();
+  // other pages ignore songs
+  const o = await open('about.html', { override: withSongs([{ title: 'x', file: F1 }]) });
+  check('songs in content.json do not disturb other pages', o.errors.length === 0);
+  await o.ctx.close();
+}
+{
+  // the Songs editor exists only while Edit mode is on; labelled; 44px targets on phones
+  const off = await open('work.html', { token: TOKEN, edit: false }); await off.page.waitForSelector('#alcove-admin');
+  check('Edit mode off: no Songs editor', (await off.page.locator(SG).count()) === 0);
+  await off.page.click('#alcove-admin .admin-edit-switch');
+  check('Edit mode on: the Songs editor lists the four authored songs', (await rowTitles(off.page)).join('|') === AUTHORED.join('|'));
+  const labels = await off.page.$$eval(`${SG} .admin-song button`, b => b.map(x => x.getAttribute('aria-label')));
+  check('every row has labelled Move up, Move down and Remove buttons naming the song', labels.length === 12 && labels.every(l => /^(Move up|Move down|Remove): /.test(l)) && new Set(labels).size === 12, JSON.stringify(labels));
+  check('each title input has an accessible name', (await off.page.$$eval(`${SG} .admin-song-title`, i => i.every(x => (x.getAttribute('aria-label') || '').length > 3))));
+  check('first Move up and last Move down are disabled', (await off.page.isDisabled(`${ROW(1)} .admin-song-up`)) && (await off.page.isDisabled(`${ROW(4)} .admin-song-down`)) && !(await off.page.isDisabled(`${ROW(2)} .admin-song-up`)));
+  check('the add file input only accepts audio types', /audio|mp3/.test(await off.page.getAttribute(`${SG} .admin-song-new-file`, 'accept')) && !/video\/mp4|image/.test(await off.page.getAttribute(`${SG} .admin-song-new-file`, 'accept')));
+  await off.page.click('#alcove-admin .admin-edit-switch');
+  check('Edit mode switched off removes the Songs editor again', (await off.page.locator(SG).count()) === 0);
+  await off.ctx.close();
+  const ph = await unlocked('work.html', { width: 375, height: 800 });
+  const sizes = await ph.page.$$eval(`${SG} button, ${SG} input`, b => b.filter(x => x.type !== 'file').map(x => { const r = x.getBoundingClientRect(); return [r.width, r.height]; }));
+  check('phone: up, down, remove, add and title inputs are 44px targets', sizes.length > 12 && sizes.every(([w, h]) => w >= 44 && h >= 44), JSON.stringify(sizes.filter(([w, h]) => w < 44 || h < 44)));
+  check('phone: no horizontal overflow', (await ph.page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)) <= 0);
+  await ph.ctx.close();
+}
+{
+  // rename in place: live in the Crate, counted, saved as songs only (no files), visitor sees it
+  const gh = { file: branchWith(null) };
+  const { ctx, page, errors, allReqs } = await unlocked('work.html', { gh });
+  await page.fill(`${ROW(2)} .admin-song-title`, 'My Bedroom Banger');
+  check('renaming shows in the Crate at once and names the sleeve', (await crateTitles(page)).join('|') === [AUTHORED[0], 'My Bedroom Banger', AUTHORED[2], AUTHORED[3]].join('|') && (await page.locator('.rp-crate').getByRole('button', { name: /My Bedroom Banger/ }).count()) === 1);
+  await openPanel(page);
+  check('the rename counts as one change', (await page.textContent(saveBtn)).includes('1 change') && /renamed/i.test(await page.textContent('#alcove-admin .admin-changes')));
+  await page.click(saveBtn); await saveDone(page);
+  check('Save sends only content.json (no media files)', puts(gh).length === 1 && contentPuts(gh).length === 1);
+  const file = songsOf(gh);
+  check('content.json carries the whole ordered list with the new title', JSON.stringify(file) === JSON.stringify([{ title: AUTHORED[0], file: F1 }, { title: 'My Bedroom Banger', file: F2 }, { title: AUTHORED[2], file: F3 }, { title: AUTHORED[3], file: F4 }]), JSON.stringify(file));
+  check('version stays 1', savedContent(gh).version === 1);
+  check('after Save the count is zero and the note says live in a minute or two or lists success', (await page.textContent(saveBtn)).trim() === 'Save');
+  check('token only to api.github.com; no console errors', allReqs.every(r => !r.auth || new URL(r.url).host === 'api.github.com') && errors.length === 0, errors.join(' | '));
+  const v = await open('work.html', { override: JSON.stringify(savedContent(gh)) });
+  check('visitor reload shows the renamed song', (await crateTitles(v.page))[1] === 'My Bedroom Banger');
+  await v.ctx.close();
+  await ctx.close();
+}
+{
+  // reorder with up/down buttons: live order, focus stays on the moved song's button, revert restores, Save writes the order
+  const gh = { file: branchWith(null) };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await page.click(`${ROW(3)} .admin-song-up`);
+  check('Move up reorders the list and the Crate', (await rowTitles(page)).join('|') === [AUTHORED[0], AUTHORED[2], AUTHORED[1], AUTHORED[3]].join('|') && (await crateTitles(page)).join('|') === [AUTHORED[0], AUTHORED[2], AUTHORED[1], AUTHORED[3]].join('|') && (await crateSrcs(page)).join() === [F1, F3, F2, F4].join());
+  check('focus stays on the moved song\'s Move up button', await page.evaluate(() => document.activeElement.matches('.admin-song:nth-child(2) .admin-song-up')));
+  await page.click(`${ROW(1)} .admin-song-down`);
+  check('Move down reorders too', (await rowTitles(page))[0] === AUTHORED[2] && (await rowTitles(page))[1] === AUTHORED[0]);
+  await openPanel(page);
+  check('order changes are counted', /\d change/.test(await page.textContent(saveBtn)) && /order/i.test(await page.textContent('#alcove-admin .admin-changes')));
+  const revert = page.locator('#alcove-admin .admin-changes li', { hasText: /order/i }).locator('button');
+  await revert.click();
+  check('reverting the order restores it everywhere and clears the count', (await rowTitles(page)).join('|') === AUTHORED.join('|') && (await crateTitles(page)).join('|') === AUTHORED.join('|') && (await page.textContent(saveBtn)).trim() === 'Save');
+  await page.click(`${ROW(4)} .admin-song-up`); await page.click(`${ROW(3)} .admin-song-up`); await page.click(`${ROW(2)} .admin-song-up`);
+  await page.click(saveBtn); await saveDone(page);
+  check('Save writes the new order', songsOf(gh).map(s => s.file).join() === [F4, F1, F2, F3].join(), JSON.stringify(songsOf(gh)));
+  const v = await open('work.html', { override: JSON.stringify(savedContent(gh)) });
+  check('visitor: the player uses the saved order', (await crateSrcs(v.page)).join() === [F4, F1, F2, F3].join() && (await v.page.textContent('.rp-count')) === '1 of 4');
+  await v.ctx.close();
+  await ctx.close();
+}
+{
+  // remove: gone from list and Crate; revert brings it back in place; removing the playing song resets the player; at least one stays
+  const gh = { file: branchWith(null) };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await page.click(`.sleeve[data-src="${F1}"]`);
+  await page.waitForFunction(() => document.querySelector('.record-player').dataset.playing === 'true', null, { timeout: 5000 });
+  await page.click(`${ROW(1)} .admin-song-remove`);
+  check('removing a song drops it from the list and the Crate', (await rowTitles(page)).join('|') === AUTHORED.slice(1).join('|') && (await crateTitles(page)).join('|') === AUTHORED.slice(1).join('|'));
+  check('removing the playing song stops the player and empties the platter', (await page.evaluate(() => document.getElementById('audio-player').paused)) && (await page.getAttribute('.record-player', 'data-state')) === 'empty' && (await page.textContent('.rp-status')).startsWith('Pick'));
+  await openPanel(page);
+  check('removal is counted as a change', (await page.textContent(saveBtn)).includes('1 change') && /removed/i.test(await page.textContent('#alcove-admin .admin-changes')));
+  await page.locator('#alcove-admin .admin-changes li', { hasText: /removed/i }).locator('button').click();
+  check('Revert brings the song back at its place', (await rowTitles(page)).join('|') === AUTHORED.join('|') && (await crateTitles(page)).join('|') === AUTHORED.join('|') && (await page.textContent(saveBtn)).trim() === 'Save');
+  await page.click(`${ROW(2)} .admin-song-remove`);
+  await page.click(saveBtn); await saveDone(page);
+  check('Save writes the list without it, no files uploaded or deleted', songsOf(gh).map(s => s.file).join() === [F1, F3, F4].join() && puts(gh).length === 1 && gh.calls.every(c => c.method !== 'DELETE'));
+  for (let i = 0; i < 2; i++) await page.click(`${ROW(1)} .admin-song-remove`);
+  check('the last song cannot be removed, with a reason', (await rowTitles(page)).length === 1 && (await page.isDisabled(`${ROW(1)} .admin-song-remove`)) && /at least one/i.test(await songNote(page)), await songNote(page));
+  await ctx.close();
+}
+{
+  // add: title + audio file; previewed (plays) before Save; Save uploads the audio first, then content.json
+  const gh = { file: branchWith(null) };
+  const { ctx, page, errors, allReqs } = await unlocked('work.html', { gh });
+  await addSong(page, '  My New Jam  ', songFile);
+  await page.waitForFunction(n => document.querySelectorAll('.sleeve').length === n, 5);
+  check('the new song is appended to the list and the Crate with a trimmed title', (await rowTitles(page)).at(-1) === 'My New Jam' && (await crateTitles(page)).at(-1) === 'My New Jam');
+  check('the add fields are cleared', (await page.inputValue(`${SG} .admin-song-new-title`)) === '' && (await page.textContent(`${SG} .admin-song-msg`)) === '');
+  check('the staged song previews from a blob', (await crateSrcs(page)).at(-1).startsWith('blob:'));
+  for (let i = 0; i < 4 && (await page.getAttribute('.sleeve:last-of-type', 'data-pos')) !== 'front'; i++) { await page.click('.rp-next'); await page.waitForTimeout(80); }
+  await page.waitForFunction(() => !document.querySelector('.record-player').dataset.picking);
+  await page.click('.sleeve:last-of-type');
+  await page.waitForFunction(() => document.querySelector('.record-player').dataset.playing === 'true', null, { timeout: 6000 });
+  const dur = await page.evaluate(() => document.getElementById('audio-player').duration);
+  check('the staged song plays in place before Save (its own 1s clip)', dur > 0.8 && dur < 1.3, String(dur));
+  await page.evaluate(() => document.getElementById('audio-player').pause());
+  await openPanel(page);
+  check('the staged song counts in Save', (await page.textContent(saveBtn)).includes('1 change') && /added/i.test(await page.textContent('#alcove-admin .admin-changes')));
+  await page.click(saveBtn); await saveDone(page);
+  const order = gh.calls.filter(c => c.method === 'PUT').map(c => c.path);
+  check('Save sends the audio file first, then content.json', order.length === 2 && /^\/contents\/media\/my-new-jam-[0-9a-f]{8}\.wav$/.test(order[0]) && order[1] === '/contents/content.json', JSON.stringify(order));
+  const up = Object.entries(gh.files)[0];
+  check('uploaded bytes are the chosen audio, unchanged, on the content branch', up[1].equals(songFile.buffer) && JSON.parse(mediaFileCalls(gh)[0].body).branch === 'content');
+  const list = songsOf(gh);
+  check('content.json lists all five songs, the new one last, with its saved path', list.length === 5 && list[4].title === 'My New Jam' && list[4].file === order[0].replace('/contents/', ''), JSON.stringify(list));
+  check('after Save the song is no longer pending and its sleeve keeps working', (await page.textContent(saveBtn)).trim() === 'Save');
+  check('token only to api.github.com; no console errors', allReqs.every(r => !r.auth || new URL(r.url).host === 'api.github.com') && errors.length === 0, errors.join(' | '));
+  const v = await open('work.html', { override: JSON.stringify(savedContent(gh)), gh: {} });
+  check('visitor: five sleeves, the new one last', (await crateTitles(v.page)).length === 5 && (await crateTitles(v.page)).at(-1) === 'My New Jam');
+  await v.ctx.close();
+  await ctx.close();
+}
+{
+  // add: rejected with a clear message and no request: wrong type, oversize, no title, no file, duplicate file
+  const gh = { file: branchWith(null) };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  const tmp = await mkdtemp(join(tmpdir(), 'alcove-songs-'));
+  const huge = join(tmp, 'huge.mp3'); await writeFile(huge, ''); await truncate(huge, 90 * 1024 * 1024 + 1);
+  const bad = [
+    ['a photo', 'T', { name: 'pic.png', mimeType: 'image/png', buffer: Buffer.alloc(50) }, /audio|MP3|type/i],
+    ['a video', 'T', { name: 'clip.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(50) }, /audio|MP3|type/i],
+    ['a text file', 'T', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.alloc(50) }, /audio|MP3|type/i],
+    ['an exe lying about its type', 'T', { name: 'song.exe', mimeType: 'audio/mpeg', buffer: Buffer.alloc(50) }, /audio|MP3|type/i],
+    ['over the size cap', 'T', huge, /too large|90 ?MB/i],
+    ['no title', '   ', songFile, /title/i],
+  ];
+  for (const [label, title, f, re] of bad) {
+    await addSong(page, title, f);
+    await page.waitForFunction(s => (document.querySelector(s)?.textContent || '').length > 0, `${SG} .admin-song-msg`);
+    const msg = await songNote(page);
+    check(`add rejected (${label}): clear message`, re.test(msg), msg);
+    check(`add rejected (${label}): nothing staged, list unchanged, no request`, (await rowTitles(page)).length === 4 && (await page.locator('.sleeve').count()) === 4 && (await page.textContent(saveBtn)).trim() === 'Save' && gh.calls.every(c => c.method === 'GET'));
+    await page.setInputFiles(`${SG} .admin-song-new-file`, []);
+  }
+  await page.fill(`${SG} .admin-song-new-title`, 'Only a title');
+  await page.click(`${SG} .admin-song-add`);
+  check('add with no file: asks for a file', /file|audio/i.test(await songNote(page)) && (await rowTitles(page)).length === 4, await songNote(page));
+  await addSong(page, 'Good one', songFile);
+  await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 5);
+  check('a good song after a rejection clears the message', (await songNote(page)) === '');
+  await addSong(page, 'Same file again', songFile);
+  await page.waitForFunction(s => (document.querySelector(s)?.textContent || '').length > 0, `${SG} .admin-song-msg`);
+  check('the same file twice is refused', /already/i.test(await songNote(page)) && (await rowTitles(page)).length === 5, await songNote(page));
+  await rm(tmp, { recursive: true, force: true });
+  await ctx.close();
+}
+{
+  // 20-song cap: a clear message at the limit; room again after removing one
+  const nineteen = Array.from({ length: 19 }, (_, i) => ({ title: 'Song ' + (i + 1), file: F1 }));
+  const { ctx, page } = await unlocked('work.html', { gh: { file: branchWith(nineteen) } });
+  check('19 saved songs: Add is available', (await rowTitles(page)).length === 19 && !(await page.isDisabled(`${SG} .admin-song-add`)));
+  await addSong(page, 'Number twenty', songFile);
+  await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 20);
+  check('at 20 songs: Add is disabled and the message names the limit', (await page.isDisabled(`${SG} .admin-song-add`)) && /20/.test(await songNote(page)) && /remove/i.test(await songNote(page)), await songNote(page));
+  await page.click(`${ROW(20)} .admin-song-remove`);
+  check('removing one frees a place again', !(await page.isDisabled(`${SG} .admin-song-add`)) && (await page.locator('.sleeve').count()) === 19);
+  await ctx.close();
+}
+{
+  // revert an added song before saving; staged songs survive a reload; leave warning while pending
+  const gh = { file: branchWith(null) };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await addSong(page, 'Reload Me', songFile);
+  await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 5);
+  await page.fill(`${ROW(1)} .admin-song-title`, 'Renamed One');
+  await page.click(`${ROW(3)} .admin-song-up`);
+  await page.waitForTimeout(300);
+  await page.reload();
+  await page.waitForSelector(`${SG} .admin-song`);
+  await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 5, null, { timeout: 5000 });
+  check('after a reload the staged song, rename and order are back', (await rowTitles(page)).join('|') === ['Renamed One', AUTHORED[2], AUTHORED[1], AUTHORED[3], 'Reload Me'].join('|') && (await crateTitles(page)).at(-1) === 'Reload Me', JSON.stringify(await rowTitles(page)));
+  await openPanel(page);
+  check('the restored changes are counted again', /^Save [3-9] changes$/.test((await page.textContent(saveBtn)).trim()), await page.textContent(saveBtn));
+  await page.evaluate(() => { window.__beforeunload = null; window.addEventListener('beforeunload', e => { window.__beforeunload = e.defaultPrevented; }); window.dispatchEvent(new Event('beforeunload', { cancelable: true })); });
+  check('leaving with staged songs is warned about', (await page.evaluate(() => window.__beforeunload)) === true);
+  await page.locator('#alcove-admin .admin-changes li', { hasText: /added/i }).locator('button').click();
+  check('Revert on the added song removes it and its preview', (await rowTitles(page)).length === 4 && (await page.locator('.sleeve').count()) === 4 && (await crateSrcs(page)).every(s => !s.startsWith('blob:')));
+  await ctx.close();
+}
+{
+  // conflict: the branch's songs changed after load, and this editor changes songs: stop, nothing uploaded, drafts kept
+  const gh = { file: branchWith([{ title: 'Branch A', file: F1 }, { title: 'Branch B', file: F2 }]) };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  check('unlocked: Songs come from the content branch file', (await rowTitles(page)).join('|') === 'Branch A|Branch B');
+  await addSong(page, 'Conflicting', songFile);
+  await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 3);
+  gh.file = branchWith([{ title: 'Someone Else', file: F3 }], 'sha-songs-2');
+  await openPanel(page); await page.click(saveBtn);
+  await page.waitForFunction(s => /changed/i.test(document.querySelector(s)?.textContent || ''), note);
+  check('conflict: no file uploaded, no content.json written, drafts kept', puts(gh).length === 0 && (await page.textContent(saveBtn)).includes('1 change') && (await rowTitles(page)).length === 3, JSON.stringify(puts(gh).map(c => c.path)));
+  await ctx.close();
+  // no clash when the branch moved but songs are untouched by this save
+  const gh2 = { file: branchWith([{ title: 'Branch A', file: F1 }]) };
+  const o = await unlocked('work.html', { gh: gh2 });
+  await replaceText(o.page, H1SEL, 'Other Edit'); await o.page.keyboard.press('Escape');
+  gh2.file = { sha: 'sha-songs-3', text: JSON.stringify({ version: 1, text: {}, defaults: {}, songs: [{ title: 'Branch A', file: F1 }], media: {} }) };
+  await openPanel(o.page); await o.page.click(saveBtn); await saveDone(o.page);
+  check('a text-only save keeps the branch\'s songs untouched', JSON.stringify(songsOf(gh2)) === JSON.stringify([{ title: 'Branch A', file: F1 }]));
+  await o.ctx.close();
+}
+{
+  // a failed audio upload stops the Save: names the file, content.json not written, song stays staged; retry works
+  const gh = { file: branchWith(null), failFile: 500 };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await addSong(page, 'Flaky', songFile);
+  await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 5);
+  await openPanel(page); await page.click(saveBtn);
+  await page.waitForFunction(s => /could not|error|failed/i.test(document.querySelector(s)?.textContent || ''), note);
+  check('upload failure names the audio file and writes no content.json', /flaky|my-new-jam/i.test(await page.textContent(note)) && contentPuts(gh).length === 0, await page.textContent(note));
+  check('the song stays staged and counted', (await page.textContent(saveBtn)).includes('1 change') && (await rowTitles(page)).at(-1) === 'Flaky');
+  gh.failFile = 0;
+  await page.click(saveBtn); await saveDone(page);
+  check('retry saves the audio then content.json', contentPuts(gh).length === 1 && songsOf(gh).at(-1).title === 'Flaky');
+  await ctx.close();
+}
+{
+  // song + text + slot changes save together, files first (slot photo and song audio), content.json last
+  const gh = { file: branchWith(null) };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await replaceText(page, H1SEL, 'Both'); await page.keyboard.press('Escape');
+  await addSong(page, 'Combo', songFile);
+  await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 5);
+  await page.setInputFiles(input(MEMO), memoFile);
+  await page.waitForFunction(s => document.querySelector(s).getAttribute('data-src').startsWith('blob:'), clipEl(MEMO));
+  await openPanel(page);
+  check('text, clip and song changes are all counted', (await page.textContent(saveBtn)).includes('3 changes'), await page.textContent(saveBtn));
+  await page.click(saveBtn); await saveDone(page);
+  const order = puts(gh).map(c => c.path);
+  check('both audio files first, content.json last', order.length === 3 && order[2] === '/contents/content.json' && order.slice(0, 2).every(p => p.startsWith('/contents/media/')), JSON.stringify(order));
+  const f = savedContent(gh);
+  check('content.json has the text, the slot and the songs', f.text['work.h1.listen-in'] === 'Both' && /^media\/my-rough-memo/.test(f.media[MEMO]) && f.songs.at(-1).title === 'Combo');
+  await ctx.close();
+}
+{
+  // sign out clears staged songs and their draft
+  const { ctx, page } = await unlocked('work.html', { gh: { file: branchWith(null) } });
+  await addSong(page, 'Gone Soon', songFile);
+  await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 5);
+  await page.fill(`${ROW(1)} .admin-song-title`, 'Draft Title');
+  await page.waitForTimeout(200);
+  check('a songs draft is kept in this browser while unsaved', await page.evaluate(() => Object.keys(localStorage).some(k => k.startsWith('alcove_admin_draft'))));
+  await openPanel(page);
+  await Promise.all([page.waitForEvent('load'), page.click('#alcove-admin .admin-signout')]);
+  check('sign out discards songs drafts', await page.evaluate(() => !Object.keys(localStorage).some(k => k.startsWith('alcove_admin_draft'))));
+  await ctx.close();
+}
+
+// --- Admin media, ticket 04: cleanup, failure ordering, conflicts ---------------------------------------------------
+{
+  const OLD_P = 'images/old-portrait-aaaaaaaa.jpg', OLD_A = 'media/old-a-11111111.wav', OLD_B = 'media/old-b-22222222.wav', OLD_M = 'media/old-memo-33333333.wav';
+  const PIANO = 'about.photo.the-piano-and-desk-area';
+  const mk = (media, songs) => ({ sha: 'sha-c1', text: JSON.stringify({ version: 1, text: {}, defaults: {}, media, ...(songs ? { songs } : {}) }) });
+  const have = (...ps) => Object.fromEntries(ps.map(p => ['/contents/' + p, Buffer.from('x')]));
+  const dels = gh => gh.calls.filter(c => c.method === 'DELETE');
+  const idx = (gh, pred) => gh.calls.findIndex(pred);
+  const until = async (fn, ms = 5000) => { for (let n = 0; n < ms / 50 && !fn(); n++) await new Promise(r => setTimeout(r, 50)); };
+  const stage = async (page, key = PORTRAIT) => { await page.setInputFiles(input(key), jpegFile); await page.waitForFunction(([s]) => document.querySelector(s).src.startsWith('blob:'), [imgOf(key)]); };
+
+  {
+    // replaced photo: old file deleted with its sha, on the content branch, AFTER content.json is written
+    const gh = { file: mk({ [PORTRAIT]: OLD_P }), files: have(OLD_P) };
+    const { ctx, page } = await unlocked('about.html', { gh });
+    await stage(page); await openPanel(page); await page.click(saveBtn); await saveDone(page);
+    await until(() => gh.deleted);
+    const d = dels(gh);
+    check('replaced photo: old file deleted (DELETE with branch content and the sha from GET)', d.length === 1 && d[0].path === '/contents/' + OLD_P && JSON.parse(d[0].body).branch === 'content' && JSON.parse(d[0].body).sha === 'filesha' && gh.deleted[0] === '/contents/' + OLD_P, JSON.stringify(d.map(c => c.path)));
+    check('delete comes after the content.json PUT', idx(gh, c => c.method === 'DELETE') > idx(gh, c => c.path === '/contents/content.json' && c.method === 'PUT') && idx(gh, c => c.path === '/contents/content.json' && c.method === 'PUT') > 0);
+    check('the new file is not deleted', !gh.deleted.some(x => /seth-portrait/.test(x)) && Object.keys(gh.files).some(x => /seth-portrait/.test(x)));
+    check('success message says live in a minute or two, no merge wording', /minute or two/.test(await page.textContent(note)) && !/merge/i.test(await page.textContent(note)));
+    await ctx.close();
+  }
+  {
+    // shared file kept: another slot in the merged file still uses it
+    const gh = { file: mk({ [PORTRAIT]: OLD_P, [PIANO]: OLD_P }), files: have(OLD_P) };
+    const { ctx, page } = await unlocked('about.html', { gh });
+    await stage(page); await openPanel(page); await page.click(saveBtn); await saveDone(page); await page.waitForTimeout(500);
+    check('file still used by another slot is kept', dels(gh).length === 0 && !!gh.files['/contents/' + OLD_P]);
+    await ctx.close();
+  }
+  {
+    // authored defaults and textures are never deleted, even when saved media pointed at them
+    const gh = { file: mk({ [PORTRAIT]: 'images/studio-live-room.jpg', [PIANO]: 'images/textures/metal.webp' }), files: have('images/studio-live-room.jpg', 'images/textures/metal.webp') };
+    const { ctx, page } = await unlocked('about.html', { gh });
+    await stage(page); await stage(page, PIANO); await openPanel(page); await page.click(saveBtn); await saveDone(page); await page.waitForTimeout(500);
+    check('authored defaults (used on any page) and non-whitelisted paths are never deleted', dels(gh).length === 0 && Object.keys(gh.files).length >= 3, JSON.stringify(dels(gh).map(c => c.path)));
+    await ctx.close();
+  }
+  {
+    // clip slot + removed song: old clip and old song audio deleted; a song file still in the list is kept; authored track files kept
+    const gh = { file: mk({ [MEMO]: OLD_M }, [{ title: 'A', file: OLD_A }, { title: 'B', file: OLD_B }, { title: 'C', file: F1 }]), files: have(OLD_M, OLD_A, OLD_B, F1) };
+    const { ctx, page } = await unlocked('work.html', { gh });
+    await page.click(`${ROW(2)} .admin-song-remove`);
+    await page.click(`${ROW(2)} .admin-song-remove`);   // the list closes up, so the old third song is now second
+    await page.setInputFiles(input(MEMO), memoFile);
+    await page.waitForFunction(s => document.querySelector(s).getAttribute('data-src').startsWith('blob:'), clipEl(MEMO));
+    await openPanel(page); await page.click(saveBtn); await saveDone(page); await until(() => gh.deleted && gh.deleted.length >= 2);
+    const gone = (gh.deleted || []).map(x => x.replace('/contents/', '')).sort();
+    check('replaced memo and removed song audio deleted; authored track file kept', gone.join() === [OLD_B, OLD_M].sort().join() && !!gh.files['/contents/' + OLD_A] && !!gh.files['/contents/' + F1], JSON.stringify(gone));
+    await ctx.close();
+  }
+  {
+    // delete failure is soft: Save still succeeded, message names the file, drafts cleared
+    const gh = { file: mk({ [PORTRAIT]: OLD_P }), files: have(OLD_P), failDelete: 500 };
+    const { ctx, page } = await unlocked('about.html', { gh });
+    await stage(page); await openPanel(page); await page.click(saveBtn); await saveDone(page);
+    await page.waitForFunction(s => /old-portrait/.test(document.querySelector(s).textContent), note);
+    check('delete failure: content saved, file named softly, count cleared', contentPuts(gh).length === 1 && /old-portrait-aaaaaaaa\.jpg/.test(await page.textContent(note)) && /Saved/.test(await page.textContent(note)) && (await page.textContent(saveBtn)).trim() === 'Save');
+    await ctx.close();
+  }
+  {
+    // no deletions after an upload failure; retry works and then cleans up
+    const gh = { file: mk({ [PORTRAIT]: OLD_P }), files: have(OLD_P), failFile: 500 };
+    const { ctx, page } = await unlocked('about.html', { gh });
+    await stage(page); await openPanel(page); await page.click(saveBtn);
+    await page.waitForFunction(s => /could not/i.test(document.querySelector(s)?.textContent || ''), note);
+    check('upload failure: no DELETE, no content.json, file named', dels(gh).length === 0 && contentPuts(gh).length === 0 && /seth-portrait-[0-9a-f]{8}\.jpg/.test(await page.textContent(note)) && !!gh.files['/contents/' + OLD_P]);
+    gh.failFile = 0; await openPanel(page); await page.click(saveBtn); await saveDone(page); await until(() => gh.deleted);
+    check('retry succeeds and then removes the old file', (gh.deleted || []).length === 1);
+    await ctx.close();
+  }
+  {
+    // content.json PUT failure: no deletions
+    const gh = { file: mk({ [PORTRAIT]: OLD_P }), files: have(OLD_P), putStatus: 500 };
+    const { ctx, page } = await unlocked('about.html', { gh });
+    await stage(page); await openPanel(page); await page.click(saveBtn);
+    await page.waitForFunction(s => /error|nothing was saved/i.test(document.querySelector(s)?.textContent || ''), note);
+    await page.waitForTimeout(300);
+    check('content.json PUT failure: nothing deleted', dels(gh).length === 0 && !!gh.files['/contents/' + OLD_P] && (await page.textContent(saveBtn)).includes('1 change'));
+    await ctx.close();
+  }
+  {
+    // conflict on a staged song: existing message, drafts kept, nothing uploaded or deleted; other-key change still merges
+    const gh = { file: mk({ [PORTRAIT]: OLD_P }, [{ title: 'A', file: OLD_A }]), files: have(OLD_P, OLD_A) };
+    const { ctx, page } = await unlocked('work.html', { gh });
+    await addSong(page, 'Mine', songFile);
+    await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 2);
+    gh.file = { sha: 'sha-c2', text: JSON.stringify({ version: 1, text: {}, defaults: {}, media: { [PORTRAIT]: OLD_P }, songs: [{ title: 'Other', file: OLD_A }] }) };
+    await openPanel(page); await page.click(saveBtn); await page.waitForSelector(note + ' button');
+    check('song conflict: message, drafts kept, nothing written or deleted', /changed/i.test(await page.textContent(note)) && puts(gh).length === 0 && dels(gh).length === 0 && (await page.textContent(saveBtn)).includes('1 change'));
+    await ctx.close();
+    const gh2 = { file: mk({ [PORTRAIT]: OLD_P }), files: have(OLD_P) };
+    const o = await unlocked('about.html', { gh: gh2 });
+    await stage(o.page);
+    gh2.file = { sha: 'sha-c3', text: JSON.stringify({ version: 1, text: { 'x.other': 'new' }, defaults: {}, media: { [PORTRAIT]: OLD_P } }) };
+    await openPanel(o.page); await o.page.click(saveBtn); await saveDone(o.page);
+    check('other-key change on the branch still merges', savedContent(gh2).text['x.other'] === 'new' && !!savedContent(gh2).media[PORTRAIT] && savedContent(gh2).media[PORTRAIT] !== OLD_P);
+    await o.ctx.close();
+  }
+  {
+    // editors cannot choose paths: hostile names become slug + hash under media/ or images/
+    const gh = { file: branchWith(null) };
+    const { ctx, page } = await unlocked('work.html', { gh });
+    await addSong(page, 'Sneaky', { name: '../../images/../x/Evil Name!!.wav', mimeType: 'audio/wav', buffer: songFile.buffer });
+    await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 5);
+    await openPanel(page); await page.click(saveBtn); await saveDone(page);
+    check('hostile file name is sanitized to media/slug-hash under the media folder', mediaFileCalls(gh).length === 1 && /^\/contents\/media\/evil-name-[0-9a-f]{8}\.wav$/.test(mediaFileCalls(gh)[0].path), JSON.stringify(puts(gh).map(c => c.path)));
+    await ctx.close();
+  }
+}
+
+{
+  // hardening: a stored (IndexedDB) file with a tampered path is never restored, so it can never be uploaded
+  const gh = { file: { ...BRANCH_FILE } };
+  const { ctx, page } = await unlocked('work.html', { gh });
+  await page.setInputFiles(input(MEMO), memoFile);
+  await page.waitForFunction(s => document.querySelector(s).getAttribute('data-src').startsWith('blob:'), clipEl(MEMO));
+  await page.evaluate(() => new Promise((res, rej) => {
+    const o = indexedDB.open('alcove_admin', 1);
+    o.onsuccess = () => { const tx = o.result.transaction('media', 'readwrite'), st = tx.objectStore('media'), q = st.openCursor();
+      q.onsuccess = () => { const c = q.result; if (c) { const v = c.value; v.path = 'media/../.github/evil.wav'; c.update(v); c.continue(); } };
+      tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); };
+    o.onerror = () => rej(o.error);
+  }));
+  await page.reload(); await page.waitForSelector('#alcove-admin');
+  await page.waitForTimeout(600);
+  check('a tampered stored path is not restored and nothing is staged', !(await page.getAttribute(clipEl(MEMO), 'data-src')).startsWith('blob:') && (await page.textContent(saveBtn)).trim() === 'Save');
+  await ctx.close();
+}
+
+await fxPage.close();
 await browser.close();
 server.close();
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll admin checks passed');
