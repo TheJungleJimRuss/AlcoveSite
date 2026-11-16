@@ -1,0 +1,130 @@
+/* Admin mode (admin.js). Unboxed to match the site: hairline outlines and borders, no pills, no solid fills. */
+[data-admin-edit] {
+  outline: 1px dashed var(--border-focus);
+  outline-offset: 3px;
+  cursor: text;
+}
+[data-admin-edit]:hover { outline-style: solid; }
+[data-admin-edit]:focus-visible, [data-admin-edit]:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 3px;
+}
+
+#alcove-admin {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 10001;
+  width: min(22rem, calc(100vw - 2rem));
+  background: var(--bg-page);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  font: 0.9rem/1.35 var(--font-sans);
+}
+#alcove-admin button {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: var(--cursor-pointer, pointer);
+}
+#alcove-admin button:hover:not(:disabled) { text-decoration: underline; }
+#alcove-admin button:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
+#alcove-admin button:disabled { color: var(--text-muted); cursor: not-allowed; }
+#alcove-admin .admin-toggle, #alcove-admin .admin-edit-switch { display: block; width: 100%; text-align: left; }
+#alcove-admin .admin-edit-switch { border-top: 1px solid var(--border-color); }
+#alcove-admin .admin-edit-switch[aria-checked="true"] { text-decoration: underline; }
+#admin-body { padding: 0 0.75rem 0.5rem; border-top: 1px solid var(--border-color); }
+#admin-body { max-height: min(70dvh, 38rem); overflow-y: auto; overscroll-behavior: contain; }
+.admin-defaults { margin: 0.5rem 0 0; padding: 0.25rem 0 0; border: 0; border-top: 1px solid var(--border-color); min-width: 0; }
+.admin-defaults legend { padding: 0 0.25rem 0 0; font-weight: 600; }
+.admin-defaults label { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: 44px; }
+.admin-defaults select {
+  flex: 0 0 12rem; max-width: 55%; min-width: 0; min-height: 44px; padding: 0 0.5rem;
+  background: var(--bg-page); color: var(--text-main); border: 1px solid var(--border-color); font: inherit;
+}
+.admin-defaults select:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
+#admin-body[hidden] { display: none; }
+.admin-status { margin: 0.5rem 0; color: var(--text-muted); }
+.admin-changes { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow-y: auto; }
+.admin-changes li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; border-top: 1px solid var(--border-color); }
+.admin-change-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-actions { display: flex; justify-content: space-between; gap: 0.5rem; border-top: 1px solid var(--border-color); }
+.admin-note { margin: 0.5rem 0 0; color: var(--text-muted); overflow-wrap: anywhere; }
+.admin-note:empty { display: none; }
+.admin-note button { font: inherit; min-height: 44px; }
+
+/* Clear the bottom tab bar on phones (nav height is about 3.5rem plus the safe-area inset). */
+@media (max-width: 640px) {
+  #alcove-admin { bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+  #admin-body { max-height: min(60dvh, calc(100dvh - 9rem - env(safe-area-inset-bottom, 0px))); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-admin-edit] { transition: outline-color 0.15s ease; }
+}
+
+/* Replace controls (admin-media ticket 01): unboxed like the rest, hairline border, no fill */
+.admin-media-host { position: relative; }
+.admin-replace {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 6;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-page);
+  color: var(--text-main);
+  border: 1px solid var(--border-focus);
+  font: 600 0.85rem/1.2 var(--font-sans);
+  cursor: var(--cursor-pointer, pointer);
+}
+.admin-replace:hover { text-decoration: underline; }
+.admin-replace:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+.admin-media-error { margin: 0.5rem 0; color: var(--text-main); font-weight: 600; overflow-wrap: anywhere; }
+.admin-media-warning { margin: 0.5rem 0; color: var(--text-muted); overflow-wrap: anywhere; }
+.admin-media-error:empty, .admin-media-warning:empty { display: none; }
+
+/* Clip and poster Replace controls (admin-media ticket 02): the poster sits under the video button; the memo sits left, the master right */
+.admin-replace[data-kind="poster"] { top: calc(0.5rem + 44px + 0.5rem); }
+.admin-replace[data-kind="memo"] { right: auto; left: 0.5rem; }
+
+/* Songs editor (admin-media ticket 03): unboxed rows, hairline controls, 44px targets, wraps instead of overflowing */
+.admin-songs { margin: 2rem auto; max-width: 60rem; padding: 0 1rem; color: var(--text-main); }
+.admin-songs h3 { margin: 0 0 0.5rem; }
+.admin-songs-help { margin: 0 0 1rem; color: var(--text-muted); }
+.admin-song-list { list-style: none; margin: 0 0 1.5rem; padding: 0; }
+.admin-song { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border-focus); }
+.admin-song-title, .admin-song-new input[type="text"] { flex: 1 1 12rem; min-width: 0; min-height: 44px; padding: 0.5rem 0.75rem; background: var(--bg-page); color: var(--text-main); border: 1px solid var(--border-focus); font: 1rem/1.3 var(--font-sans); }
+.admin-song button, .admin-song-add { min-width: 44px; min-height: 44px; padding: 0.5rem 0.75rem; background: var(--bg-page); color: var(--text-main); border: 1px solid var(--border-focus); font: 600 0.85rem/1.2 var(--font-sans); cursor: var(--cursor-pointer, pointer); }
+.admin-song button:disabled, .admin-song-add:disabled { opacity: 0.4; cursor: not-allowed; }
+.admin-song button:hover:not(:disabled), .admin-song-add:hover:not(:disabled) { text-decoration: underline; }
+.admin-song :focus-visible, .admin-song-new :focus-visible, .admin-song-add:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+.admin-song-new { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; margin: 0; padding: 0.75rem 0 0; border: 0; border-top: 1px solid var(--border-focus); }
+.admin-song-new legend { font-weight: 600; padding: 0; }
+.admin-song-new label { display: flex; flex-direction: column; gap: 0.25rem; flex: 1 1 14rem; min-width: 0; font-size: 0.9rem; }
+.admin-song-new input[type="file"] { min-height: 44px; max-width: 100%; }
+.admin-song-msg { margin: 0.75rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.admin-song-msg:empty { display: none; }
+
+/* Replace cover (admin-media ticket 06): one button over the Sleeve sticking out of the pile; admin.js sets left/top and follows the Sleeve */
+.admin-cover-replace {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 60; /* above every Sleeve (z-index 40 and down) */
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-page);
+  color: var(--text-main);
+  border: 1px solid var(--border-focus);
+  font: 600 0.85rem/1.2 var(--font-sans);
+  cursor: var(--cursor-pointer, pointer);
+}
+.admin-cover-replace[hidden] { display: none; }
+.admin-cover-replace:hover { text-decoration: underline; }
+.admin-cover-replace:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }

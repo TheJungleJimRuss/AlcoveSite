@@ -1,0 +1,282 @@
+/* ===== Work page Record player (ticket 01 static states, ticket 03 motion: slide, swing, lift, spin in JS via WAAPI) =====
+   Photoreal top-down turntable beside a pile of record sleeves. Colours come from palette tokens (black/white mixes only for
+   vinyl, metal and gloss). Hardware gloss is allowed on the Work players (ADR 0005).
+   Cover art: set `--cover: url(images/covers/<name>.jpg)` on `.sleeve[data-art="..."]` below; it paints over the
+   placeholder design with no markup change. */
+.record-player {
+  --rp-plinth: color-mix(in srgb, #000 42%, var(--accent-tertiary));
+  --rp-metal: color-mix(in srgb, #fff 30%, color-mix(in srgb, #000 35%, var(--bg-accent)));
+  --rp-vinyl: color-mix(in srgb, #000 84%, var(--accent-tertiary));
+  --arm-rest: 0deg;
+  --arm-on: 32deg;
+  --arm-angle: var(--arm-rest);
+  margin-block-start: 1rem;
+}
+.record-player[data-arm="on"] { --arm-angle: var(--arm-on); }
+
+.rp-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.rp-deck { display: grid; gap: 0.85rem; min-inline-size: 0; }
+
+/* Plinth: the whole turntable body (walnut deck, platter, mat, buttons, arm rest, pivot base) is one top-down Blender render, images/record-player/turntable-base-*.webp */
+.rp-photo { display: block; max-inline-size: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.rp-turntable { position: relative; container-type: inline-size; aspect-ratio: 5 / 4; }
+.rp-base { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
+
+/* Platter geometry measured from the render (canvas 500x400): centre (190,200), platter r168, vinyl r161. Everything below is
+   positioned in % of the platter box (336 units). The turntable image already draws platter and mat. */
+.rp-platter { position: absolute; inset-inline-start: 4.4%; inset-block-start: 8%; inline-size: 67.2%; aspect-ratio: 1; border-radius: 50%; }
+.rp-platter > * { position: absolute; }
+.rp-mat { display: none; }
+.rp-dshadow { inset: -3.57%; inline-size: 107.14%; block-size: 107.14%; transition: opacity 0.32s ease; }
+.record-player[data-record="in"] .rp-sheen { opacity: 0.5; }
+.rp-record { inset: 2.08%; border-radius: 50%; }
+.rp-record > .rp-vinyl { position: absolute; inset: -0.62%; inline-size: 101.24%; block-size: 101.24%; }
+.rp-record > .rp-vinyl, .rp-disc > .rp-vinyl { filter: brightness(0.45) contrast(1.1); }
+.rp-sheen { inset-inline-start: 1.49%; inset-block-start: 1.49%; inline-size: 97.03%; block-size: 97.03%; transition: opacity 0.32s ease; }
+.record-player[data-state="empty"] .rp-record, .record-player[data-state="empty"] .rp-sheen, .record-player[data-state="empty"] .rp-dshadow { visibility: hidden; }
+.record-player:not([data-record="in"]) .rp-sheen, .record-player:not([data-record="in"]) .rp-dshadow { opacity: 0; }
+.rp-spindle { display: none; } /* the render draws the spindle and the record's hole */
+.rp-label {
+  position: absolute;
+  inset: 33.1%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--on-accent, var(--bg-surface));
+  text-align: center;
+}
+/* the blank cream label in the render is tinted by multiplying the palette colour over it; the text stays crisp on top */
+.rp-label::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--accent-primary); mix-blend-mode: multiply; }
+.rp-label > * { position: relative; }
+.rp-label-text, .rp-disc-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  max-inline-size: 78%;
+  padding-block-start: 12%;
+  font-family: var(--font-mono);
+  font-size: max(0.5rem, 2.7cqi);
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.rp-spindle {
+  inset: 48.5%;
+  background: radial-gradient(circle at 35% 30%, #fff, #a9a49a 60%, #5b574f);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.5);
+}
+
+/* Tonearm: one SVG over the plinth; the arm group rotates about its pivot by --arm-angle (ticket 03 animates it) */
+.rp-arm-svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none; overflow: visible; }
+.rp-arm { transform: rotate(var(--arm-angle)); transform-origin: 435px 60px; transform-box: view-box; transition: scale 0.3s ease, filter 0.3s ease; }
+/* No transition on the angle while tracking playback; it eases only when swinging in or returning home. */
+.record-player[data-arm="swing"] .rp-arm, .record-player[data-arm="rest"] .rp-arm { transition: transform 0.75s cubic-bezier(0.45, 0, 0.2, 1), scale 0.3s ease, filter 0.3s ease; }
+/* Lifted (paused, or mid-swing): the arm hovers over its position, bigger with a softer, longer shadow. */
+.record-player[data-arm="lifted"] .rp-arm, .record-player[data-arm="swing"] .rp-arm { scale: 1.05; filter: drop-shadow(7px 13px 7px rgb(0 0 0 / 0.3)); }
+/* Record: fades away when another one replaces it; appears the instant the travelling disc lands (JS sets data-record="in"). */
+/* Record: the vinyl render (even light, so it can spin) with a fixed sheen overlay and a disc shadow beside it */
+.rp-disc { background: none; }
+.rp-disc > .rp-vinyl { position: absolute; inset: -0.62%; inline-size: 101.24%; block-size: 101.24%; }
+.rp-record { transition: opacity 0.32s ease; }
+.record-player:not([data-record="in"]) .rp-record { opacity: 0; }
+.record-player[data-record="in"] .rp-record { transition: none; }
+.rp-arm { touch-action: none; }
+.rp-arm-hit { stroke: transparent; stroke-width: 72; pointer-events: stroke; touch-action: none; cursor: grab; }
+.rp-arm[aria-disabled="true"] .rp-arm-hit { pointer-events: none; cursor: default; }
+.rp-arm:active .rp-arm-hit { cursor: grabbing; }
+.rp-arm:focus { outline: none; }
+.rp-focus { fill: none; stroke: none; pointer-events: none; }
+.rp-arm:focus-visible .rp-focus { stroke: var(--border-focus); stroke-width: 3; stroke-dasharray: 8 5; }
+.rp-arm-img { pointer-events: none; }
+
+/* Start/Stop key: a latching matte key with a lamp, like the one on a real deck. Pressing it sinks it; it stays down
+   while the record plays and the lamp glows. The label is printed on the key and never changes. */
+.rp-controls { display: flex; align-items: center; gap: 1.1rem; }
+.rp-play {
+  --edge: color-mix(in srgb, var(--text-main) 30%, var(--bg-accent));
+  flex: none; position: relative;
+  display: grid; place-items: center; align-content: center; gap: 0.15rem;
+  inline-size: 5.2rem; min-block-size: 3.6rem; padding: 0.5rem 0.4rem 0.35rem;
+  font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; line-height: 1.15; text-transform: uppercase; text-align: center;
+  color: var(--text-main);
+  cursor: var(--cursor-pointer, pointer);
+  border: 1px solid var(--edge);
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--bg-accent) 55%, var(--bg-surface));
+  box-shadow: 0 5px 0 var(--edge), 0 8px 6px rgb(0 0 0 / 0.25);
+  transition: transform 0.09s, box-shadow 0.09s;
+}
+.rp-play-label { display: block; }
+.rp-lamp {
+  position: absolute; inset-block-start: 0.4rem; inset-inline-end: 0.45rem;
+  inline-size: 0.5rem; block-size: 0.5rem; border-radius: 50%;
+  background: color-mix(in srgb, var(--text-main) 20%, var(--bg-accent));
+  box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.5);
+  transition: background-color 0.12s, box-shadow 0.12s;
+}
+.rp-play:active:not(:disabled), .rp-play[aria-pressed="true"] { transform: translateY(4px); box-shadow: 0 1px 0 var(--edge), inset 0 2px 4px rgb(0 0 0 / 0.3); }
+.rp-play[aria-pressed="true"] .rp-lamp { background: #ff9a3c; box-shadow: 0 0 6px 1px rgb(255 154 60 / 0.85), inset 0 1px 1px rgb(255 255 255 / 0.5); }
+.rp-play:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 4px; }
+.rp-play:disabled { cursor: not-allowed; color: var(--text-muted); box-shadow: 0 5px 0 var(--border-color); border-color: var(--border-color); }
+.rp-status { margin: 0; min-inline-size: 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-main); overflow-wrap: anywhere; }
+
+/* ===== Crate: a messy pile of record sleeves on the bare surface, seen from straight above (spec amendment 3) =====
+   Sleeves are record-sized: --sleeve is the vinyl diameter on the turntable (+3%, like a real 12" jacket), worked out from
+   .rp-layout's width (the turntable is 1.35fr of it; the vinyl is 64.4% of the turntable). The pile lies partly off the
+   right edge of the screen (--edge = distance from the layout to the screen edge; .container is centred) and the current
+   sleeve (data-pos="front") slides out to the LEFT, from under the sleeves above it. Sleeves are pictures only: the
+   title/subtitle text stays in the button for its accessible name but is visually hidden. Each sleeve lies in the pile at
+   its own angle and offset (from --i, its place in the list). --r / --m / --i / data-pos come from record-player.js. */
+@property --sleeve { syntax: '<length>'; inherits: true; initial-value: 16rem; }
+@property --edge { syntax: '<length>'; inherits: true; initial-value: 0px; }
+html:has(.record-player), body:has(.record-player) { overflow-x: clip; } /* the pile hangs off the screen edge without a horizontal scrollbar */
+.rp-layout { container-type: inline-size; }
+.rp-crate {
+  --sleeve: calc((100cqi - 1.5rem) * 1.35 / 2.35 * 0.663);
+  --edge: calc((100vw - 100cqi) / 2);
+  display: grid; gap: 0.5rem; min-inline-size: 0; align-content: start;
+}
+.rp-stage {
+  position: relative;
+  inline-size: 100%;
+  block-size: calc(var(--sleeve) * 1.18);
+}
+.rp-stack { position: absolute; inset: 0; }
+
+.sleeve {
+  --cover: none;
+  --r: 0; /* places behind the front one */
+  --m: 0; /* places since it was flipped past */
+  --i: 0; /* place in the list: picks this sleeve's angle and offset in the pile */
+  --out: translate(calc(var(--sleeve) * -0.62), calc(var(--sleeve) * 0.03)) rotate(-2deg); /* how far the current sleeve sticks out of the pile (to the left) */
+  position: absolute;
+  z-index: calc(40 - var(--i));
+  inset-inline-start: calc(100% + var(--edge) - var(--sleeve) * 0.55); /* 45% of the pile is off screen */
+  inset-block-start: calc(var(--sleeve) * 0.08);
+  inline-size: var(--sleeve);
+  block-size: var(--sleeve);
+  display: block;
+  padding: 0;
+  font: inherit;
+  color: #2a2622;
+  cursor: var(--cursor-pointer, pointer);
+  border: 0;
+  border-radius: 0.1rem;
+  background-color: #ebe5d9; /* card photo paints over it */
+  transform: translate(calc(sin(var(--i) * 2.3rad) * var(--sleeve) * 0.08), calc(cos(var(--i) * 1.7rad) * var(--sleeve) * 0.07)) rotate(calc(sin(var(--i) * 2.1rad + 0.7rad) * 9deg));
+  transition: transform 0.45s cubic-bezier(0.3, 0.75, 0.25, 1), filter 0.3s ease;
+}
+.sleeve[data-pos="front"] { transform: var(--out); } /* keeps its place in the pile: slides out from under the ones above it */
+/* picking: the sleeve is lifted toward the camera (bigger, softer shadow) while the disc slides out */
+.sleeve[data-pos="front"].is-lifted { transform: var(--out) translateY(calc(var(--sleeve) * -0.02)) scale(1.04); transition-duration: 0.28s; }
+.sleeve.is-lifted::before { filter: drop-shadow(calc(var(--sleeve) * 0.016) calc(var(--sleeve) * 0.032) calc(var(--sleeve) * 0.032) rgb(0 0 0 / 0.35)); }
+/* The card is a render (paper grain, wear, soft shadow in its margin); it sits 16% of --sleeve outside the button box on every side. */
+.sleeve::before { content: ""; position: absolute; inset: calc(var(--sleeve) * -0.16); z-index: -1; pointer-events: none; background: image-set(url(images/record-player/sleeve-flat-1x.webp) 1x, url(images/record-player/sleeve-flat-2x.webp) 2x) center / 100% 100% no-repeat; }
+.sleeve:hover::before { filter: brightness(1.05); } /* faint lift only */
+.sleeve:focus-visible { outline: 3px solid var(--border-focus); outline-offset: 2px; }
+/* pictures only: the text names the button for screen readers but is not drawn */
+.sleeve-strip, .sleeve-band { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.sleeve-art::after { content: ""; position: absolute; inset: 0; mix-blend-mode: multiply; }
+.sleeve-art { position: absolute; inset: 0; display: block; overflow: hidden; }
+.sleeve-art::before { content: ""; position: absolute; inset: 0; z-index: 1; background: var(--cover) center / cover no-repeat; mix-blend-mode: multiply; }
+/* A real cover (admin media ticket 06): the picture as it is, over the sleeve face; the printed pattern is gone. */
+.sleeve.has-cover .sleeve-art::before { mix-blend-mode: normal; }
+.sleeve.has-cover .sleeve-art::after { display: none; }
+/* "On the platter" tab: sticks out of the loaded sleeve's left edge (the on-screen side), so it shows even under the pile. */
+.sleeve-tab { display: none; position: absolute; z-index: 2; inset-block-start: calc(var(--sleeve) * 0.06); inset-inline-start: calc(var(--sleeve) * -0.112); inline-size: calc(var(--sleeve) * 0.128); block-size: calc(var(--sleeve) * 0.104); border-radius: 0.3rem 0 0 0.3rem; background: var(--accent-primary); box-shadow: 0 1px 3px rgb(0 0 0 / 0.4); }
+.sleeve-tab::before { content: ""; position: absolute; inset: calc(var(--sleeve) * 0.014) calc(var(--sleeve) * 0.008) calc(var(--sleeve) * 0.014) calc(var(--sleeve) * 0.02); border-radius: 50%; background: radial-gradient(circle, var(--tint-1) 0 18%, #111 20%); }
+.sleeve.is-current .sleeve-tab { display: block; }
+.sleeve.is-current { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.sleeve.is-current:focus-visible { outline: 3px solid var(--border-focus); outline-offset: 2px; }
+
+/* Cover placeholders: printed (multiplied) onto the paper render so the grain shows through.
+    four designs, picked per sleeve by record-player.js (data-art) from the song's file name */
+.sleeve[data-art="0"] .sleeve-art::after { background: repeating-linear-gradient(135deg, var(--accent-primary) 0 0.9rem, var(--tint-1) 0.9rem 1.8rem); }
+.sleeve[data-art="1"] .sleeve-art::after { background: radial-gradient(circle at 28% 35%, var(--accent-secondary) 0 24%, transparent 25%), radial-gradient(circle at 72% 62%, var(--tint-1) 0 30%, transparent 31%), var(--tint-2); }
+.sleeve[data-art="2"] .sleeve-art::after { background: repeating-radial-gradient(circle at 50% 42%, transparent 0 0.55rem, color-mix(in srgb, var(--accent-tertiary) 55%, transparent) 0.55rem 0.7rem), var(--tint-1); box-shadow: inset 0 0 0 0.35rem var(--bg-surface), inset 0 0 0 0.45rem var(--accent-tertiary); }
+.sleeve[data-art="3"] .sleeve-art::after { background: linear-gradient(45deg, transparent 40%, var(--accent-secondary) 40% 52%, transparent 52%), linear-gradient(-45deg, transparent 40%, var(--accent-primary) 40% 52%, transparent 52%), var(--accent-tertiary); }
+
+/* Previous / next keys under the crate */
+.rp-crate-nav { display: flex; align-items: center; justify-content: center; gap: 1rem; }
+.rp-count { min-inline-size: 5.5rem; text-align: center; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-main); }
+
+/* Fader under the pile: slides through the records (dark anodised plate, slotted track, ribbed cap, as the page fader) */
+.rp-fader {
+  --cap-w: 2.6rem; --cap-h: 2.1rem;
+  position: relative; inline-size: min(100%, 22rem); block-size: 2.75rem; margin-inline: auto;
+  touch-action: none; user-select: none; outline: none; cursor: var(--cursor-pointer, pointer);
+  -webkit-tap-highlight-color: transparent;
+}
+.rp-fader[hidden] { display: none; }
+.rp-fader-plate {
+  position: absolute; inset-inline: 0; inset-block: 0.25rem; border-radius: 0.3rem;
+  background: #232326; border: 1px solid #0d0d0e;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 2px 5px rgb(0 0 0 / 0.3);
+}
+/* One tick per record, lined up with the cap's resting spots */
+.rp-fader-plate::after {
+  content: ""; position: absolute; inset-block: auto 0.2rem; block-size: 0.28rem;
+  inset-inline: calc(var(--cap-w) / 2 - 1px); 
+  background: repeating-linear-gradient(to right, rgb(255 255 255 / 0.55) 0 1px, transparent 1px calc((100% - 1px) / max(var(--n, 2) - 1, 1)));
+  inline-size: auto;
+}
+.rp-fader-slot {
+  position: absolute; inset-inline: calc(var(--cap-w) / 2); inset-block: calc(50% - 0.2rem) auto; block-size: 0.4rem; border-radius: 0.2rem;
+  background: #0b0b0c; box-shadow: inset 0 1px 3px #000, 0 0 0 1px rgb(255 255 255 / 0.18);
+}
+.rp-fader-cap {
+  position: absolute; inset-block-start: calc(50% - var(--cap-h) / 2); inline-size: var(--cap-w); block-size: var(--cap-h);
+  inset-inline-start: calc(var(--p, 0) * (100% - var(--cap-w)));
+  border-radius: 0.3rem; border: 1px solid #111;
+  background:
+    linear-gradient(var(--fader-mark), var(--fader-mark)) center / 3px 100% no-repeat,
+    repeating-linear-gradient(to right, rgb(255 255 255 / 0.05) 0 1px, rgb(0 0 0 / 0.3) 1px 3px),
+    #35353a;
+  box-shadow: 0 4px 6px -2px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.12);
+  transition: inset-inline-start 0.18s ease-out;
+}
+.rp-fader.is-dragging .rp-fader-cap { transition: none; }
+.rp-fader:focus-visible .rp-fader-cap { outline: 2px solid var(--border-focus); outline-offset: 3px; }
+
+/* The disc that travels from the sleeve to the platter: sized and moved by record-player.js (WAAPI) */
+.record-player { position: relative; }
+.rp-disc { position: absolute; inset: 0 auto auto 0; z-index: 6; inline-size: var(--d, 10rem); aspect-ratio: 1; container-type: inline-size; border-radius: 50%; opacity: 0; pointer-events: none; transform-origin: 0 0; box-shadow: 0 1.2cqi 3cqi rgb(0 0 0 / 0.5); }
+.rp-disc-text { font-size: max(0.5rem, 4.6cqi); }
+.rp-disc .rp-label { inset: 30%; box-shadow: 0 0 0 0.6cqi rgb(0 0 0 / 0.4); }
+
+/* Phones: crate below the turntable, full width */
+@media (max-width: 640px) {
+  .rp-layout { grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
+  .rp-crate { --sleeve: calc(100cqi * 0.663); }
+  .rp-controls { gap: 0.7rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-arm, .rp-record, .rp-sheen, .rp-dshadow, .sleeve, .sleeve-tab, .rp-disc, .rp-fader-cap, .rp-play, .rp-lamp { transition: none !important; animation: none !important; }
+}
+
+@media (forced-colors: active) {
+  .rp-arm, .record-player[data-arm] .rp-arm { filter: none; }
+  .rp-platter, .rp-mat, .rp-record, .rp-label { background: Canvas; box-shadow: none; }
+  .rp-label-text { color: CanvasText; }
+  .rp-mat, .rp-record { border: 1px solid CanvasText; }
+  .sleeve, .rp-play { box-shadow: none; }
+  .sleeve-art { background: Canvas; box-shadow: none; border-block-end: 1px solid CanvasText; }
+  .sleeve-art::before { display: none; }
+  .sleeve:hover { background: Canvas; }
+  .sleeve:focus-visible, .rp-play:focus-visible { outline: 3px solid Highlight; }
+  .rp-arm:focus-visible .rp-focus { stroke: Highlight; }
+  .rp-play, .rp-play:disabled { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
+  .rp-play:disabled { color: GrayText; border-color: GrayText; }
+  .rp-turntable, .rp-platter, .rp-record, .rp-label, .sleeve, .rp-crate { border: 1px solid CanvasText; forced-color-adjust: auto; }
+  .rp-photo, .sleeve::before, .sleeve-strip::before, .rp-label::before, .sleeve-art::after { display: none; } /* photo layers drop away; outlines stay */
+  .rp-arm-img { display: none; }
+  .rp-arm-hit { stroke: CanvasText; stroke-opacity: 0.2; }
+  .sleeve.is-current { outline-color: Highlight; }
+  /* pile: sleeves, tabs and keys keep their edges */
+  .sleeve-strip { position: static; inline-size: auto; block-size: auto; clip-path: none; display: block; padding: 0.3rem; background: Canvas; color: CanvasText; } /* no pictures: show the title */
+  .rp-stage { border: 1px solid CanvasText; }
+  .sleeve-tab { background: Canvas; color: CanvasText; border: 1px solid CanvasText; }
+  

@@ -2,23 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#FDFBF7">
   <title>Work - Alcove Recording</title>
   <link rel="stylesheet" href="wireframe.css">
+  <link rel="stylesheet" href="record-player.css?v=14">
   <link rel="stylesheet" href="theme-preview.css">
-  <script src="theme-preview.js" defer></script>
+  <link rel="stylesheet" href="logo.css">
+  <link rel="stylesheet" href="textures.css?v=etch1">
+  <script src="content-loader.js"></script>
+  <script src="theme-preview.js"></script>
+  <script src="fader.js" defer></script>
+  <script src="nav-switch.js" defer></script>
+  <script src="ab-compare.js" defer></script>
+  <script src="record-player.js" defer></script>
+  <script src="now-playing.js" defer></script>
+  <script src="cards-tilt.js" defer></script>
 </head>
 <body>
 
   <!-- Global Header & Navigation -->
   <header class="site-header">
-    <a href="index.html" class="logo-placeholder">Alcove Recording</a>
+    <a href="index.html" class="logo-placeholder" aria-label="Alcove Recording, home"><span class="logo-mark" role="img" aria-label="Alcove Recording"></span></a>
     <nav aria-label="Main Navigation">
       <ul class="nav-links">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="work.html" class="active" aria-current="page">Work</a></li>
-        <li><a href="about.html">About</a></li>
-        <li><a href="contact.html">Contact</a></li>
+        <li><a href="index.html" data-edit-key="site.nav.home">Home</a></li>
+        <li><a href="work.html" class="active" aria-current="page" data-edit-key="site.nav.work">Work</a></li>
+        <li><a href="about.html" data-edit-key="site.nav.about">About</a></li>
+        <li><a href="contact.html" data-edit-key="site.nav.contact">Contact</a></li>
       </ul>
     </nav>
   </header>
@@ -27,137 +38,172 @@
 
     <!-- Open Page Header -->
     <header class="page-header">
-      <h1>[Selected Work &amp; Recordings]</h1>
-      <p class="page-intro">[Raw ideas, session takes, and finished releases recorded at Alcove Recording.]</p>
+      <h1 data-edit-key="work.h1.listen-in">Listen In</h1>
+      <p class="page-intro" data-edit-key="work.p.a-few-things-made-at-alcove">A few things made at Alcove, from rough ideas to finished songs.</p>
     </header>
 
     <!-- Section 1: Featured Audio Demos (Interactive Sampler) -->
     <section class="section-block">
-      <h2>[Featured Release Sampler]</h2>
+      <h2 data-edit-key="work.h2.recent-recordings">Recent Recordings</h2>
       
-      <div class="filter-bar" role="toolbar" aria-label="Genre Filters">
-        <button type="button" class="filter-pill active" data-genre="all">All Genres</button>
-        <button type="button" class="filter-pill" data-genre="indie">Indie Rock</button>
-        <button type="button" class="filter-pill" data-genre="pop">Bedroom Pop</button>
-        <button type="button" class="filter-pill" data-genre="acoustic">Acoustic / Folk</button>
-        <button type="button" class="filter-pill" data-genre="punk">Punk / Alt</button>
+      <div class="record-player" data-state="empty" data-playing="false" data-arm="rest">
+        <audio id="audio-player" preload="none"></audio>
+        <span class="rp-disc" aria-hidden="true"><img class="rp-photo rp-vinyl" src="images/record-player/vinyl-1x.webp" srcset="images/record-player/vinyl-1x.webp 1x, images/record-player/vinyl-2x.webp 2x" alt="" aria-hidden="true" decoding="async"><span class="rp-label"><span class="rp-disc-text"></span></span></span>
+        <div class="rp-layout">
+          <div class="rp-deck">
+            <div class="rp-turntable">
+              <img class="rp-photo rp-base" src="images/record-player/turntable-base-1x.webp" srcset="images/record-player/turntable-base-1x.webp 1x, images/record-player/turntable-base-2x.webp 2x" alt="" aria-hidden="true" loading="lazy" decoding="async">
+              <div class="rp-platter">
+                <span class="rp-mat"></span>
+                <img class="rp-photo rp-dshadow" src="images/record-player/disc-shadow-1x.webp" srcset="images/record-player/disc-shadow-1x.webp 1x, images/record-player/disc-shadow-2x.webp 2x" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                <span class="rp-record"><img class="rp-photo rp-vinyl" src="images/record-player/vinyl-1x.webp" srcset="images/record-player/vinyl-1x.webp 1x, images/record-player/vinyl-2x.webp 2x" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="rp-label"><span class="rp-label-text" id="rp-label-text"></span></span></span>
+                <img class="rp-photo rp-sheen" src="images/record-player/vinyl-sheen-1x.webp" srcset="images/record-player/vinyl-sheen-1x.webp 1x, images/record-player/vinyl-sheen-2x.webp 2x" alt="" aria-hidden="true" loading="lazy" decoding="async">
+                <span class="rp-spindle"></span>
+              </div>
+              <svg class="rp-arm-svg" viewBox="0 0 500 400" aria-hidden="true" focusable="false">
+                <g class="rp-arm" role="slider" aria-label="Needle position" aria-orientation="horizontal" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-valuetext="No record loaded" aria-disabled="true">
+                  <line class="rp-arm-hit" x1="435" y1="40" x2="435" y2="322"/>
+                  <rect class="rp-focus" x="410" y="2" width="50" height="326" rx="10"/>
+                  <image class="rp-arm-img" href="images/record-player/tonearm-2x.webp" x="319" y="0" width="181" height="400" preserveAspectRatio="none"/>
+                </g>
+              </svg>
+            </div>
+            <div class="rp-controls">
+              <button type="button" class="rp-play" aria-label="Play" aria-pressed="false" disabled><span class="rp-lamp" aria-hidden="true"></span><span class="rp-play-label" aria-hidden="true">Start<br>Stop</span></button>
+              <p class="rp-status" id="rp-status" role="status" aria-live="polite">Pick a record from the pile.</p>
+            </div>
+          </div>
+
+          <div class="rp-crate" role="group" aria-label="Crate of records">
+            <div class="rp-stage">
+              <div class="rp-stack">
+              <button type="button" class="sleeve" data-src="media/track-1-indie.wav" aria-pressed="false">
+                <span class="sleeve-strip"><strong class="sleeve-title">Indie Rock Demo</strong></span>
+                <span class="sleeve-band"><span class="sleeve-sub">Recorded at Alcove</span></span>
+                <span class="sleeve-art" aria-hidden="true"></span>
+                <span class="sleeve-tab" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="sleeve" data-src="media/track-2-bedroom-pop.wav" aria-pressed="false">
+                <span class="sleeve-strip"><strong class="sleeve-title">Bedroom Pop Single</strong></span>
+                <span class="sleeve-band"><span class="sleeve-sub">Recorded at Alcove</span></span>
+                <span class="sleeve-art" aria-hidden="true"></span>
+                <span class="sleeve-tab" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="sleeve" data-src="media/track-3-acoustic.wav" aria-pressed="false">
+                <span class="sleeve-strip"><strong class="sleeve-title">Acoustic Folk Song</strong></span>
+                <span class="sleeve-band"><span class="sleeve-sub">Recorded at Alcove</span></span>
+                <span class="sleeve-art" aria-hidden="true"></span>
+                <span class="sleeve-tab" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="sleeve" data-src="media/track-4-punk.wav" aria-pressed="false">
+                <span class="sleeve-strip"><strong class="sleeve-title">Alternative &amp; Punk Track</strong></span>
+                <span class="sleeve-band"><span class="sleeve-sub">Recorded at Alcove</span></span>
+                <span class="sleeve-art" aria-hidden="true"></span>
+                <span class="sleeve-tab" aria-hidden="true"></span>
+              </button>
+              </div>
+            </div>
+            <div class="rp-crate-nav"></div>
+            <p class="visually-hidden" id="rp-crate-status" role="status" aria-live="polite"></p>
+          </div>
+        </div>
       </div>
 
-      <div class="audio-widget">
-        <div class="media-box">[Audio Player &amp; Waveform]</div>
-        <div class="player-scrubber-wireframe" role="region" aria-label="Audio timeline">
-          <span class="player-timestamp" id="current-time">0:42</span>
-          <div class="scrubber-track" role="progressbar" aria-valuenow="35" aria-valuemin="0" aria-valuemax="100">
-            <div class="scrubber-progress" id="progress-bar"></div>
-          </div>
-          <span class="player-timestamp" id="total-time">2:45</span>
-        </div>
-        
-        <div class="track-row" data-genre="indie">
-          <div class="track-info">
-            <strong>[Track Title 1]</strong> &bull; <span class="placeholder-text">[Artist Name &bull; Indie Rock Demo]</span>
-          </div>
-          <div class="track-meta">
-            <span class="track-duration">2:45</span>
-            <button type="button" class="btn-placeholder btn-sm play-btn" data-time="2:45">Play Preview</button>
-          </div>
-        </div>
-
-        <div class="track-row" data-genre="pop">
-          <div class="track-info">
-            <strong>[Track Title 2]</strong> &bull; <span class="placeholder-text">[Artist Name &bull; Bedroom Pop Single]</span>
-          </div>
-          <div class="track-meta">
-            <span class="track-duration">3:12</span>
-            <button type="button" class="btn-placeholder btn-sm play-btn" data-time="3:12">Play Preview</button>
-          </div>
-        </div>
-
-        <div class="track-row" data-genre="acoustic">
-          <div class="track-info">
-            <strong>[Track Title 3]</strong> &bull; <span class="placeholder-text">[Artist Name &bull; Acoustic Folk Song]</span>
-          </div>
-          <div class="track-meta">
-            <span class="track-duration">1:58</span>
-            <button type="button" class="btn-placeholder btn-sm play-btn" data-time="1:58">Play Preview</button>
-          </div>
-        </div>
-
-        <div class="track-row" data-genre="punk">
-          <div class="track-info">
-            <strong>[Track Title 4]</strong> &bull; <span class="placeholder-text">[Artist Name &bull; Alternative &amp; Punk Track]</span>
-          </div>
-          <div class="track-meta">
-            <span class="track-duration">3:30</span>
-            <button type="button" class="btn-placeholder btn-sm play-btn" data-time="3:30">Play Preview</button>
-          </div>
-        </div>
-      </div>
-
-      <p class="placeholder-text mt-1">[From raw bedroom voice memos to Spotify-ready masters, engineered and mixed in the room.]</p>
+      <p class="placeholder-text mt-1" data-edit-key="work.p.from-rough-bedroom-voice-memos-to">From rough bedroom voice memos to finished songs, recorded and mixed right here.</p>
     </section>
 
     <!-- Section 2: From Voice Memo to Finished Song (The Creative Evolution) -->
+    <section class="section-block ab-compare">
+      <h2 data-edit-key="work.h2.voice-memo-vs-finished-song">Voice Memo vs. Finished Song</h2>
+      <p class="placeholder-text" data-edit-key="work.p.flip-the-switch-and-hear-what">Flip the switch and hear what happens when a phone recording becomes a finished song.</p>
+
+      <div class="audio-widget ab-player">
+        <audio data-version="memo" data-media-clip="work.ab.memo" preload="none" data-src="media/voice-memo-rough.wav"></audio>
+        <audio data-version="master" data-media-clip="work.ab.master" preload="none" data-src="media/track-3-acoustic.wav"></audio>
+        <div class="deck-display">
+          <p class="deck-label" aria-live="polite">Voice Memo</p>
+          <div class="deck-reels" aria-hidden="true"><span class="reel"></span><span class="reel"></span></div>
+        </div>
+        <div class="ab-slide-row">
+          <button type="button" class="ab-slide" role="switch" aria-checked="false" aria-labelledby="ab-master-name"><span class="ab-slide-cap"></span></button>
+          <div class="ab-slide-labels" aria-hidden="true">
+            <span class="ab-slide-label" data-version="memo" data-edit-key="work.ab.label-memo">Memo</span>
+            <span class="ab-slide-label" data-version="master" data-edit-key="work.ab.label-master">Master</span>
+          </div>
+        </div>
+        <div class="transport">
+          <button type="button" class="btn-placeholder btn-sm btn-primary transport-btn ab-play" aria-label="Play">&#9654;&#xFE0E;</button>
+        </div>
+        <div class="player-scrubber-wireframe">
+          <span class="player-timestamp ab-time">0:00</span>
+          <input type="range" class="ab-seek" min="0" max="0" step="0.1" value="0" aria-label="Seek">
+          <span class="player-timestamp ab-dur">0:00</span>
+        </div>
+        <p class="ab-hint" data-edit-key="work.p.slide-the-switch-while-it-plays">Slide the switch while it plays. The song keeps its place.</p>
+      </div>
+
+      <table class="ab-specs">
+        <caption class="visually-hidden">What changed between the voice memo and the master</caption>
+        <thead>
+          <tr><td></td><th scope="col" data-version="memo" data-edit-key="work.ab.col-memo">Voice Memo</th><th scope="col" data-version="master" id="ab-master-name" data-edit-key="work.ab.col-master">Finished Master</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.mic.name">Mic</span></th><td data-version="memo" data-edit-key="work.ab.mic.memo">Phone mic</td><td data-version="master" data-edit-key="work.ab.mic.master">Studio mics</td></tr>
+          <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.room.name">Room</span></th><td data-version="memo" data-edit-key="work.ab.room.memo">Bedroom, some room noise</td><td data-version="master" data-edit-key="work.ab.room.master">Live room</td></tr>
+          <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.takes.name">Takes</span></th><td data-version="memo" data-edit-key="work.ab.takes.memo">One take</td><td data-version="master" data-edit-key="work.ab.takes.master">Layered takes and harmonies</td></tr>
+          <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.mix.name">Mix</span></th><td data-version="memo" data-edit-key="work.ab.mix.memo">None</td><td data-version="master" data-edit-key="work.ab.mix.master">Mixed and finished</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section: Studio Video (placeholder) -->
     <section class="section-block">
-      <h2>[Voice Memo vs. Finished Master]</h2>
-      <p class="placeholder-text">[Listen to how an iPhone recording evolves into a polished release.]</p>
-
-      <div class="comparison-container">
-        <article class="card">
-          <div class="media-box ratio-16-9">[Rough Voice Memo Player]</div>
-          <h3>[Where It Started: Phone Voice Memo]</h3>
-          <p class="placeholder-text">[Rough acoustic chords and humming into an iPhone mic with room noise.]</p>
-        </article>
-
-        <div class="comparison-arrow" aria-hidden="true">&rarr;</div>
-
-        <article class="card">
-          <div class="media-box ratio-16-9">[Studio Master Player]</div>
-          <h3>[Where It Ended Up: Finished Master]</h3>
-          <p class="placeholder-text">[Tight live drums, layered vocal harmonies, dialed guitar tones, and radio-ready punch.]</p>
-        </article>
+      <h2 data-edit-key="work.h2.a-look-inside">A Look Inside</h2>
+      <p class="placeholder-text" data-edit-key="work.p.a-quick-peek-at-the-room">A quick peek at the room and the vibe.</p>
+      <div class="media-box ratio-16-9 has-photo has-video">
+        <video controls loop muted playsinline preload="metadata" data-media-clip="work.video.session" data-media-poster="work.video.poster" poster="images/studio-live-room.jpg" src="media/placeholder-session.webm" aria-label="A short video tour of Alcove Recording"></video>
       </div>
     </section>
 
     <!-- Section 3: In-Studio Sessions (Candid Photo Gallery) -->
     <section class="section-block">
-      <h2>[Real Moments in the Room]</h2>
-      <p class="placeholder-text">[Candid moments, tracking sessions, and relaxed studio energy.]</p>
+      <h2 data-edit-key="work.h2.in-the-room">In the Room</h2>
+      <p class="placeholder-text" data-edit-key="work.p.what-a-session-looks-and-feels">What a session looks and feels like.</p>
 
       <div class="grid-cards">
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 1]</div>
-          <p class="placeholder-text">[Tracking live drums &amp; percussion in the room]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-live-room.jpg" alt="The live room at Alcove Recording" data-media-slot="work.photo.the-live-room-at-alcove" class="p-left" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.setting-up-in-the-live-room">Setting up in the live room</p>
         </article>
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 2]</div>
-          <p class="placeholder-text">[Vocal tracking with warm condenser microphone]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-acoustic-room.jpg" alt="The acoustic room at Alcove Recording" data-media-slot="work.photo.the-acoustic-room-at-alcove" class="p-right" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.getting-comfortable-before-the-first-take">Getting comfortable before the first take</p>
         </article>
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 3]</div>
-          <p class="placeholder-text">[Dialing pedals &amp; guitar amp textures on the floor]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-instruments.jpg" alt="Instruments and amps in the studio" data-media-slot="work.photo.instruments-and-amps-in-the" class="p-left" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.trying-out-different-sounds">Trying out different sounds</p>
         </article>
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 4]</div>
-          <p class="placeholder-text">[Listening back on the lounge couch with bandmates]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-piano.jpg" alt="The piano in the studio" data-media-slot="work.photo.the-piano-in-the-studio" class="p-right" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.listening-back-together">Listening back together</p>
         </article>
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 5]</div>
-          <p class="placeholder-text">[Acoustic guitar layering by the window]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-acoustic-room.jpg" alt="The acoustic room at Alcove Recording" data-media-slot="work.photo.the-acoustic-room-at-alcove-2" class="p-left" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.layering-parts-one-at-a-time">Layering parts, one at a time</p>
         </article>
         <article class="card">
-          <div class="media-box ratio-4-3">[Session Photo 6]</div>
-          <p class="placeholder-text">[Printing the final master mix with Seth]</p>
+          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-instruments.jpg" alt="Instruments and amps in the studio" data-media-slot="work.photo.instruments-and-amps-in-the-2" class="p-right" loading="lazy" decoding="async"></div>
+          <p class="placeholder-text" data-edit-key="work.p.putting-the-finishing-touches-on-a">Putting the finishing touches on a mix</p>
         </article>
       </div>
     </section>
 
     <!-- Section 4: Invitation -->
     <section class="section-block text-center">
-      <h2>[Have a Song You Want to Hear Come Together?]</h2>
-      <p class="placeholder-text">[Share your rough demo or voice memo with Seth. Zero pressure.]</p>
+      <h2 data-edit-key="work.h2.have-a-song-you-want-to">Have a Song You Want to Hear Come Together?</h2>
+      <p class="placeholder-text" data-edit-key="work.p.send-me-your-rough-demo-or">Send me your rough demo or voice memo. No pressure at all.</p>
       <div class="button-group flex-center">
-        <a href="contact.html" class="btn-placeholder btn-primary">Start Your Project</a>
+        <a href="contact.html" class="btn-placeholder btn-primary" data-edit-key="work.a.start-your-project">Start Your Project</a>
       </div>
     </section>
 
@@ -165,50 +211,9 @@
 
   <!-- Global Footer -->
   <footer class="site-footer">
-    <p>Alcove Recording &copy; 2026</p>
+    <p data-edit-key="site.footer.copyright">Alcove Recording &copy; 2026</p>
   </footer>
 
-  <script>
-    (function () {
-      const filters = document.querySelectorAll('.filter-pill');
-      const rows = document.querySelectorAll('.track-row');
-      const playBtns = document.querySelectorAll('.play-btn');
-      const totalTimeEl = document.getElementById('total-time');
-      const currentTimeEl = document.getElementById('current-time');
-      const progressBar = document.getElementById('progress-bar');
-
-      filters.forEach(f => {
-        f.addEventListener('click', () => {
-          filters.forEach(btn => btn.classList.remove('active'));
-          f.classList.add('active');
-          const genre = f.dataset.genre;
-          rows.forEach(r => {
-            if (genre === 'all' || r.dataset.genre === genre) {
-              r.style.display = 'flex';
-            } else {
-              r.style.display = 'none';
-            }
-          });
-        });
-      });
-
-      playBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const isPlaying = btn.textContent === 'Pause';
-          playBtns.forEach(b => b.textContent = 'Play Preview');
-          if (!isPlaying) {
-            btn.textContent = 'Pause';
-            totalTimeEl.textContent = btn.dataset.time || '2:45';
-            currentTimeEl.textContent = '0:01';
-            progressBar.style.width = '15%';
-          } else {
-            currentTimeEl.textContent = '0:00';
-            progressBar.style.width = '0%';
-          }
-        });
-      });
-    })();
-  </script>
 
 </body>
 </html>

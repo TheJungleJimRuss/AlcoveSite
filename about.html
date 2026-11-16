@@ -2,23 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#FDFBF7">
   <title>About - Alcove Recording</title>
   <link rel="stylesheet" href="wireframe.css">
   <link rel="stylesheet" href="theme-preview.css">
-  <script src="theme-preview.js" defer></script>
+  <link rel="stylesheet" href="logo.css">
+  <link rel="stylesheet" href="textures.css?v=etch1">
+  <script src="content-loader.js"></script>
+  <script src="theme-preview.js"></script>
+  <script src="fader.js" defer></script>
+  <script src="nav-switch.js" defer></script>
+  <script src="now-playing.js" defer></script>
+  <script src="cards-tilt.js" defer></script>
 </head>
 <body>
 
   <!-- Global Header & Navigation -->
   <header class="site-header">
-    <a href="index.html" class="logo-placeholder">Alcove Recording</a>
+    <a href="index.html" class="logo-placeholder" aria-label="Alcove Recording, home"><span class="logo-mark" role="img" aria-label="Alcove Recording"></span></a>
     <nav aria-label="Main Navigation">
       <ul class="nav-links">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="work.html">Work</a></li>
-        <li><a href="about.html" class="active" aria-current="page">About</a></li>
-        <li><a href="contact.html">Contact</a></li>
+        <li><a href="index.html" data-edit-key="site.nav.home">Home</a></li>
+        <li><a href="work.html" data-edit-key="site.nav.work">Work</a></li>
+        <li><a href="about.html" class="active" aria-current="page" data-edit-key="site.nav.about">About</a></li>
+        <li><a href="contact.html" data-edit-key="site.nav.contact">Contact</a></li>
       </ul>
     </nav>
   </header>
@@ -27,21 +35,23 @@
 
     <!-- Open Page Header -->
     <header class="page-header">
-      <h1>[About Alcove Recording]</h1>
-      <p class="page-intro">[Meet Seth Miller &mdash; Producer, engineer, and mentor at Alcove Recording.]</p>
+      <h1 data-edit-key="about.h1.about-alcove">About Alcove</h1>
+      <p class="page-intro" data-edit-key="about.p.hi-i-m-seth-i-make">Hi, I'm Seth. I make records, and I'd love to help you make yours.</p>
     </header>
 
     <!-- Section 1: Meet Seth (Bio & Philosophy) -->
     <section class="section-block">
       <div class="grid-cards bio-grid">
-        <div class="media-box ratio-1-1">[Seth Miller Portrait (1:1)]</div>
+        <div class="card portrait-card">
+          <div class="media-box ratio-1-1 has-photo photo-slot" data-slot-label="Seth: swap in a real portrait"><img src="images/portrait-placeholder.svg" alt="Portrait of Seth Miller" data-media-slot="about.photo.portrait" class="p-center" loading="lazy" decoding="async"></div>
+        </div>
         <div>
-          <h2>[Meet Seth Miller]</h2>
-          <p class="placeholder-text">[Seth has spent over a decade producing, mixing, and mentoring emerging artists. Alcove was founded to provide young musicians with a welcoming, high-quality studio space free from industry gatekeeping.]</p>
-          <p class="placeholder-text">[The focus is always on capturing authentic character over sterile perfection, with special care for teen artists and first-time recording projects.]</p>
+          <h2 data-edit-key="about.h2.hey-i-m-seth">Hey, I'm Seth</h2>
+          <p class="placeholder-text" data-edit-key="about.p.i-produce-record-and-mix-music">I produce, record, and mix music, and I started Alcove because recording studios can feel like closed doors. I wanted a place where young musicians could walk in, feel comfortable, and still leave with something they're proud of.</p>
+          <p class="placeholder-text" data-edit-key="about.p.i-care-more-about-how-a">I care more about how a song feels than how perfect it is. If you're a teen artist or you've never been in a studio before, you're exactly who I built this for.</p>
           <div class="card mt-1">
-            <h4>[Personal Philosophy Quote]</h4>
-            <p class="placeholder-text">[Making music should be exciting, comfortable, and collaborative.]</p>
+            <h4 data-edit-key="about.h4.what-i-believe">What I believe</h4>
+            <p class="placeholder-text" data-edit-key="about.p.making-music-should-be-fun-if">Making music should be fun. If you're nervous, that's okay. We'll figure it out together.</p>
           </div>
         </div>
       </div>
@@ -49,104 +59,98 @@
 
     <!-- Section 2: The Studio Space & Vibe -->
     <section class="section-block">
-      <h2>[The Studio Space &amp; Vibe]</h2>
-      <p class="placeholder-text">[An open, comfortable living-room space where artists feel relaxed and ready to create.]</p>
+      <h2 data-edit-key="about.h2.the-space">The Space</h2>
+      <p class="placeholder-text" data-edit-key="about.p.a-relaxed-open-room-where-you">A relaxed, open room where you can take a breath, get comfortable, and get creative.</p>
 
       <div class="grid-cards">
         <article class="card">
-          <div class="media-box">[Tracking Area Photo]</div>
-          <h3>[The Tracking Area]</h3>
-          <p class="placeholder-text">[Natural lighting, comfortable seating, and no intimidating isolation booths.]</p>
+          <div class="media-box has-photo"><img src="images/studio-live-room.jpg" alt="The live room where bands and singers record" data-media-slot="about.photo.the-live-room-where-bands" class="p-right" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="about.h3.the-tracking-area">The Tracking Area</h3>
+          <p class="placeholder-text" data-edit-key="about.p.this-is-where-the-playing-happens">This is where the playing happens. Plenty of space, nothing intimidating, and room to move around.</p>
         </article>
 
         <article class="card">
-          <div class="media-box">[Lounge Area Photo]</div>
-          <h3>[The Chill Lounge]</h3>
-          <p class="placeholder-text">[Cozy space for bandmates, friends, or parents to hang out, listen, and relax.]</p>
+          <div class="media-box has-photo"><img src="images/studio-acoustic-room.jpg" alt="The relaxed acoustic room with space to hang out" data-media-slot="about.photo.the-relaxed-acoustic-room-with" class="p-center" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="about.h3.the-chill-lounge">The Chill Lounge</h3>
+          <p class="placeholder-text" data-edit-key="about.p.a-spot-for-bandmates-friends-or">A spot for bandmates, friends, or parents to hang out, listen along, and cheer you on.</p>
         </article>
 
         <article class="card">
-          <div class="media-box">[Creative Desk Photo]</div>
-          <h3>[The Creative Desk]</h3>
-          <p class="placeholder-text">[Where we listen back together, tweak tones, and dial in the final mix.]</p>
+          <div class="media-box has-photo"><img src="images/studio-piano.jpg" alt="The piano and desk area where we listen back" data-media-slot="about.photo.the-piano-and-desk-area" class="p-left" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="about.h3.the-creative-desk">The Creative Desk</h3>
+          <p class="placeholder-text" data-edit-key="about.p.where-we-listen-back-together-tweak">Where we listen back together, tweak things, and shape the final mix side by side.</p>
         </article>
       </div>
     </section>
 
     <!-- Section 3: Producer Philosophy Cards (Mentorship & Approach) -->
     <section class="section-block">
-      <h2>[How We Work Together]</h2>
-      <p class="placeholder-text">[Guiding emerging musicians with patience, encouragement, and zero gatekeeping.]</p>
+      <h2 data-edit-key="about.h2.how-i-work">How I Work</h2>
+      <p class="placeholder-text" data-edit-key="about.p.patience-encouragement-and-no-ego-that">Patience, encouragement, and no ego. That's the whole approach.</p>
 
-      <div class="feature-list">
-        <article class="feature-item">
-          <div class="feature-icon-box">[Pillar 1]</div>
-          <div>
-            <h3>[Mentorship Over Gatekeeping]</h3>
-            <p class="placeholder-text">[Encouraging young musicians to find their sound without industry ego or intimidation.]</p>
-          </div>
+      <div class="roadmap-steps how-steps">
+        <article class="roadmap-step">
+          <span class="step-badge" aria-hidden="true" data-edit-key="about.span.step-01">01</span>
+          <h3 data-edit-key="about.h3.mentorship-not-gatekeeping">Mentorship, Not Gatekeeping</h3>
+          <p class="placeholder-text" data-edit-key="about.p.i-m-here-to-help-you">I'm here to help you find your own sound, not to tell you what it should be.</p>
         </article>
 
-        <article class="feature-item">
-          <div class="feature-icon-box">[Pillar 2]</div>
-          <div>
-            <h3>[A Creative Safe Space]</h3>
-            <p class="placeholder-text">[Zero clock anxiety. Plenty of room to warm up, experiment, and make mistakes behind the mic.]</p>
-          </div>
+        <article class="roadmap-step">
+          <span class="step-badge" aria-hidden="true" data-edit-key="about.span.step-02">02</span>
+          <h3 data-edit-key="about.h3.a-safe-place-to-try-things">A Safe Place to Try Things</h3>
+          <p class="placeholder-text" data-edit-key="about.p.warm-up-experiment-and-mess-up">Warm up, experiment, and mess up as much as you need to. Mistakes are part of making something good.</p>
         </article>
 
-        <article class="feature-item">
-          <div class="feature-icon-box">[Pillar 3]</div>
-          <div>
-            <h3>[Affordable &amp; Fair for Student Artists]</h3>
-            <p class="placeholder-text">[Clear, transparent pricing designed for teen artists and high school bands, with no surprise fees.]</p>
-          </div>
+        <article class="roadmap-step">
+          <span class="step-badge" aria-hidden="true" data-edit-key="about.span.step-03">03</span>
+          <h3 data-edit-key="about.h3.fair-for-student-artists">Fair for Student Artists</h3>
+          <p class="placeholder-text" data-edit-key="about.p.i-want-recording-to-be-within">I want recording to be within reach for young artists. We'll talk about cost up front so there are no surprises.</p>
         </article>
       </div>
     </section>
 
     <!-- Section 4: Interactive First-Timer FAQ (Accessible Details & Summary) -->
     <section class="section-block">
-      <h2>[First-Timer FAQ: Common Worries Answered]</h2>
-      <p class="placeholder-text">[Demystifying the studio experience for musicians recording for the very first time.]</p>
+      <h2 data-edit-key="about.h2.first-timer-questions">First-Timer Questions</h2>
+      <p class="placeholder-text" data-edit-key="about.p.everything-people-usually-wonder-about-before">Everything people usually wonder about before their first session.</p>
       
       <div class="faq-accordion-group">
-        <details class="faq-item" open>
-          <summary class="faq-summary">[Do I have to be completely rehearsed before coming in?]</summary>
+        <details class="faq-item">
+          <summary class="faq-summary" data-edit-key="about.summary.do-i-need-to-be-totally">Do I need to be totally rehearsed?</summary>
           <div class="faq-content">
-            <p class="placeholder-text">[Not at all. Rough demos and voice memos are completely welcome. We can spend time structuring, dialing tempos, and rehearsing in the room together.]</p>
+            <p class="placeholder-text" data-edit-key="about.p.not-at-all-rough-demos-and">Not at all. Rough demos and voice memos are welcome. We can work out the structure and tempo together in the room.</p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-summary">[Can my friends or parents hang out during the session?]</summary>
+          <summary class="faq-summary" data-edit-key="about.summary.can-my-friends-or-parents-come">Can my friends or parents come along?</summary>
           <div class="faq-content">
-            <p class="placeholder-text">[Absolutely. Alcove has a comfortable lounge couch where friends, bandmates, or parents can chill, listen, and support you.]</p>
+            <p class="placeholder-text" data-edit-key="about.p.absolutely-there-s-room-for-bandmates">Absolutely. There's room for bandmates, friends, or parents to hang out, listen, and cheer you on.</p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-summary">[What should I bring on tracking day?]</summary>
+          <summary class="faq-summary" data-edit-key="about.summary.what-should-i-bring">What should I bring?</summary>
           <div class="faq-content">
-            <p class="placeholder-text">[Just bring your instrument (if you want to use yours), your lyrics/notes on your phone, and your ideas. We provide amps, mics, pedals, cables, and coffee/water.]</p>
+            <p class="placeholder-text" data-edit-key="about.p.your-instrument-if-you-d-like">Your instrument if you'd like to use your own, your lyrics or notes, and your ideas. If you're not sure what else you need, ask me and we'll sort it out before the session.</p>
           </div>
         </details>
 
         <details class="faq-item">
-          <summary class="faq-summary">[How long does it take to get the final mix?]</summary>
+          <summary class="faq-summary" data-edit-key="about.summary.how-long-until-i-hear-the">How long until I hear the finished song?</summary>
           <div class="faq-content">
-            <p class="placeholder-text">[Typically within a few days of tracking. You will receive draft revisions to listen on your headphones and in the car before finalizing your master.]</p>
+            <p class="placeholder-text" data-edit-key="about.p.we-ll-talk-timing-before-we">We'll talk timing before we start. You'll get to hear drafts and tell me what you'd change before anything's final.</p>
           </div>
         </details>
       </div>
     </section>
 
     <!-- Section 5: Low-Stress Invitation -->
-    <section class="section-block text-center">
-      <h2>[Questions About Recording?]</h2>
-      <p class="placeholder-text">[Want to meet Seth, ask a question, or check out the room? Reach out anytime.]</p>
+    <section class="section-block text-center closing-note">
+      <h2 data-edit-key="about.h2.still-have-questions">Still Have Questions?</h2>
+      <p class="placeholder-text" data-edit-key="about.p.want-to-say-hi-ask-something">Want to say hi, ask something, or come see the room? Reach out anytime.</p>
       <div class="button-group flex-center">
-        <a href="contact.html" class="btn-placeholder btn-primary">Get in Touch</a>
+        <a href="contact.html" class="btn-placeholder btn-primary" data-edit-key="about.a.get-in-touch">Get in Touch</a>
       </div>
     </section>
 
@@ -154,7 +158,7 @@
 
   <!-- Global Footer -->
   <footer class="site-footer">
-    <p>Alcove Recording &copy; 2026</p>
+    <p data-edit-key="site.footer.copyright">Alcove Recording &copy; 2026</p>
   </footer>
 
 </body>

@@ -15,14 +15,41 @@ Alcove Recording is an independent music production studio founded by music prod
 1. **Unintimidating & Welcoming**: Strip away gear elitism and technical gatekeeping. The site should feel as friendly and inviting as sitting down on a couch in the live room.
 2. **Focus on the Creative Process**: Celebrate the progression from rough bedroom phone memo to polished streaming release.
 3. **Warm, Analog & Cozy Aesthetic**: Evoke natural studio light, acoustic wood baffles, warm vacuum tubes, and tactile console controls.
-4. **Studio Minimalism & Visual Restraint**: Every element on the page must earn its place. Embrace generous whitespace, open layouts, and zero visual clutter. Avoid nested box fatigue, border overload, and decorative noise so young artists feel calm, focused, and unhurried.
+4. **Analog Studio Tactility**: Stylized recording gear (faders, knobs, buttons, VU meters, tape) mixed equally with printed ephemera (labels, stickers, polaroids), built only from CSS and SVG. Keep generous whitespace and a legible layout so young artists stay calm and curious. See `docs/adr/0001-analog-studio-style.md`.
 5. **Transparent & Frictionless**: Clear next steps, demystified recording workflows, and low-pressure contact points.
 
-### The Minimalist Studio Philosophy
-- **Breathing Room & Openness**: Ample vertical rhythm (`margin-bottom: 3.5rem`), spacious fluid padding, and unboxed headers (`.page-header`) that let content breathe.
-- **Zero Decorative Clutter & Box Fatigue**: Background fill boxes behind elements are removed; cards and sections use clean, subtle 1px hairline borders (`--border-color`) directly over the natural page background.
-- **Pill-Free Typography**: Unnecessary pill capsules and circular badge backgrounds are eliminated. Interactive filters use clean typographic text tabs (`.filter-pill`), step sequences use editorial numerals (`01`, `02`, `03`), and carousel captions float cleanly with high-contrast text shadows.
-- **Content-First Simplicity**: Authentic room photography, clean typography, and audio demos take center stage; decorative pills, heavy dropshadows, and nested boxes are eliminated.
+### The Analog Studio Philosophy
+- **Breathing Room**: Ample vertical rhythm (`margin-bottom: 3.5rem`) and fluid padding remain; tactile surfaces sit on open layouts, not crowded ones.
+- **Gear Treatment**: Audio player, buttons, navigation (including the mobile tab bar), booking pre-filter questions and photo captions look like hardware: soft gradients, bevels, highlights, pressed states. Hairlines are used only where they help.
+- **Fill Panels Welcome**: Saturated accent panels from Seth's palettes, colored fader caps and knobs; no page-wide film grain (removed 2026-11-12). Text must stay AA on every surface.
+- **Soft Shadows and Depth**: Raised and inset shadows signal what can be pressed. Filters and tabs may use chunky toggle or button shapes; steps keep mono numerals `01`-`03`. Small CC0 scanned texture tiles are allowed (ADR 0003): at most 150 KB in total, licenses recorded in `images/textures/LICENSES.md`, all wired up in `textures.css`, scaled by `--tex-strength`, and switched off under reduced transparency, increased contrast and forced colors. No other raster texture files.
+
+### Textures
+Tactile textures live only in `textures.css` (spec `.agents/issues/tactile-textures/spec.md`, ADR 0003). They are decorative CSS layers, never `<img>`, and never sit over body text. Every texture is painted in the active palette's own colours (via `color-mix` of `--text-main`, `--accent-*`, `--tint-*`), so it recolours with all four palettes and stays matte.
+
+Paper and tape are real scans kept as grayscale photos (`paper.webp`, `tape.webp`): the layer's `background-color` is a palette colour and the scan is multiplied onto it with `background-blend-mode: multiply` inside that one element, so the hue follows the palette. The other tiles in `images/textures/` are alpha-only WebP (white RGB, alpha = intensity): a pseudo-element with `background-color: <palette mix>` and ONE `mask-image` tile (plus `-webkit-mask-image`). Never use `mask-composite`, `mask-mode`, multi-layer masks or `mix-blend-mode`: engines disagree (headless Chromium 131 ignored the union and knocked out the ink).
+
+| Token | Value / use |
+|---|---|
+| `--tex-strength` | Scales every layer: `0` Off, `1` Quiet (default), `1.6` Bold. Set by `html[data-texture]` and the toolbar's Off/Quiet/Bold control (`?texture=`). Off removes the layers. |
+| `--tex-*-base` | Base opacity per layer (tape, label, wear); layer opacity = base x strength. |
+| `--tex-fiber-color`, `--tex-polaroid-fiber`, `--tex-label-color` | Palette tints: deeper tints on light palettes, lighter on dark (`html[data-scheme="dark"]`). Grain uses `--text-main`. |
+| `--tex-under` | The surface colour under type (`--bg-page`). |
+| `--tex-paper-img`, `--tex-tape-img` | The scanned photos (multiplied onto a palette colour). |
+| `--tex-wear-img`, `--tex-metal-img`, `--tex-film-img` | The alpha tiles. |
+
+Layers: tape (polaroid `::before`: a scanned strip of Tape005 masking tape multiplied onto the palette's tan tape colour and masked by its own outline; masking is the only tape, there is no tape option in the toolbar; three different strips (`tape.webp`, `tape-2.webp`, `tape-3.webp`, all without a wrinkle or scratch) rotate across cards, and strips also differ in angle, flip, length, sideways shift and shade, all keyed on the card's `:nth-child()` position; a flat strip at Off), page surface (brushed metal, the only surface: `body::before` is a sheet of `metal.webp` streaks behind all content, absolute over the whole body so it scrolls with the page, and `body::after` is a fixed steel wash with diagonal sheen bands; toolbar "Surface" / `?surface=` picks `metal` (default) or `metal-subtle`, the same layers at 0.45 strength; there is no page paper), paper things (polaroid frames and Card Stock: the scanned white Paper001 sheet multiplied onto the frame or card colour, strength `--tex-paper-base` on Card Stock and the lower `--tex-polaroid-base` on polaroid frames, which read as smoother coated photo paper), cards (always card stock, no option: off-white card sheet with the scanned paper, 3px corners and a layered soft shadow), hero logo edge (`h1.studio-wordmark` filter `#logo-edge-grain`: a subtle grainy blur, 1.2px blur dithered by fine noise so the outline breaks into grain; the SVG filter is inline in `index.html`). Print wear is an OVERLAY, not a mask: `h1::after` and `h2::after` are painted in the surface colour under the type (`--tex-under`) and cut by the wear tile; the hero wordmark gets none. Body text, form fields and buttons stay clean.
+
+Textures are off under `prefers-reduced-transparency: reduce`, `prefers-contrast: more` and `forced-colors: active`. `tests/texture-check.mjs` guards the budget (150 KB), alpha tiles, licenses, no `mask-composite`, the hero at `?texture=off` and these switches.
+
+---|---|
+| `--tex-strength` | Scales every layer: `0` Off, `1` Quiet (default), `1.6` Bold. Set by `html[data-texture]` and the toolbar's Off/Quiet/Bold control (`?texture=`). |
+| `--tex-blend` | `multiply` on light palettes, `screen` on dark ones. |
+| `--tex-tape` | Tape stock: polaroid tape. |
+| `--tex-label` | Label stock: label-maker captions. |
+| `--tex-wear` | Print wear mask: h1/h2, captions, tape. Body text, form fields and buttons stay clean. |
+
+Each image token lists the scanned WebP first and an SVG-noise data URI as fallback. Textures are off under `prefers-reduced-transparency: reduce`, `prefers-contrast: more` and `forced-colors: active`. `tests/texture-check.mjs` guards the budget, licenses and these switches.
 
 ---
 
@@ -32,32 +59,34 @@ All colors, typography, and core visual properties are managed via CSS custom pr
 
 ### 2.1 Color Palettes
 
-#### Default Studio Palette: Golden Hour Room (Client Favorite)
-Natural morning sunlight streaming into the tracking room, acoustic guitars, and calm creative focus.
+#### Palettes: Seth's Picks (Light + Dark)
+Only these four themes ship in the Theme Dock. Colors were sampled from the swatches Seth supplied; page/surface tints and dark backgrounds are derived. The default is **Olive & Orange (Light)**.
 
 ```css
 :root {
-  --bg-page: #FDFBF7;        /* Warm parchment / morning white */
-  --bg-surface: #FFFFFF;     /* Crisp paper card surface */
-  --bg-accent: #F4EFE6;      /* Soft warm sand / subtle containers */
-  --border-color: #E0DACF;   /* Neutral linen border */
-  --border-focus: #4D7C5F;   /* Studio sage green focus ring */
-  --text-main: #242E20;      /* Deep forest olive / high-contrast ink */
-  --text-muted: #5D6B57;     /* Soft olive gray for captions and secondary text */
-  --accent-primary: #4D7C5F; /* Studio sage green primary accent */
+  --bg-page: #FBF3E2;        /* Light tint of the yellow */
+  --bg-surface: #FFFBF2;
+  --bg-accent: #F6E3BC;
+  --border-color: #E8CE98;
+  --border-focus: #F58448;   /* Orange focus ring */
+  --text-main: #3B1A0F;
+  --text-muted: #575021;     /* Olive */
+  --accent-primary: #762E1A; /* Deep brick red */
   --color-error: #d93025;    /* Form error red */
   --color-valid: #188038;    /* Form success green */
 }
 ```
 
-#### Secondary Palettes (Available via Theme Dock)
-When designing new elements, test how they look against both light parchment and deep console themes:
-- **Golden Hour Room (Favorite)**: Daylight streaming warmth (`#FDFBF7` page, `#242E20` text, `#4D7C5F` studio sage accent).
-- **Terracotta Studio**: Sun-baked clay & warm acoustic baffles (`#F7F4EE` page, `#231D19` text, `#C85A32` terracotta accent).
-- **Sundown Live Room (Twilight Dark)**: Cozy studio night tracking (`#1A1D1A` page, `#242924` surface, `#F2EFE9` text, `#E5A93C` amber bulb accent).
-- **Laurel Canyon (Vintage Folk)**: Sunlit wood & tube preamps (`#FBF7EE` page, `#262016` text, `#B86B28` honey amber accent).
-- **Deep Vinyl Midnight (Late Night)**: Late-night vocal session (`#11141E` page, `#181C2A` surface, `#F0F2FA` text, `#FF7A59` electric apricot accent).
-- **Desert Sound City (Agave Teal)**: Modern recording retreat (`#F6F4F0` page, `#1C2321` text, `#2C7A7B` agave teal accent).
+| Theme | Page | Surface | Text | Accent | Focus |
+|---|---|---|---|---|---|
+| Olive & Orange (Light) | `#FBF3E2` | `#FFFBF2` | `#3B1A0F` | `#762E1A` | `#F58448` |
+| Olive & Orange (Dark) | `#1F1A0C` | `#292212` | `#FBF0D8` | `#F58448` | `#EDC070` |
+| Sage & Coral (Light) | `#FFF5E0` | `#FFFBF3` | `#472D2E` | `#723D45` | `#E16C5B` |
+| Sage & Coral (Dark) | `#2A1B1D` | `#352326` | `#FEEFD0` | `#E16C5B` | `#FEE0A6` |
+
+Each theme also defines `--accent-secondary`, `--accent-tertiary`, `--tint-1`, `--tint-2` so all five swatch colors appear on the site: a five-color stripe under the header and above the footer, cycling card/section top borders, gradient wordmark, colored numerals, soft washes. Text-safe colors (primary, tertiary) carry text; secondary and tints carry borders and washes.
+
+Accent is used as text/border color only (never a fill behind white text), so bright accents work on dark themes.
 
 ### 2.2 Color Usage Rules
 - **High Contrast Main Text**: Use `var(--text-main)` for all headings, labels, button text, and primary content (always maintains WCAG AA / AAA contrast).
@@ -75,13 +104,13 @@ All fonts are imported from Google Fonts in [`wireframe.css`](file:///Users/alex
 ```css
 :root {
   /* Headings: Clean, modern, warm geometric grotesk */
-  --font-heading: "Outfit", system-ui, -apple-system, sans-serif;
+  --font-heading: "Fraunces", Georgia, serif;
 
   /* Body text: High-legibility humanist sans-serif */
-  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-sans: "Fraunces", Georgia, serif;
 
   /* Technical / Audio Specs: Monospace for timecodes, gear specs, badges, and labels */
-  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
+  --font-mono: "Fraunces", Georgia, serif;
 }
 ```
 
@@ -97,7 +126,7 @@ Use fluid `clamp()` values to ensure titles scale naturally between mobile and w
 | **Sub-item H4** | `h4` | `0.95rem` | 600 | `0` | `1.3` |
 | **Lead / Intro Text** | `.page-intro`, `.hero-wordmark-subline` | `clamp(1.05rem, 2.2vw, 1.35rem)` | 400 | `0` | `1.55` |
 | **Body Paragraph** | `p` | `1rem` | 400 | `0` | `1.6` |
-| **Mono / Badges / Meta**| `.carousel-badge`, `.track-meta`, `.step-badge` | `0.8rem` – `0.85rem` | 600 / 700 | `0.02em` | `1.4` |
+| **Mono / Badges / Meta**| `.track-meta`, `.step-badge` | `0.8rem` – `0.85rem` | 600 / 700 | `0.02em` | `1.4` |
 
 ---
 
@@ -123,12 +152,7 @@ Wrap distinct thematic sections inside `.section-block`:
   <!-- Content Grid / Cards -->
 </section>
 ```
-Styling features:
-- `padding: clamp(1.5rem, 3vw, 2.25rem)`
-- `border: 1px solid var(--border-color)`
-- `background: var(--bg-surface)`
-- `border-radius: 2px` (analog console plate aesthetic)
-- `margin-bottom: 3.5rem`
+Styling: unboxed. No border, background, padding, radius or texture; sections are separated by space only (`margin-bottom: clamp(3rem, 7vw, 5rem)`).
 
 ### 4.3 Subpage Header (`.page-header`)
 Subpages (`work.html`, `about.html`, `contact.html`) use an open, uncluttered header at the top of the container:
@@ -240,15 +264,15 @@ Used inside tight card rows, table rows, or scrubbers:
 - `padding: 0.4rem 0.85rem; font-size: 0.8rem;`
 
 ### 5.3 Filter Tabs (`.filter-pill`, `.filter-btn`)
-Clean typographic text tabs used for audio genre filtering:
+Clean typographic text tabs for switching between a few views or filters (the Work page no longer has a filter bar; songs are a plain list):
 ```html
-<div class="filter-bar" role="toolbar" aria-label="Genre Filters">
-  <button type="button" class="filter-pill active" aria-pressed="true">All</button>
-  <button type="button" class="filter-pill" aria-pressed="false">Indie Rock</button>
-  <button type="button" class="filter-pill" aria-pressed="false">Acoustic</button>
+<div class="filter-bar" role="toolbar" aria-label="Filters">
+  <button type="button" class="filter-pill active" aria-pressed="true">Option A</button>
+  <button type="button" class="filter-pill" aria-pressed="false">Option B</button>
+  <button type="button" class="filter-pill" aria-pressed="false">Option C</button>
 </div>
 ```
-- Flat, pill-free design (`background: transparent; border: none; border-bottom: 2px solid transparent`).
+- Superseded by the analog studio style: tactile toggle or button shapes (see ADR 0001); the flat text-tab rules below describe the pre-reskin baseline.
 - Active state indicates selection cleanly via bottom border (`border-bottom-color: var(--border-focus)`).
 - Monospace typography (`font-family: var(--font-mono); font-size: 0.85rem`).
 - Smooth hover and active color transitions with zero pill background.
@@ -260,7 +284,6 @@ Clean typographic text tabs used for audio genre filtering:
     <div class="track-info">
       <strong>[Track Title]</strong>
       <span class="track-meta">
-        <span class="filter-pill">[Genre]</span>
         <span class="track-duration">2:45</span>
       </span>
     </div>
@@ -318,12 +341,10 @@ Encouraging bedroom artists to drop rough audio phone memos:
 </div>
 ```
 
-### 5.8 Studio Atmosphere Carousel (`.carousel-track`)
-- Positioned below the Home hero with a sticky 100dvh viewport inside a 120vh scroll dwell.
-- Edge-to-edge photography (`object-fit: cover`) showcasing authentic live room light and gear.
-- Frosted analog console chevron buttons (`.carousel-btn--prev`, `.carousel-btn--next`).
-- Studio channel plate badge (`.carousel-badge`) with current slide caption.
-- Level-meter dot indicators (`.carousel-dots` and `.carousel-dot`).
+### 5.8 Home Hero Photo (`.hero-media`)
+- One still studio photo (`images/studio-live-room.jpg`) fills the 100dvh Home hero behind the wordmark, subline and hero nav.
+- Parallax: the photo drifts down 40% of its height while the hero scrolls away (CSS `animation-timeline: scroll(root)`, small JS fallback in `index.html`); still under `prefers-reduced-motion`.
+- A palette-tinted scrim (`.hero-media::after`, `--bg-page` at 74% plus a fade to `--bg-page` at the bottom) keeps the type readable in every palette and blends into the next section.
 
 ---
 
@@ -354,7 +375,7 @@ Every animation and transition MUST respect `prefers-reduced-motion`:
 ```css
 @media (prefers-reduced-motion: reduce) {
   @view-transition { navigation: none; }
-  .carousel-slide { transition: none !important; }
+  .hero-media { transform: none !important; }
   .site-header--smart { transition: none !important; }
 }
 ```
@@ -368,7 +389,7 @@ Every animation and transition MUST respect `prefers-reduced-motion`:
 | **> 1080px** | Desktop / Large Laptops | Fixed 1080px max-width container, full multi-column grids. |
 | **769px – 1079px** | Small Laptops / Tablets | Fluid container (`100% - 2rem`), `.grid-cards` auto-wraps cleanly. |
 | **541px – 768px** | Small Tablets / Large Phones | `.grid-showcase` collapses to 1 column; `.comparison-container` stacks with vertical arrow (`↓`). |
-| **<= 540px** | Mobile Phones | Header wraps neatly; nav link padding reduces to `0.25rem 0.45rem`; carousel buttons scale to `2.6rem`; feature items stack vertically. |
+| **<= 540px** | Mobile Phones | Header wraps neatly; nav link padding reduces to `0.25rem 0.45rem`; feature items stack vertically. |
 
 ---
 
@@ -403,5 +424,17 @@ When adding a new page or new section to an existing page, verify:
 - [ ] Interactive elements include `:hover`, `:focus-visible`, and `aria-*` attributes.
 - [ ] Tested at mobile (`375px`), tablet (`768px`), and desktop (`1200px`) screen widths.
 - [ ] Respects reduced motion preferences.
-- [ ] Adheres to studio minimalism: no unnecessary borders, badge clutter, or nested boxes; generous spacing and breathing room preserved.
+- [ ] Follows the analog studio style: gear treatment on controls, textures (`textures.css`, Off/Quiet/Bold control) and palette tokens, AA contrast, reduced-motion and reduced-transparency respected; generous spacing preserved.
 - [ ] Narrative copy uses clean `[ ... ]` placeholders until approved by Seth Miller.
+
+## Analog Studio keys (matte, no gloss)
+Buttons, nav links and the phone tab bar are matte keys: flat theme fill, 1px edge, solid 3px bottom edge (`box-shadow: 0 3px 0`), pressed state drops 3px and loses the edge. No gradients, inset highlights or soft drop shadows ("glossy keys" are rejected).
+
+## Analog Studio components (current)
+- **Nav switch:** header nav (desktop) and phone tab bar are a recessed track with a flat sliding thumb (`nav-switch.js`); hero nav keeps matte keys.
+- **Hover:** faint fill only. No colored borders, underlines, lift or scale.
+- **Player:** dark display strip with a 'Now playing' label, matte transport keys. No per-player meters: one live waveform appears in the middle of the site header while any audio plays (`now-playing.js`; still shape under reduced motion).
+- **A/B compare (Work):** tape-deck slide switch (recessed slot, ridged cap, MEMO / MASTER printed underneath with indicator lights); sliding keeps the playhead (`ab-compare.js`).
+- **Photos:** taped polaroid frames with slight tilt; placeholder slots use a dashed accent border and a label-maker note.
+- **Home hero:** one still studio photo with slow parallax under a palette scrim.
+- **Fader:** thin matte scroll fader on the right edge (`fader.js`).

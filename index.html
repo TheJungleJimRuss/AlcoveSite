@@ -2,23 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#FDFBF7">
   <title>Home - Alcove Recording</title>
   <link rel="stylesheet" href="wireframe.css">
   <link rel="stylesheet" href="theme-preview.css">
-  <script src="theme-preview.js" defer></script>
+  <link rel="stylesheet" href="logo.css">
+  <link rel="stylesheet" href="textures.css?v=etch1">
+  <script src="content-loader.js"></script>
+  <script src="theme-preview.js"></script>
+  <script src="fader.js" defer></script>
+  <script src="nav-switch.js" defer></script>
+  <script src="now-playing.js" defer></script>
+  <script src="cards-tilt.js" defer></script>
 </head>
 <body>
 
   <!-- Global Header & Navigation (Smart Reveal on Scroll) -->
   <header class="site-header site-header--smart">
-    <a href="index.html" class="logo-placeholder">Alcove Recording</a>
+    <a href="index.html" class="logo-placeholder" aria-label="Alcove Recording, home"><span class="logo-mark" role="img" aria-label="Alcove Recording"></span></a>
     <nav aria-label="Sticky Main Navigation">
       <ul class="nav-links">
-        <li><a href="index.html" class="active" aria-current="page">Home</a></li>
-        <li><a href="work.html">Work</a></li>
-        <li><a href="about.html">About</a></li>
-        <li><a href="contact.html">Contact</a></li>
+        <li><a href="index.html" class="active" aria-current="page" data-edit-key="site.nav.home">Home</a></li>
+        <li><a href="work.html" data-edit-key="site.nav.work">Work</a></li>
+        <li><a href="about.html" data-edit-key="site.nav.about">About</a></li>
+        <li><a href="contact.html" data-edit-key="site.nav.contact">Contact</a></li>
       </ul>
     </nav>
   </header>
@@ -27,110 +35,106 @@
 
     <!-- Above-The-Fold Viewport: Studio Wordmark, Subheader & Centered Navigation -->
     <section class="hero-wordmark-viewport">
-      <h1 class="studio-wordmark">Alcove</h1>
-      <p class="hero-wordmark-subline">[A comfortable, low-pressure creative studio for emerging musicians and first-time artists.]</p>
+      <div class="hero-media" aria-hidden="true" data-media-slot="index.photo.hero"></div>
+      <!-- Hero halation (textures.css): the wordmark's own colours, blurred very softly and laid under it, plus a slight softening of the letters -->
+      <svg class="svg-defs" aria-hidden="true" focusable="false">
+        <filter id="hero-halation-soft" x="-25%" y="-60%" width="150%" height="220%" color-interpolation-filters="sRGB">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="22" result="wide"/>
+          <feComponentTransfer in="wide" result="glow"><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.5" result="soft"/>
+          <feMerge><feMergeNode in="glow"/><feMergeNode in="soft"/></feMerge>
+        </filter>
+        <filter id="hero-halation-strong" x="-25%" y="-60%" width="150%" height="220%" color-interpolation-filters="sRGB">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="wide"/>
+          <feComponentTransfer in="wide" result="glow"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.8" result="soft"/>
+          <feMerge><feMergeNode in="glow"/><feMergeNode in="soft"/></feMerge>
+        </filter>
+        <!-- Hero edge roughness (textures.css): fractal noise nudges the wordmark's edges, like ink on rough stock -->
+        <filter id="hero-edge-subtle" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="3" seed="7" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+        <filter id="hero-edge-medium" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="3" seed="7" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+        <filter id="hero-edge-rough" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="3" seed="7" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="9" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+      </svg>
+      <h1 class="studio-wordmark"><span class="logo-mark logo-mark--hero" role="img" aria-label="Alcove Recording"></span></h1>
+      <p class="hero-wordmark-subline" data-edit-key="index.p.a-relaxed-little-studio-where-your">A relaxed little studio where your first song is welcome.</p>
       
       <nav class="hero-nav" aria-label="Hero Navigation">
         <ul class="nav-links">
-          <li><a href="index.html">Home</a></li>
-          <li><a href="work.html">Work</a></li>
-          <li><a href="about.html">About</a></li>
-          <li><a href="contact.html">Contact</a></li>
+          <li><a href="index.html" data-edit-key="site.nav.home">Home</a></li>
+          <li><a href="work.html" data-edit-key="site.nav.work">Work</a></li>
+          <li><a href="about.html" data-edit-key="site.nav.about">About</a></li>
+          <li><a href="contact.html" data-edit-key="site.nav.contact">Contact</a></li>
         </ul>
       </nav>
 
-      <a href="#content-start" class="scroll-cue" aria-label="Scroll to explore content">&darr;</a>
+      <a href="#process" class="scroll-cue" aria-label="Scroll to explore content" data-edit-key="index.a.scroll-cue">&darr;</a>
     </section>
-
-    <!-- Studio Atmosphere Full Viewport Sticky Parallax Carousel Track -->
-    <div id="content-start" class="carousel-track">
-      <section class="carousel-viewport parallax-viewport" aria-label="Studio Atmosphere Carousel">
-        <div class="carousel-slides" id="carousel-slides">
-          <div class="carousel-slide active" data-caption="[The Tracking Room &bull; Vintage console, analog warmth]">
-            <div class="parallax-media" style="background-image: url('images/studio-live-room.jpg');"></div>
-          </div>
-          <div class="carousel-slide" data-caption="[Live Acoustic Space &bull; Room for full band setups &amp; natural drums]">
-            <div class="parallax-media" style="background-image: url('images/studio-acoustic-room.jpg');"></div>
-          </div>
-          <div class="carousel-slide" data-caption="[Warm Upright Piano &bull; Acoustic tracking with natural resonance]">
-            <div class="parallax-media" style="background-image: url('images/studio-piano.jpg');"></div>
-          </div>
-          <div class="carousel-slide" data-caption="[Instruments &amp; Mics &bull; Tube amps, vintage guitars &amp; warm mics]">
-            <div class="parallax-media" style="background-image: url('images/studio-instruments.jpg');"></div>
-          </div>
-        </div>
-
-        <button type="button" class="carousel-btn carousel-btn--prev" id="carousel-prev" aria-label="Previous Slide">&lsaquo;</button>
-        <button type="button" class="carousel-btn carousel-btn--next" id="carousel-next" aria-label="Next Slide">&rsaquo;</button>
-
-        <div class="carousel-overlay">
-          <div class="carousel-badge" id="carousel-caption">[The Tracking Room &bull; Vintage console, analog warmth]</div>
-          <div class="carousel-dots" id="carousel-dots" role="tablist" aria-label="Slide Selector">
-            <button type="button" class="carousel-dot active" role="tab" aria-selected="true" aria-label="Slide 1"></button>
-            <button type="button" class="carousel-dot" role="tab" aria-selected="false" aria-label="Slide 2"></button>
-            <button type="button" class="carousel-dot" role="tab" aria-selected="false" aria-label="Slide 3"></button>
-            <button type="button" class="carousel-dot" role="tab" aria-selected="false" aria-label="Slide 4"></button>
-          </div>
-        </div>
-      </section>
-    </div>
 
     <div class="container">
       <!-- Section 2: First Time in a Studio? 3-Step Journey -->
     <section id="process" class="section-block">
-      <h2>[First Time in a Studio? 3-Step Journey]</h2>
-      <p class="placeholder-text">[Demystifying how raw bedroom voice memos turn into finished tracks.]</p>
+      <h2 data-edit-key="index.h2.first-time-in-a-studio-here">First Time in a Studio? Here's How It Goes</h2>
+      <p class="placeholder-text" data-edit-key="index.p.nobody-s-born-knowing-how-this">Nobody's born knowing how this works. Here's the short version of how a rough idea becomes a finished song.</p>
 
       <div class="grid-cards">
         <article class="card">
-          <div class="media-box">[Step 1 Visual]</div>
-          <h3>[Step 1: Voice Memo to Demo]</h3>
-          <p class="placeholder-text">[Bring rough bedroom recordings, acoustic riffs, or phone audio. No studio experience required.]</p>
+          <div class="media-box has-photo"><img src="images/studio-instruments.jpg" alt="Guitars and gear ready to play in the studio" data-media-slot="index.photo.guitars-and-gear-ready-to" class="p-left" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.01-start-with-what-you-ve">01. Start with what you've got</h3>
+          <p class="placeholder-text" data-edit-key="index.p.a-voice-memo-a-half-finished">A voice memo, a half-finished riff, a lyric in your notes app. It doesn't have to be polished, and you don't need any studio experience.</p>
         </article>
 
         <article class="card">
-          <div class="media-box">[Step 2 Visual]</div>
-          <h3>[Step 2: Comfortable Tracking]</h3>
-          <p class="placeholder-text">[Zero pressure, take your time, dial in tones, and capture takes you love.]</p>
+          <div class="media-box has-photo"><img src="images/studio-live-room.jpg" alt="The live room at Alcove Recording" data-media-slot="index.photo.the-live-room-at-alcove" class="p-center" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.02-record-at-your-own-pace">02. Record at your own pace</h3>
+          <p class="placeholder-text" data-edit-key="index.p.no-rush-and-no-judgment-we">No rush and no judgment. We'll mess with sounds, try things, and keep going until you've got takes you love.</p>
         </article>
 
         <article class="card">
-          <div class="media-box">[Step 3 Visual]</div>
-          <h3>[Step 3: The Finished Master]</h3>
-          <p class="placeholder-text">[Mixed, balanced, and ready for streaming platforms and playlists.]</p>
+          <div class="media-box has-photo"><img src="images/studio-piano.jpg" alt="The piano in the studio" data-media-slot="index.photo.the-piano-in-the-studio" class="p-right" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.03-hear-it-finished">03. Hear it finished</h3>
+          <p class="placeholder-text" data-edit-key="index.p.we-mix-it-so-everything-sits">We mix it so everything sits right, then get it ready to share with friends, family, and the world.</p>
         </article>
       </div>
     </section>
 
     <!-- Section 3: The Studio Vibe & Tools to Play With (Showcase Layout Variant) -->
     <section class="section-block">
-      <h2>[The Space &amp; Instruments]</h2>
-      <p class="placeholder-text">[Welcoming atmosphere with instruments and amps ready to play.]</p>
+      <h2 data-edit-key="index.h2.the-space">The Space</h2>
+      <p class="placeholder-text" data-edit-key="index.p.it-s-meant-to-feel-like">It's meant to feel like a hangout, not a lab. Come as you are.</p>
 
       <div class="grid-showcase">
         <article class="card">
-          <div class="media-box ratio-16-9">[Instruments &amp; Amps Wide Photo]</div>
-          <h3>[Instruments &amp; Gear]</h3>
-          <p class="placeholder-text">[Real amplifiers, guitars, drums, pedals, and warm vocal microphones available to try out.]</p>
+          <div class="media-box ratio-16-9 has-photo"><img src="images/studio-instruments.jpg" alt="Instruments and amps set up in the studio" data-media-slot="index.photo.instruments-and-amps-set-up" class="p-center" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.instruments-and-gear">Instruments &amp; Gear</h3>
+          <p class="placeholder-text" data-edit-key="index.p.there-s-real-gear-around-to">There's real gear around to try out. If you're curious about something, just ask and we'll plug it in.</p>
           <div class="gear-badges mt-1">
-            <span class="track-duration">[Treated Acoustic Room]</span> &bull;
-            <span class="track-duration">[Warm Vocal Condensers]</span> &bull;
-            <span class="track-duration">[Tube Amps &amp; Pedals]</span> &bull;
-            <span class="track-duration">[Comfortable Headphones]</span>
+            <span class="track-duration" data-edit-key="index.span.gear-1">Acoustic Room</span> &bull;
+            <span class="track-duration" data-edit-key="index.span.gear-2">Vocal Mics</span> &bull;
+            <span class="track-duration" data-edit-key="index.span.gear-3">Amps &amp; Pedals</span> &bull;
+            <span class="track-duration" data-edit-key="index.span.gear-4">Comfy Headphones</span>
           </div>
         </article>
 
         <div class="showcase-side-cards">
           <article class="card">
-            <div class="media-box ratio-16-9">[Room Atmosphere Photo]</div>
-            <h3>[Comfortable Space]</h3>
-            <p class="placeholder-text">[Relaxed living-room feel with no stiff glass walls, sterile clipboards, or intimidation.]</p>
+            <div class="media-box ratio-16-9 has-photo"><img src="images/studio-acoustic-room.jpg" alt="The relaxed acoustic room at Alcove Recording" data-media-slot="index.photo.the-relaxed-acoustic-room-at" class="p-right" loading="lazy" decoding="async"></div>
+            <h3 data-edit-key="index.h3.a-comfortable-space">A Comfortable Space</h3>
+            <p class="placeholder-text" data-edit-key="index.p.it-feels-more-like-a-friend">It feels more like a friend's living room than an intimidating studio. Settle in.</p>
           </article>
 
           <article class="card">
-            <div class="media-box ratio-16-9">[Collaboration Photo]</div>
-            <h3>[Creative Partner]</h3>
-            <p class="placeholder-text">[Collaborative guidance to help capture the sound in your head.]</p>
+            <div class="media-box ratio-16-9 has-photo"><img src="images/studio-live-room.jpg" alt="The live room, set up for a session" data-media-slot="index.photo.the-live-room-set-up" class="p-left" loading="lazy" decoding="async"></div>
+            <h3 data-edit-key="index.h3.a-creative-partner">A Creative Partner</h3>
+            <p class="placeholder-text" data-edit-key="index.p.i-m-here-to-help-you">I'm here to help you get the sound in your head out into the world, not to push my own.</p>
           </article>
         </div>
       </div>
@@ -138,46 +142,46 @@
 
     <!-- Section 4: What We Record (Genre Showcase Cards) -->
     <section class="section-block">
-      <h2>[What We Record: Genres &amp; Styles]</h2>
-      <p class="placeholder-text">[Welcoming young artists across all styles and sounds.]</p>
+      <h2 data-edit-key="index.h2.what-we-record">What We Record</h2>
+      <p class="placeholder-text" data-edit-key="index.p.all-kinds-of-music-all-kinds">All kinds of music, all kinds of artists. If you're making something, I want to hear it.</p>
 
       <div class="grid-cards">
         <article class="card">
-          <div class="media-box">[Indie &amp; Alt Visual]</div>
-          <h3>[Indie Rock &amp; Alternative]</h3>
-          <p class="placeholder-text">[Live drums in the room, dialed guitar amps, and energetic band tracking.]</p>
+          <div class="media-box has-photo"><img src="images/studio-live-room.jpg" alt="The live room, ready for a band" data-media-slot="index.photo.the-live-room-ready-for" class="p-center" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.indie-and-alternative">Indie &amp; Alternative</h3>
+          <p class="placeholder-text" data-edit-key="index.p.bands-playing-together-in-the-room">Bands playing together in the room, loud and a little messy in the best way.</p>
         </article>
 
         <article class="card">
-          <div class="media-box">[Acoustic Visual]</div>
-          <h3>[Singer-Songwriters &amp; Acoustic]</h3>
-          <p class="placeholder-text">[Intimate acoustic guitar resonance, vocal clarity, and natural room space.]</p>
+          <div class="media-box has-photo"><img src="images/studio-acoustic-room.jpg" alt="The acoustic room" data-media-slot="index.photo.the-acoustic-room" class="p-left" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.singer-songwriters-and-acoustic">Singer-Songwriters &amp; Acoustic</h3>
+          <p class="placeholder-text" data-edit-key="index.p.just-you-a-guitar-and-a">Just you, a guitar, and a song worth telling. We'll keep it close and honest.</p>
         </article>
 
         <article class="card">
-          <div class="media-box">[Bedroom Pop Visual]</div>
-          <h3>[Bedroom Pop &amp; Electronic]</h3>
-          <p class="placeholder-text">[Analog synthesizers, vocal textures, creative layering, and lush reverbs.]</p>
+          <div class="media-box has-photo"><img src="images/studio-piano.jpg" alt="The piano in the studio" data-media-slot="index.photo.the-piano-in-the-studio-2" class="p-center" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.bedroom-pop-and-electronic">Bedroom Pop &amp; Electronic</h3>
+          <p class="placeholder-text" data-edit-key="index.p.layers-textures-and-weird-little-ideas">Layers, textures, and weird little ideas. Bring your demo and we'll build it up together.</p>
         </article>
 
         <article class="card">
-          <div class="media-box">[Rap &amp; Vocals Visual]</div>
-          <h3>[Rap, Hip-Hop &amp; Vocals]</h3>
-          <p class="placeholder-text">[Clean punchy lead vocals, crisp ad-libs, and radio-ready mix polish.]</p>
+          <div class="media-box has-photo"><img src="images/studio-instruments.jpg" alt="Microphones and gear set up for vocals" data-media-slot="index.photo.microphones-and-gear-set-up" class="p-right" loading="lazy" decoding="async"></div>
+          <h3 data-edit-key="index.h3.rap-hip-hop-and-vocals">Rap, Hip-Hop &amp; Vocals</h3>
+          <p class="placeholder-text" data-edit-key="index.p.clear-punchy-vocals-that-sit-right">Clear, punchy vocals that sit right on the beat, with all your ad-libs in the right places.</p>
         </article>
       </div>
 
       <div class="mt-15 text-center">
-        <a href="work.html" class="btn-placeholder">Explore Songs, Demos &amp; Session Photos &rarr;</a>
+        <a href="work.html" class="btn-placeholder"><span data-edit-key="index.a.explore-songs-demos-session-photos">Explore Songs, Demos &amp; Session Photos</span> &rarr;</a>
       </div>
     </section>
 
     <!-- Section 5: Low-Stress Closing Invitation -->
     <section class="section-block text-center">
-      <h2>[Ready to Record Your First Track?]</h2>
-      <p class="placeholder-text">[No studio experience required. Send a voice memo or say hi to talk about your songs.]</p>
+      <h2 data-edit-key="index.h2.ready-to-record-your-first-track">Ready to Record Your First Track?</h2>
+      <p class="placeholder-text" data-edit-key="index.p.you-don-t-need-any-experience">You don't need any experience. Send me a voice memo, or just say hi and tell me about your songs.</p>
       <div class="button-group flex-center">
-        <a href="contact.html" class="btn-placeholder btn-primary">Start a Conversation</a>
+        <a href="contact.html" class="btn-placeholder btn-primary" data-edit-key="index.a.start-a-conversation">Start a Conversation</a>
       </div>
     </section>
 
@@ -186,7 +190,7 @@
 
   <!-- Global Footer -->
   <footer class="site-footer">
-    <p>Alcove Recording &copy; 2026</p>
+    <p data-edit-key="site.footer.copyright">Alcove Recording &copy; 2026</p>
   </footer>
 
   <!-- Persistent Sticky Scroll Header Script -->
@@ -194,84 +198,22 @@
     (function () {
       const header = document.querySelector('.site-header--smart');
       const hero = document.querySelector('.hero-wordmark-viewport');
-      const parallaxSection = document.getElementById('content-start');
-      const parallaxMedias = document.querySelectorAll('.carousel-slide .parallax-media');
+      const heroMedia = hero ? hero.querySelector('.hero-media') : null;
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const cssParallax = window.CSS && CSS.supports('animation-timeline: scroll()');
       if (!header || !hero) return;
 
-      const urlParams = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
-      if (urlParams && urlParams.get('scroll') === 'parallax') {
-        document.documentElement.style.scrollBehavior = 'auto';
-        window.scrollTo(0, hero.offsetHeight);
-      }
-
-      // Sticky Scroll Header, Velocity Bypass & Parallax Updates
       let ticking = false;
-      let lastScrollY = window.scrollY;
-      let lastTimestamp = performance.now();
-      const FAST_SCROLL_THRESHOLD = 0.95; // px/ms (~55-60px per frame at 60fps)
 
-      function checkScrollVelocity(currentScrollY, now) {
-        if (!parallaxSection) return;
-        const deltaY = currentScrollY - lastScrollY;
-        const deltaTime = Math.max(1, now - lastTimestamp);
-        const velocity = Math.abs(deltaY) / deltaTime;
-
-        const trackRect = parallaxSection.getBoundingClientRect();
-        const approachingFromTop = trackRect.top > 0 && currentScrollY < hero.offsetHeight;
-
-        if (approachingFromTop) {
-          if (velocity > FAST_SCROLL_THRESHOLD && deltaY > 0) {
-            parallaxSection.classList.add('is-bypassing-stick');
-          } else if (velocity < FAST_SCROLL_THRESHOLD * 0.7) {
-            parallaxSection.classList.remove('is-bypassing-stick');
-          }
-        } else if (trackRect.bottom < 0 || currentScrollY <= 10) {
-          parallaxSection.classList.remove('is-bypassing-stick');
-        }
-
-        lastScrollY = currentScrollY;
-        lastTimestamp = now;
-      }
-
+      // Fallback hero parallax for browsers without scroll-driven animations
       function updateParallax() {
-        if (!parallaxSection || prefersReducedMotion) return;
-        const trackRect = parallaxSection.getBoundingClientRect();
-        const windowHeight = window.innerHeight;
-
-        if (trackRect.bottom > 0 && trackRect.top < windowHeight) {
-          const carouselViewport = parallaxSection.querySelector('.carousel-viewport');
-          const viewportHeight = carouselViewport ? carouselViewport.offsetHeight : windowHeight;
-          const dwell = Math.max(0, parallaxSection.offsetHeight - viewportHeight);
-
-          let offset = 0;
-          if (parallaxSection.classList.contains('is-bypassing-stick')) {
-            const sectionCenter = trackRect.top + trackRect.height / 2;
-            const viewportCenter = windowHeight / 2;
-            const distanceFromCenter = sectionCenter - viewportCenter;
-            offset = -distanceFromCenter * 0.40;
-          } else if (trackRect.top > 0) {
-            // Approach: gliding into stick
-            offset = -trackRect.top * 0.40;
-          } else if (trackRect.top < -dwell) {
-            // Exit: releasing from stick into Section 2
-            offset = -(trackRect.top + dwell) * 0.40;
-          } else {
-            // Sticky Dwell: locked flush at top: 0 -> completely stationary
-            offset = 0;
-          }
-
-          const transformValue = `translate3d(0, ${offset.toFixed(1)}px, 0)`;
-          parallaxMedias.forEach(function (media) {
-            media.style.transform = transformValue;
-          });
-        }
+        if (!heroMedia || cssParallax || prefersReducedMotion) return;
+        const y = Math.min(window.scrollY, hero.offsetHeight);
+        heroMedia.style.transform = 'translate3d(0, ' + (y * 0.4).toFixed(1) + 'px, 0)';
       }
 
       function updateHeader() {
         const currentScrollY = window.scrollY;
-        const now = performance.now();
-        checkScrollVelocity(currentScrollY, now);
 
         // Keep header visible whenever scrolled down past ~45% of hero viewport
         const threshold = hero.offsetHeight * 0.45;
@@ -295,42 +237,6 @@
 
       window.addEventListener('resize', updateHeader, { passive: true });
       updateHeader();
-
-      // Studio Atmosphere Carousel Controller
-      const slides = Array.from(document.querySelectorAll('.carousel-slide'));
-      const dots = Array.from(document.querySelectorAll('.carousel-dot'));
-      const caption = document.getElementById('carousel-caption');
-      const prevBtn = document.getElementById('carousel-prev');
-      const nextBtn = document.getElementById('carousel-next');
-      let currentSlide = 0;
-
-      function setSlide(index) {
-        if (!slides.length) return;
-        currentSlide = (index + slides.length) % slides.length;
-        slides.forEach(function (slide, idx) {
-          slide.classList.toggle('active', idx === currentSlide);
-        });
-        dots.forEach(function (dot, idx) {
-          const isActive = idx === currentSlide;
-          dot.classList.toggle('active', isActive);
-          dot.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        });
-        if (caption && slides[currentSlide]) {
-          caption.innerHTML = slides[currentSlide].getAttribute('data-caption') || '';
-        }
-      }
-
-      if (prevBtn) prevBtn.addEventListener('click', function () { setSlide(currentSlide - 1); });
-      if (nextBtn) nextBtn.addEventListener('click', function () { setSlide(currentSlide + 1); });
-      dots.forEach(function (dot, idx) {
-        dot.addEventListener('click', function () { setSlide(idx); });
-      });
-
-      // Keyboard arrow navigation
-      window.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrowLeft') setSlide(currentSlide - 1);
-        if (e.key === 'ArrowRight') setSlide(currentSlide + 1);
-      });
 
       // Prevent redundant reload/transition when clicking Home while already on Home
       const homeLinks = document.querySelectorAll('.hero-nav a[href="index.html"], .site-header .nav-links a[href="index.html"]');

@@ -55,7 +55,7 @@ Before declaring any task or wireframe update complete:
 
 ## 8. Project Charter Synchronization
 - **Source of Truth**: Google Doc ID `1pKumu8AMftI42kU4cJL_V7S-5Z1vxSb3Tmt0WJ_V64Q` ([Alcove Site Charter](https://docs.google.com/document/d/1pKumu8AMftI42kU4cJL_V7S-5Z1vxSb3Tmt0WJ_V64Q/edit?usp=sharing)).
-- **Sync Protocol**: The local file is `Project Charter.md`. Run `./sync_charter.sh` whenever reviewing project scope or updating requirements to keep Antigravity aligned.
+- **Sync Protocol**: The local file is `External Notes.md`. Run `./sync_charter.sh` whenever reviewing project scope or updating requirements to keep Antigravity aligned.
 
 ## 9. Ultra-Concise Responses & Targeted Explanations
 - **Default Minimal Output**: Keep completion responses concise (1–3 short sentences stating what changed and was verified) whenever results can be directly inspected or tested by the user. Omit conversational fluff.
