@@ -374,3 +374,18 @@ body::after {
   rotate: var(--stock-turn, 0deg);
   background-position: var(--stock-x, 0) var(--stock-y, 0);
 }
+
+/* Seth's portrait: NOT a visible card. The wrapper keeps the .card class only so it gets the same
+   placement, hover lift and pointer tilt (cards-tilt.js); all card looks are stripped. The photo
+   keeps its polaroid frame but has no tape and no hinge tilt (the whole print lifts). */
+:root .portrait-card.card {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+:root .portrait-card.card::before { display: none; }
+.portrait-card.card > .media-box.has-photo:not(.has-video)::before { display: none; }
+.portrait-card.card > .media-box.has-photo:not(.has-video),
+.portrait-card.card:hover > .media-box.has-photo:not(.has-video) { transform: none; margin-block-start: 0; }

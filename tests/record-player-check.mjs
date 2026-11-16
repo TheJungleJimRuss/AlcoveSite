@@ -6,6 +6,9 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+const flip = (pg, d) => pg.evaluate(d => document.querySelector('.rp-fader').dispatchEvent(new KeyboardEvent('keydown', { key: d > 0 ? 'ArrowRight' : 'ArrowLeft', bubbles: true, cancelable: true })), d);
+const atStart = pg => pg.getAttribute('.rp-fader', 'aria-valuenow').then(v => v === '1');
+const atEnd = pg => Promise.all([pg.getAttribute('.rp-fader', 'aria-valuenow'), pg.getAttribute('.rp-fader', 'aria-valuemax')]).then(([a, b]) => a === b);
 
 const root = join(fileURLToPath(import.meta.url), '..', '..');
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.wav': 'audio/wav', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.json': 'application/json' };
@@ -40,7 +43,7 @@ const NUM = { indie: 1, pop: 2, acoustic: 3, punk: 4 }; // sleeves are identifie
 const S = g => `.sleeve[data-src*="track-${NUM[g]}"]`;
 const flipTo = async (pg, g) => { // flip the crate until the genre's sleeve is in front (waits out a record being lifted)
   await pg.waitForFunction(() => !document.querySelector('.record-player').dataset.picking);
-  for (let i = 0; i < 6 && (await pg.getAttribute(S(g), 'data-pos')) !== 'front'; i++) { await pg.click((await pg.getAttribute(S(g), 'data-pos')) === 'tipped' ? '.rp-prev' : '.rp-next'); await pg.waitForTimeout(40); }
+  for (let i = 0; i < 6 && (await pg.getAttribute(S(g), 'data-pos')) !== 'front'; i++) { await flip(pg, (await pg.getAttribute(S(g), 'data-pos')) === 'tipped' ? -1 : 1); await pg.waitForTimeout(40); }
   await pg.waitForFunction(() => !document.querySelector('.rp-stack').getAnimations({ subtree: true }).some(a => a.playState === 'running')); // let the tipping settle before clicking
 };
 const playing = () => page.waitForFunction(() => !document.getElementById('audio-player').paused, null, { timeout: 4000 });
@@ -67,9 +70,9 @@ check((await page.getAttribute(S('indie'), 'aria-pressed')) === 'true' && (await
 check((await page.textContent('.rp-label-text')).trim() === 'Indie Rock Demo', 'centre label shows the title');
 check(/^Now playing: Indie Rock Demo$/.test(await page.textContent('.rp-status')) && (await page.getAttribute('.rp-status', 'aria-live')) === 'polite', 'live region announces "Now playing: ..."');
 check(!(await page.isDisabled('.rp-play')) && (await page.getAttribute('.rp-play', 'aria-label')) === 'Pause', 'play/pause key is enabled and offers Pause');
+check((await page.getAttribute('.rp-play', 'aria-pressed')) === 'true' && (await page.evaluate(() => getComputedStyle(document.querySelector('.rp-lamp')).backgroundColor)) !== (await page.evaluate(() => getComputedStyle(document.querySelector('.rp-play')).backgroundColor)), 'the Start/Stop key stays down with its lamp lit while a record plays');
 await page.waitForTimeout(700);
-check((await page.textContent('#current-time')) !== '0:00' || (await page.evaluate(() => document.getElementById('audio-player').currentTime)) > 0.3, 'timeline time advances');
-check((await page.textContent('#total-time')) !== '0:00', `total time shows the real duration (${await page.textContent('#total-time')})`);
+check((await page.evaluate(() => document.getElementById('audio-player').currentTime)) > 0.3, 'playback time advances');
 check(await page.evaluate(() => document.querySelector('.site-header .nav-wave')?.classList.contains('is-on')), 'header oscilloscope reacts while the record plays');
 
 await page.click(S('indie'));
@@ -95,63 +98,63 @@ check((await page.textContent('.rp-label-text')).includes('Punk'), 'centre label
 // Song list: genres are retired (no tabs, no genre attributes or labels); the crate is a plain list in order
 check((await page.locator('.filter-pill, .filter-bar, [data-genre], .sleeve-genre').count()) === 0, 'no genre tabs, data-genre attributes or genre labels remain on Work');
 check((await page.$$eval('.sleeve .sleeve-title', t => t.map(x => x.textContent.trim()))).join('|') === 'Indie Rock Demo|Bedroom Pop Single|Acoustic Folk Song|Alternative & Punk Track', 'the four authored songs are listed in order by title');
-for (let i = 0; i < 4 && (await page.getAttribute(S('indie'), 'data-pos')) !== 'front'; i++) { await page.click('.rp-prev'); await page.waitForTimeout(60); }
-check(!(await st()).paused && (await page.textContent('.rp-count')) === '1 of 4' && (await page.getAttribute(S('indie'), 'data-pos')) === 'front', 'flipping the crate back to the first sleeve does not pause the record; the count reads 1 of 4');
+for (let i = 0; i < 4 && (await page.getAttribute(S('indie'), 'data-pos')) !== 'front'; i++) { await flip(page, -1); await page.waitForTimeout(60); }
+check(!(await st()).paused && (await page.getAttribute(S('indie'), 'data-pos')) === 'front', 'flipping the crate back to the first sleeve does not pause the record');
 // ---- Ticket 04: the milk crate ----
 const front = () => page.evaluate(() => __g(document.querySelector('.sleeve[data-pos="front"]')));
 const live = () => page.textContent('#rp-crate-status');
 const settle = () => page.waitForTimeout(80);
-check((await front()) === 'indie' && (await page.textContent('.rp-count')) === '1 of 4' && (await page.isDisabled('.rp-prev')) && !(await page.isDisabled('.rp-next')), 'crate starts on the first record; previous is disabled at the start');
-check((await page.getAttribute('.rp-prev', 'aria-label')) === 'Previous record' && (await page.getAttribute('.rp-next', 'aria-label')) === 'Next record' && (await page.evaluate(() => [...document.querySelectorAll('.rp-flip')].every(b => b.getBoundingClientRect().width >= 44 && b.getBoundingClientRect().height >= 44))), 'flip keys are named "Previous record" / "Next record" and are at least 44px');
+check((await front()) === 'indie' && (await atStart(page)) && !(await atEnd(page)), 'crate starts on the first record; previous is disabled at the start');
+check((await page.getAttribute('.rp-fader', 'aria-label')) === 'Browse records' && (await page.evaluate(() => document.querySelector('.rp-fader').getBoundingClientRect().height >= 44)) && (await page.locator('.rp-prev, .rp-next, .rp-flip, .rp-count').count()) === 0, 'the fader is the only browse control: named "Browse records", at least 44px, no flip buttons or count');
 check((await page.evaluate(() => [...document.querySelectorAll('.sleeve')].filter(x => x.tabIndex === 0).map(x => __g(x)).join())) === 'indie', 'only the front sleeve is a tab stop');
-await page.click('.rp-next'); await settle();
-check((await front()) === 'pop' && (await live()) === 'Record 2 of 4: Bedroom Pop Single' && (await page.getAttribute(S('indie'), 'data-pos')) === 'tipped' && !(await page.isDisabled('.rp-prev')), 'Next flips to record 2 and announces "Record 2 of 4: Bedroom Pop Single"');
-check((await page.evaluate(() => getComputedStyle(document.querySelector('.sleeve[data-src*="track-1"]')).transform)) !== 'none', 'the flipped sleeve is tipped forward by a 3D transform');
+await flip(page, 1); await settle();
+check((await front()) === 'pop' && (await live()) === 'Record 2 of 4: Bedroom Pop Single' && (await page.getAttribute(S('indie'), 'data-pos')) === 'tipped' && !(await atStart(page)), 'Next flips to record 2 and announces "Record 2 of 4: Bedroom Pop Single"');
+check((await page.evaluate(() => getComputedStyle(document.querySelector('.sleeve[data-src*="track-1"]')).transform)) !== 'none', 'the flipped sleeve goes back into the pile (transformed)');
 await page.focus(S('pop'));
 await page.keyboard.press('ArrowRight'); await settle();
 check((await front()) === 'acoustic' && (await live()) === 'Record 3 of 4: Acoustic Folk Song' && (await page.evaluate(() => __g(document.activeElement))) === 'acoustic', 'ArrowRight flips forward, announces it and keeps focus on the new front sleeve');
 await page.keyboard.press('ArrowDown'); await settle();
-check((await front()) === 'punk' && (await page.isDisabled('.rp-next')) && (await live()) === 'Record 4 of 4: Alternative & Punk Track', 'ArrowDown flips to the last record; Next is disabled at the end');
+check((await front()) === 'punk' && (await atEnd(page)) && (await live()) === 'Record 4 of 4: Alternative & Punk Track', 'ArrowDown flips to the last record; Next is disabled at the end');
 await page.keyboard.press('ArrowRight'); await settle();
 check((await front()) === 'punk', 'no wrap-around past the last record');
 await page.keyboard.press('ArrowUp'); await settle();
 check((await front()) === 'acoustic', 'ArrowUp flips back');
 await page.keyboard.press('Home'); await settle();
-check((await front()) === 'indie' && (await page.isDisabled('.rp-prev')) && (await live()) === 'Record 1 of 4: Indie Rock Demo', 'Home goes to the first record');
+check((await front()) === 'indie' && (await atStart(page)) && (await live()) === 'Record 1 of 4: Indie Rock Demo', 'Home goes to the first record');
 await page.keyboard.press('ArrowLeft'); await settle();
 check((await front()) === 'indie', 'no wrap-around before the first record');
 await page.keyboard.press('End'); await settle();
 check((await front()) === 'punk', 'End goes to the last record');
 await page.keyboard.press('Home'); await settle();
-// Mouse wheel: one flip per gesture; ends are left to the page
+// Wheel and swipe no longer move through the records; the fader does
 {
   const b = await page.locator('.rp-stage').boundingBox();
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-  await page.mouse.wheel(0, 100);
+  const w = await page.evaluate(() => { const e = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true }); document.querySelector('.rp-stage').dispatchEvent(e); return e.defaultPrevented; });
   await settle();
-  check((await front()) === 'pop', 'one wheel notch flips exactly one record');
-  await page.mouse.wheel(0, 100); await page.mouse.wheel(0, 100); await settle();
-  check((await front()) === 'pop', 'wheel events right after a flip are throttled');
-  await page.waitForTimeout(500);
-  await page.mouse.wheel(0, -100); await settle();
-  check((await front()) === 'indie', 'wheel up flips back');
-  const ends = await page.evaluate(() => { const s = document.querySelector('.rp-stage'), up = new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true }), dn = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true }); s.dispatchEvent(up); const a = up.defaultPrevented; s.dispatchEvent(dn); return [a, dn.defaultPrevented]; });
-  check(ends[0] === false && ends[1] === true, 'at the first record a wheel-up is left to the page (page still scrolls); wheel-down is taken');
-  await page.waitForTimeout(500);
-  await page.evaluate(() => document.querySelector('.rp-prev').click()); await settle();
+  check((await front()) === 'indie' && w === false, 'the wheel does not flip records and is left to the page');
+  const swipe = (dx) => page.evaluate(dx => { const s = document.querySelector('.rp-stage'), r = s.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, o = { pointerId: 9, pointerType: 'touch', bubbles: true }; s.dispatchEvent(new PointerEvent('pointerdown', { ...o, clientX: x, clientY: y })); s.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: x + dx, clientY: y })); s.dispatchEvent(new PointerEvent('pointerup', { ...o, clientX: x + dx, clientY: y })); }, dx);
+  await swipe(-80); await settle();
+  check((await front()) === 'indie', 'swiping the crate does not flip records');
+  const fb = await page.locator('.rp-fader').boundingBox(), capW = await page.evaluate(() => document.querySelector('.rp-fader-cap').offsetWidth), cy = fb.y + fb.height / 2;
+  check((await page.getAttribute('.rp-fader', 'role')) === 'slider' && (await page.getAttribute('.rp-fader', 'aria-valuenow')) === '1' && (await page.getAttribute('.rp-fader', 'aria-valuemax')) === '4', 'the fader is a slider reading 1 of 4');
+  await page.mouse.move(fb.x + capW / 2, cy); await page.mouse.down();
+  await page.mouse.move(fb.x + fb.width / 2, cy, { steps: 6 }); await settle();
+  check((await front()) === 'pop' || (await front()) === 'acoustic', 'dragging the fader to the middle brings a middle record forward');
+  await page.mouse.move(fb.x + fb.width - capW / 2, cy, { steps: 6 }); await page.mouse.up(); await settle();
+  check((await front()) === 'punk' && (await page.getAttribute('.rp-fader', 'aria-valuenow')) === '4', 'dragging the fader to the end brings the last record forward');
+  await page.mouse.click(fb.x + capW / 2, cy); await settle();
+  check((await front()) === 'indie', 'clicking the start of the fader track goes back to the first record');
+  await flip(page, -1); await settle();
 }
-// Touch swipe (Pointer Events, 30px threshold) and tap-on-edge
 {
-  const swipe = (dx, dy) => page.evaluate(([dx, dy]) => { const s = document.querySelector('.rp-stage'), r = s.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, o = { pointerId: 9, pointerType: 'touch', bubbles: true }; s.dispatchEvent(new PointerEvent('pointerdown', { ...o, clientX: x, clientY: y })); s.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: x + dx / 3, clientY: y + dy / 3 })); s.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: x + dx, clientY: y + dy })); s.dispatchEvent(new PointerEvent('pointerup', { ...o, clientX: x + dx, clientY: y + dy })); }, [dx, dy]);
-  await swipe(-60, 5); await settle();
-  check((await front()) === 'pop', 'swiping left flips to the next record');
-  await swipe(60, 0); await settle();
-  check((await front()) === 'indie', 'swiping right flips back');
-  await swipe(-15, 0); await settle();
-  check((await front()) === 'indie', 'a short drag (under 30px) does not flip');
-  check((await page.evaluate(() => getComputedStyle(document.querySelector('.rp-stage')).touchAction)) === 'pan-y', 'the crate leaves vertical page scroll to the browser (touch-action: pan-y)');
-  await page.click(`${S('acoustic')} .sleeve-strip`); await settle();
-  check((await front()) === 'acoustic', 'clicking the title strip of a sleeve behind flips straight to it');
+  // a point where the acoustic sleeve is the top element (a corner peeking out of the pile)
+  await page.evaluate(() => { document.querySelector('.rp-stage').scrollIntoView({ block: 'start' }); scrollBy(0, -140); });
+  const target = 'pop'; // the pile hangs off the screen edge: the next sleeve is the one whose corner always shows
+  const peek = await page.evaluate(sel => { const el = document.querySelector(sel), r = el.getBoundingClientRect(); for (let y = r.top + 2; y < r.bottom; y += 4) for (let x = r.left + 2; x < r.right; x += 4) { const h = document.elementFromPoint(x, y); if (h && h.closest('.sleeve') === el) return [x, y]; } return null; }, S(target));
+  if (peek) { await page.mouse.click(peek[0], peek[1]); await settle(); }
+  check(peek && (await front()) === target, 'clicking the visible part of a sleeve in the pile brings it out');
+  await page.evaluate(() => document.querySelector('.sleeve[data-src*="track-3"]').click()); await settle(); // acoustic in front, so Bedroom Pop is tipped for the next checks
   await page.evaluate(() => document.querySelector('.sleeve[data-src*="track-2"]').click()); await settle();
   check((await front()) === 'pop' && (await page.evaluate(() => document.getElementById('audio-player').dataset.track)).includes('punk'), 'clicking a tipped sleeve flips back to it without loading it');
 }
@@ -166,7 +169,7 @@ await page.click(S('pop'));
 await page.waitForFunction(() => document.querySelector('.record-player').dataset.picking === 'true');
 await page.waitForTimeout(500);
 {
-  const mid = await page.evaluate(() => { const d = document.querySelector('.rp-disc'); return { op: getComputedStyle(d).opacity, anims: d.getAnimations().filter(a => a.playState === 'running').length, lifted: document.querySelector('.sleeve[data-src*="track-2"]').classList.contains('is-lifted'), nav: document.querySelector('.rp-next').disabled && document.querySelector('.rp-prev').disabled, label: d.textContent.trim(), playing: !document.getElementById('audio-player').paused }; });
+  const mid = await page.evaluate(() => { const d = document.querySelector('.rp-disc'); return { op: getComputedStyle(d).opacity, anims: d.getAnimations().filter(a => a.playState === 'running').length, lifted: document.querySelector('.sleeve[data-src*="track-2"]').classList.contains('is-lifted'), nav: document.querySelector('.rp-fader').getAttribute('aria-disabled') === 'true', label: d.textContent.trim(), playing: !document.getElementById('audio-player').paused }; });
   check(mid.op === '1' && mid.anims > 0 && mid.lifted && mid.label === 'Bedroom Pop Single' && !mid.playing, 'while the record is picked: the sleeve is lifted and the disc (with its label) is moving');
   check(mid.nav, 'flip keys wait (disabled) while the record is being lifted');
 }
@@ -213,7 +216,7 @@ await pick(page, 'indie');
 await page.waitForFunction(() => document.getElementById('audio-player').duration > 5 && !document.getElementById('audio-player').paused);
 await page.click('.rp-play'); // pause so only our seeks move the playhead
 const ct = () => page.evaluate(() => document.getElementById('audio-player').currentTime);
-const arm = () => page.evaluate(() => ({ now: +document.querySelector('.rp-arm').getAttribute('aria-valuenow'), max: +document.querySelector('.rp-arm').getAttribute('aria-valuemax'), text: document.querySelector('.rp-arm').getAttribute('aria-valuetext'), ang: parseFloat(document.querySelector('.record-player').style.getPropertyValue('--arm-angle')), tl: document.querySelector('.scrubber-track').getAttribute('aria-valuenow') }));
+const arm = () => page.evaluate(() => ({ now: +document.querySelector('.rp-arm').getAttribute('aria-valuenow'), max: +document.querySelector('.rp-arm').getAttribute('aria-valuemax'), text: document.querySelector('.rp-arm').getAttribute('aria-valuetext'), ang: parseFloat(document.querySelector('.record-player').style.getPropertyValue('--arm-angle')) }));
 let a = await arm();
 const dur = a.max;
 check(dur > 5 && (await page.getAttribute('.rp-arm', 'aria-disabled')) === 'false' && (await page.getAttribute('.rp-arm', 'tabindex')) === '0', `tonearm is enabled once a record is loaded (duration ${dur}s)`);
@@ -221,7 +224,7 @@ check(/^0:0\d of \d+:\d\d$/.test(a.text) && a.ang > 25 && a.ang < 40, `arm at th
 await page.focus('.rp-arm');
 await page.keyboard.press('ArrowRight');
 a = await arm();
-check(Math.abs((await ct()) - 5) < 0.3 && a.now === 5 && a.tl === '5', 'ArrowRight seeks +5s; aria-valuenow follows on arm and timeline');
+check(Math.abs((await ct()) - 5) < 0.3 && a.now === 5, 'ArrowRight seeks +5s; aria-valuenow follows on the arm');
 await page.keyboard.press('ArrowLeft');
 check(Math.abs(await ct()) < 0.3, 'ArrowLeft seeks -5s');
 await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowUp');
@@ -237,6 +240,7 @@ a = await arm();
 check((await ct()) < 0.3 && /^0:00 of /.test(a.text), 'Home goes to 0:00; aria-valuetext reads "0:00 of m:ss"');
 
 // Pointer drag on the arm: needle follows, seek commits on release, proportional to the angle
+await page.locator('.rp-turntable').scrollIntoViewIfNeeded();
 const svgBox = await page.locator('.rp-arm-svg').boundingBox();
 const k = svgBox.width / 500;
 const at = deg => { const r = deg * Math.PI / 180; return [svgBox.x + (435 - 254 * Math.sin(r)) * k, svgBox.y + (60 + 254 * Math.cos(r)) * k]; };
@@ -261,19 +265,11 @@ await page.keyboard.press('Home');
 const hb = await page.locator('.rp-arm-hit').evaluate(el => ({ ta: getComputedStyle(el).touchAction, w: parseFloat(getComputedStyle(el).strokeWidth) }));
 check(hb.ta === 'none' && hb.w * k >= 44, `arm hit area: touch-action none and ${Math.round(hb.w * k)}px wide (>= 44)`);
 
-// Timeline slider: click and keys seek, in sync with the arm
-await page.locator('.scrubber-track').scrollIntoViewIfNeeded();
-const tl = await page.locator('.scrubber-track').boundingBox();
-await page.mouse.click(tl.x + tl.width * 0.25, tl.y + tl.height / 2);
-a = await arm();
-check(Math.abs((await ct()) - dur * 0.25) < dur * 0.05 && a.now === Math.round(await ct()) , 'clicking the timeline seeks, and the arm follows');
-await page.focus('.scrubber-track');
-await page.keyboard.press('ArrowRight');
-check(Math.abs((await ct()) - (dur * 0.25 + 5)) < dur * 0.06 && (await page.getAttribute('.scrubber-track', 'role')) === 'slider', 'timeline is a slider; ArrowRight seeks +5s');
-await page.mouse.move(tl.x + 4, tl.y + tl.height / 2); await page.mouse.down(); await page.mouse.move(tl.x + tl.width * 0.75, tl.y + tl.height / 2, { steps: 4 });
-check(Math.abs((await arm()).ang - (angStart + (angEnd - angStart) * 0.75)) < 2, 'dragging the timeline moves the needle too');
-await page.mouse.up();
-check(Math.abs((await ct()) - dur * 0.75) < dur * 0.05, 'timeline drag commits on release');
+// No timeline bar or timestamps any more: the tonearm is the only seek control
+check((await page.locator('.scrubber-track, #progress-bar, #current-time, #total-time').count()) === 0, 'the progress bar and timestamps are gone');
+await page.focus('.rp-arm');
+await page.keyboard.press('Home'); const t0 = await ct(); await page.keyboard.press('ArrowRight');
+check(Math.abs((await ct()) - (t0 + 5)) < 1, 'the tonearm is the seek slider: ArrowRight seeks +5s');
 // Ended returns the arm to rest (angle 0)
 await page.keyboard.press('End');
 await page.click('.rp-play');
@@ -305,7 +301,7 @@ await page.waitForTimeout(200);
 check((await st()).arm === 'on' && (await anims()).some(x => x.s === 'running' && x.it === Infinity), 'resume lowers the arm and the spin restarts');
 // Rapid input while a record is being lifted: clicks and flips wait; only the first selection counts, state stays consistent
 await flipTo(page, 'indie');
-await page.evaluate(() => { const q = g => document.querySelector(`.sleeve[data-src*="track-${({ indie: 1, pop: 2, acoustic: 3, punk: 4 })[g]}"]`), nx = document.querySelector('.rp-next'); [() => q('indie').click(), () => q('indie').click(), () => nx.click(), () => q('pop').click(), () => q('acoustic').click()].forEach((f, i) => setTimeout(f, i * 40)); });
+await page.evaluate(() => { const q = g => document.querySelector(`.sleeve[data-src*="track-${({ indie: 1, pop: 2, acoustic: 3, punk: 4 })[g]}"]`), nx = { click: () => document.querySelector('.rp-fader').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })) }; [() => q('indie').click(), () => q('indie').click(), () => nx.click(), () => q('pop').click(), () => q('acoustic').click()].forEach((f, i) => setTimeout(f, i * 40)); });
 await page.waitForTimeout(150);
 check(await page.evaluate(() => document.getElementById('audio-player').paused) && (await page.getAttribute(S('indie'), 'data-pos')) === 'front', 'rapid input: nothing plays yet and the crate has not flipped while the record is lifted');
 await playing();
@@ -352,7 +348,7 @@ await page.evaluate(() => document.getElementById('audio-player').pause());
   await p3.click(S('indie'));
   await p3.waitForTimeout(100);
   check((await p3.evaluate(() => document.querySelector('.record-player').dataset.arm)) === 'lifted' && (await p3.evaluate(() => document.querySelector('.record-player').getAnimations({ subtree: true }).filter(a => a.playState !== 'finished').length)) === 0, 'reduced motion: pause jumps to the lifted state without animations');
-  await p3.click('.rp-next');
+  await flip(p3, 1);
   await p3.click(S('pop'));
   await p3.waitForFunction(() => document.getElementById('audio-player').dataset.track === 'media/track-2-bedroom-pop.wav' && !document.getElementById('audio-player').paused, null, { timeout: 600 });
   const rm2 = await p3.evaluate(() => ({ anims: document.querySelector('.record-player').getAnimations({ subtree: true }).filter(a => a.playState !== 'finished').length, front: __g(document.querySelector('.sleeve[data-pos="front"]')), lifted: document.querySelectorAll('.is-lifted').length, disc: getComputedStyle(document.querySelector('.rp-disc')).opacity, picking: document.querySelector('.record-player').dataset.picking || '' }));
@@ -369,8 +365,8 @@ await page.evaluate(() => document.getElementById('audio-player').pause());
   await p2.waitForFunction(() => document.querySelector('.record-player').dataset.loaded === 'true');
   await p2.click(S('indie'));
   await p2.waitForFunction(() => document.getElementById('audio-player').duration > 5);
-  const r = await p2.evaluate(() => { const a = document.getElementById('audio-player'); return { blob: a.src.startsWith('blob:'), d: a.duration, shown: document.getElementById('total-time').textContent }; });
-  check(r.blob && isFinite(r.d) && r.shown !== '0:00' && hdrs.every(c => c === 200), `no-Range server: clip is a blob, real duration ${r.d.toFixed(1)}s shown as ${r.shown}`);
+  const r = await p2.evaluate(() => { const a = document.getElementById('audio-player'); return { blob: a.src.startsWith('blob:'), d: a.duration, shown: '' }; });
+  check(r.blob && isFinite(r.d) && hdrs.every(c => c === 200), `no-Range server: clip is a blob, real duration ${r.d.toFixed(1)}s`);
   await p2.focus('.rp-arm'); await p2.keyboard.press('ArrowRight'); await p2.keyboard.press('ArrowRight');
   await p2.waitForTimeout(300);
   const t2 = await p2.evaluate(() => document.getElementById('audio-player').currentTime);
@@ -384,22 +380,41 @@ await page.reload();
 await page.waitForTimeout(300);
 const m = await page.evaluate(() => {
   const c = document.querySelector('.rp-stage').getBoundingClientRect(), t = document.querySelector('.rp-turntable').getBoundingClientRect();
-  const nav = [...document.querySelectorAll('.rp-flip')].map(b => b.getBoundingClientRect());
+  const nav = [document.querySelector('.rp-fader').getBoundingClientRect()];
   return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, below: c.top >= t.bottom - 1, tw: t.width, cwid: c.width, left: c.left, right: c.right, nav: nav.every(r => r.width >= 44 && r.height >= 44) };
 });
+check(m.nav, 'phone: the fader is at least 44px');
 check(m.sw <= m.cw, `no horizontal overflow at 375px (scrollWidth ${m.sw}, client ${m.cw})`);
 check(m.below && m.left >= 0 && m.right <= m.cw, 'phone: the crate sits below the turntable and fits the screen');
 check(m.tw > 300 && m.cwid > 300, `phone: turntable and crate are full width (${Math.round(m.tw)}px, ${Math.round(m.cwid)}px)`);
-check(m.nav, 'phone: previous/next keys are at least 44px');
-await page.click('.rp-next'); await page.click(S('pop'));
+await flip(page, 1); await page.click(S('pop'));
 await page.waitForFunction(() => !document.getElementById('audio-player').paused, null, { timeout: 6000 });
 check((await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)), 'phone: no horizontal overflow while a record is on the platter');
 { // the disc travels: take a look mid-way that it never makes the page wider
-  await page.click('.rp-next'); await page.waitForTimeout(0);
+  await flip(page, 1); await page.waitForTimeout(0);
   await page.evaluate(() => document.querySelector('.sleeve[data-pos="front"]').click());
   const ws = [];
   for (let i = 0; i < 8; i++) { await page.waitForTimeout(160); ws.push(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)); }
   check(ws.every(w => w <= 0), `phone: no horizontal overflow while the disc travels (${ws})`);
+}
+
+{ // Sleeve covers (admin media ticket 06): a song with a cover shows the picture unblended, centre-cropped, and no printed pattern
+  const cp = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await cp.goto(url);
+  await cp.evaluate(() => { const rp = window.AlcoveRecordPlayer, l = rp.getSongs(); l[1].cover = 'images/studio-live-room.jpg'; l[2].cover = 'javascript:alert(1)'; rp.setSongs(l); });
+  const cv = await cp.evaluate(() => [...document.querySelectorAll('.sleeve')].map(s => {
+    const b = getComputedStyle(s.querySelector('.sleeve-art'), '::before'), a = getComputedStyle(s.querySelector('.sleeve-art'), '::after');
+    return { has: s.classList.contains('has-cover'), blend: b.mixBlendMode, bg: b.backgroundImage, size: b.backgroundSize, pos: b.backgroundPosition, after: a.display, cover: s.dataset.cover || null };
+  }));
+  check(cv[1].has && cv[1].blend === 'normal' && /studio-live-room\.jpg/.test(cv[1].bg) && cv[1].size === 'cover' && cv[1].pos === '50% 50%', 'a song with a cover draws it unblended and centre-cropped: ' + JSON.stringify(cv[1]));
+  check(cv[1].after === 'none', 'the printed pattern is hidden on a sleeve with a cover');
+  check(!cv[0].has && cv[0].blend === 'multiply' && cv[0].bg === 'none' && cv[0].after === 'block' && !cv[3].has, 'sleeves without a cover keep the pattern');
+  check(!cv[2].has && cv[2].cover === null, 'an unsafe cover value is ignored (sleeve keeps its pattern)');
+  check(JSON.stringify(await cp.evaluate(() => window.AlcoveRecordPlayer.getSongs().map(x => x.cover || null))) === '[null,"images/studio-live-room.jpg",null,null]', 'getSongs returns the cover only where one is set');
+  await cp.evaluate(() => { const rp = window.AlcoveRecordPlayer, l = rp.getSongs(); l.reverse(); rp.setSongs(l); });
+  check((await cp.evaluate(() => [...document.querySelectorAll('.sleeve')].map(s => s.dataset.cover || '-').join())) === '-,-,images/studio-live-room.jpg,-' + '', 'the cover follows its song when the list is reordered');
+  check((await cp.evaluate(() => document.querySelector('.sleeve[data-pos="front"] .sleeve-title').textContent.trim() !== '')), 'the sleeve keeps its title as its accessible name');
+  await cp.close();
 }
 
 await browser.close(); server.close(); plain.close();

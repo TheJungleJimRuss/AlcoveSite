@@ -88,3 +88,18 @@ User feedback: the CSS/SVG turntable and crate look cartoony; the whole record p
 - **Palette**: renders are neutral (real materials), not palette-tinted; the section keeps palette tokens for text, buttons and focus. Dark palettes get a slightly darker ambient via CSS filter only if contrast needs it.
 - **Reduced motion / forced colors**: unchanged rules; forced colors hides the photo layers and shows the outlined fallback.
 - **Out of scope**: the A/B deck, play button and timeline.
+
+- 2026-11-13 follow-up: the crate was first rendered tilted (front and a little above); re-rendered straight top-down per this amendment. The front Sleeve lies face-up over the front rim, Sleeves behind show only their title edge, flipped-past Sleeves lie under the front one.
+
+## Amendment 2026-11-13 (3): Messy pile, picture-only sleeves
+
+User feedback: make the sleeves just pictures; drop the crate; a stack of records where one sticks out at a time as you select it.
+
+- **No crate**: the milk crate render leaves the page (sources stay in `assets-src/`). The Crate (same widget, same name in code and GLOSSARY, now described as a pile) is a **messy pile** of Sleeves seen from straight above, each at its own slight angle and offset, on the bare page surface.
+- **Picture-only Sleeves (user choice)**: a Sleeve shows only its cover picture (card render + placeholder art or `--cover`). No visible title, subtitle or text strip. Titles show nowhere on the sleeve; the record's centre label still shows the title once it is on the platter. Each Sleeve keeps its accessible name (the title) and the "Record N of M: title" announcement.
+- **Selecting (user choice)**: arrows, wheel, swipe and the previous/next keys move through the pile; the current Sleeve slides partly out of the pile (sideways, on top of the others) and is the only tab stop. Clicking the sticking-out Sleeve plays it (lift, disc slides out, travels to the platter, as now); clicking it again pauses. Clicking a visible part of another Sleeve in the pile makes that one stick out without playing.
+- **Kept**: the "on the platter" tab on the loaded Sleeve, the pick animation, reduced motion (no sliding), forced colors (outlined boxes), all state/ARIA/test behaviour except the title-strip click, which becomes a click on the visible part of a pile Sleeve.
+- **Admin**: sleeve titles and subtitles are no longer visible, so they are edited only through the Admin Songs list (titles); the per-sleeve subtitle key is dropped from the visible page.
+
+
+Follow-up 2026-11-13 (user): Sleeves match the record's size; the pile lies partly off the right edge of the screen and the current Sleeve sticks out to the left, staying under the Sleeves above it.

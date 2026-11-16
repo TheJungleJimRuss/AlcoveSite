@@ -7,6 +7,9 @@ import { readFile, writeFile, truncate, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+const flip = (pg, d) => pg.evaluate(d => document.querySelector('.rp-fader').dispatchEvent(new KeyboardEvent('keydown', { key: d > 0 ? 'ArrowRight' : 'ArrowLeft', bubbles: true, cancelable: true })), d);
+const atStart = pg => pg.getAttribute('.rp-fader', 'aria-valuenow').then(v => v === '1');
+const atEnd = pg => Promise.all([pg.getAttribute('.rp-fader', 'aria-valuenow'), pg.getAttribute('.rp-fader', 'aria-valuemax')]).then(([a, b]) => a === b);
 
 const root = join(fileURLToPath(import.meta.url), '..', '..');
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.webm': 'video/webm', '.mp3': 'audio/mpeg' };
@@ -1283,10 +1286,9 @@ const branchWith = (songs, sha = 'sha-songs-1') => ({ sha, text: JSON.stringify(
   const { ctx, page, errors } = await open('work.html', { override: withSongs([{ title: evil, file: F3 }, { title: 'Alpha', file: F1 }]) });
   check('saved songs replace the authored Crate, in the saved order', (await crateTitles(page)).join('|') === `${evil}|Alpha` && (await crateSrcs(page)).join() === `${F3},${F1}`, JSON.stringify(await crateTitles(page)));
   check('song titles are text only (no markup injected)', (await page.locator('.sleeve img, .sleeve b, .sleeve-title *').count()) === 0 && (await page.evaluate(() => window.__injected)) === undefined);
-  check('the count follows the list', (await page.textContent('.rp-count')) === '1 of 2');
   check('no genre tabs, labels or attributes', (await page.locator('.filter-pill, .filter-bar, [data-genre], .sleeve-genre').count()) === 0);
   check('each sleeve has an accessible name from its title', (await page.getByRole('button', { name: /Alpha/ }).count()) === 1);
-  await page.click('.rp-next'); await page.waitForTimeout(100);
+  await flip(page, 1); await page.waitForTimeout(100);
   await page.click(`.sleeve[data-src="${F1}"]`);
   await page.waitForFunction(() => document.querySelector('.record-player').dataset.playing === 'true', null, { timeout: 5000 });
   check('the player plays the song and names it by its title', (await page.getAttribute('#audio-player', 'data-track')) === F1 && /Now playing: Alpha/.test(await page.textContent('.rp-status')) && (await page.textContent('.rp-label-text')).includes('Alpha'));
@@ -1377,7 +1379,7 @@ const branchWith = (songs, sha = 'sha-songs-1') => ({ sha, text: JSON.stringify(
   await page.click(saveBtn); await saveDone(page);
   check('Save writes the new order', songsOf(gh).map(s => s.file).join() === [F4, F1, F2, F3].join(), JSON.stringify(songsOf(gh)));
   const v = await open('work.html', { override: JSON.stringify(savedContent(gh)) });
-  check('visitor: the player uses the saved order', (await crateSrcs(v.page)).join() === [F4, F1, F2, F3].join() && (await v.page.textContent('.rp-count')) === '1 of 4');
+  check('visitor: the player uses the saved order', (await crateSrcs(v.page)).join() === [F4, F1, F2, F3].join());
   await v.ctx.close();
   await ctx.close();
 }
@@ -1410,7 +1412,7 @@ const branchWith = (songs, sha = 'sha-songs-1') => ({ sha, text: JSON.stringify(
   check('the new song is appended to the list and the Crate with a trimmed title', (await rowTitles(page)).at(-1) === 'My New Jam' && (await crateTitles(page)).at(-1) === 'My New Jam');
   check('the add fields are cleared', (await page.inputValue(`${SG} .admin-song-new-title`)) === '' && (await page.textContent(`${SG} .admin-song-msg`)) === '');
   check('the staged song previews from a blob', (await crateSrcs(page)).at(-1).startsWith('blob:'));
-  for (let i = 0; i < 4 && (await page.getAttribute('.sleeve:last-of-type', 'data-pos')) !== 'front'; i++) { await page.click('.rp-next'); await page.waitForTimeout(80); }
+  for (let i = 0; i < 4 && (await page.getAttribute('.sleeve:last-of-type', 'data-pos')) !== 'front'; i++) { await flip(page, 1); await page.waitForTimeout(80); }
   await page.waitForFunction(() => !document.querySelector('.record-player').dataset.picking);
   await page.click('.sleeve:last-of-type');
   await page.waitForFunction(() => document.querySelector('.record-player').dataset.playing === 'true', null, { timeout: 6000 });
@@ -1698,6 +1700,229 @@ const branchWith = (songs, sha = 'sha-songs-1') => ({ sha, text: JSON.stringify(
   await page.waitForTimeout(600);
   check('a tampered stored path is not restored and nothing is staged', !(await page.getAttribute(clipEl(MEMO), 'data-src')).startsWith('blob:') && (await page.textContent(saveBtn)).trim() === 'Save');
   await ctx.close();
+}
+
+// --- Admin media, ticket 06: Sleeve covers -------------------------------------------------------------------------
+{
+  const CB = '.admin-cover-replace', CI = '.admin-cover-input';
+  const coverImg = await fixture(2400, 1200);
+  const coverFile = { name: 'Album Art!!.JPG', mimeType: 'image/jpeg', buffer: coverImg };
+  const COV = 'images/cover-old-aaaaaaaa.jpg';
+  const frontTitle = page => page.$eval('.sleeve[data-pos="front"] .sleeve-title', t => t.textContent.trim());
+  const settled = page => page.waitForFunction(() => !document.querySelector('.rp-stack').getAnimations({ subtree: true }).some(a => a.playState === 'running'));
+  const sleeveCover = (page, n) => page.$$eval('.sleeve', (ss, i) => ({ has: ss[i].classList.contains('has-cover'), cover: ss[i].dataset.cover || null, css: ss[i].style.getPropertyValue('--cover') }), n);
+  const blobDims = (page, url) => page.evaluate(async u => { const bm = await createImageBitmap(await (await fetch(u)).blob()); return [bm.width, bm.height]; }, url);
+  const stageCover = async (page, f = coverFile) => { await page.setInputFiles(CI, f); await page.waitForFunction(() => document.querySelector('.sleeve[data-pos="front"]').dataset.cover?.startsWith('blob:')); };
+  const withCover = (list, n) => list.map((x, i) => i === n ? { ...x, cover: COV } : x);
+  const four = [{ title: AUTHORED[0], file: F1 }, { title: AUTHORED[1], file: F2 }, { title: AUTHORED[2], file: F3 }, { title: AUTHORED[3], file: F4 }];
+
+  {
+    // content-loader: a valid cover is read; every kind of bad cover is dropped without invalidating the song or the list
+    const good = await open('work.html', { override: withSongs(withCover(four, 1)) });
+    check('visitor: a saved cover shows on its sleeve, the others keep the pattern', JSON.stringify([0, 1, 2, 3].map(n => null)) && (await sleeveCover(good.page, 1)).cover === COV && (await sleeveCover(good.page, 0)).has === false && (await sleeveCover(good.page, 2)).has === false);
+    await good.ctx.close();
+    for (const [label, cover] of [['outside images/', 'media/x.jpg'], ['traversal', 'images/../content.json'], ['external URL', 'https://evil.example/x.jpg'], ['wrong extension', 'images/x.php'], ['not a string', 7], ['quote', 'images/a".jpg'], ['subfolder', 'images/textures/x.jpg']]) {
+      const { ctx, page, errors } = await open('work.html', { override: withSongs(four.map((x, i) => i === 0 ? { ...x, cover } : x)) });
+      const c = await sleeveCover(page, 0);
+      check(`bad cover (${label}): dropped, song and list stay`, !c.has && c.cover === null && (await crateTitles(page)).join('|') === AUTHORED.join('|') && errors.length === 0, JSON.stringify(c) + errors.join());
+      await ctx.close();
+    }
+  }
+  {
+    // Edit mode off: no button. On: one labelled button on the sticking-out Sleeve, a real 44px button, follows flips, inside the viewport
+    const off = await open('work.html', { token: TOKEN });
+    await off.page.waitForSelector('#alcove-admin');
+    check('Edit mode off: no Replace cover button', (await off.page.locator(CB).count()) === 0);
+    await off.ctx.close();
+    const { ctx, page } = await unlocked('work.html', { gh: {} });
+    check('Edit mode on: exactly one Replace cover button, a real button', (await page.locator(CB).count()) === 1 && (await page.$eval(CB, b => b.tagName)) === 'BUTTON' && !(await page.$eval(CB, b => !!b.closest('.sleeve'))));
+    check('button is labelled with the front song', (await page.getAttribute(CB, 'aria-label')) === 'Replace cover: ' + AUTHORED[0], await page.getAttribute(CB, 'aria-label'));
+    const box = async () => { const b = await page.locator(CB).boundingBox(), s = await page.locator('.sleeve[data-pos="front"]').boundingBox(); return { b, s }; };
+    let { b, s } = await box();
+    check('button is at least 44px and sits over the visible left part of the front Sleeve, on screen', b.width >= 44 && b.height >= 44 && b.x >= 0 && b.x + b.width <= 1280 && b.x >= s.x - 2 && b.x + b.width <= s.x + s.width * 0.9 && b.y >= s.y && b.y + b.height <= s.y + s.height, JSON.stringify({ b, s }));
+    check('the button is on top: a click at its centre hits it, not a sleeve', await page.evaluate(sel => { const r = document.querySelector(sel).getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2).closest(sel) !== null; }, CB));
+    await flip(page, 1); await settled(page); await page.waitForTimeout(100);
+    ({ b, s } = await box());
+    check('after flipping, the button follows the new front Sleeve and names its song', (await page.getAttribute(CB, 'aria-label')) === 'Replace cover: ' + AUTHORED[1] && b.x >= s.x - 2 && b.x + b.width <= s.x + s.width * 0.9 && b.y >= s.y && b.y + b.height <= s.y + s.height, JSON.stringify({ b, s }));
+    await flip(page, -1); await settled(page);
+    // clicking the button opens the chooser and does not flip or play
+    const chooser = page.waitForEvent('filechooser', { timeout: 3000 });
+    await page.click(CB);
+    check('clicking the button opens the file chooser', !!(await chooser.catch(() => null)));
+    check('clicking the button does not flip, load or play the Sleeve', (await frontTitle(page)) === AUTHORED[0] && (await page.evaluate(() => document.getElementById('audio-player').paused && !document.getElementById('audio-player').dataset.track)));
+    await page.focus(CB);
+    const kb = page.waitForEvent('filechooser', { timeout: 3000 });
+    await page.keyboard.press('Enter');
+    check('keyboard: the button is reachable and opens the chooser', !!(await kb.catch(() => null)));
+    await page.keyboard.press('Escape');
+    await ctx.close();
+    const ph = await unlocked('work.html', { width: 375, height: 800, gh: {} });
+    await ph.page.waitForTimeout(800);
+    const pb = await ph.page.locator(CB).boundingBox();
+    check('phone: the button is 44px and fully on screen', pb.width >= 44 && pb.height >= 44 && pb.x >= 0 && pb.x + pb.width <= 375, JSON.stringify(pb));
+    await ph.ctx.close();
+    const sw = await unlocked('work.html', { gh: {} });
+    await sw.page.click('#alcove-admin .admin-edit-switch');
+    check('switching Edit mode off removes the button and the input', (await sw.page.locator(`${CB}, ${CI}`).count()) === 0);
+    await sw.ctx.close();
+  }
+  {
+    // replace: previewed at once (unblended picture on the sleeve), 1200px, change entry, revert, draft, Save order, visitor
+    const gh = { file: { ...BRANCH_FILE } };
+    const { ctx, page, errors, allReqs } = await unlocked('work.html', { gh });
+    await stageCover(page);
+    const c0 = await sleeveCover(page, 0);
+    check('the picked cover shows on the Sleeve at once, clean (has-cover, blob URL)', c0.has && c0.cover.startsWith('blob:') && c0.css.includes('blob:'));
+    check('preview is unblended, centre-cropped and the pattern is hidden', await page.evaluate(() => { const a = document.querySelector('.sleeve[data-pos="front"] .sleeve-art'), b = getComputedStyle(a, '::before'); return b.mixBlendMode === 'normal' && b.backgroundSize === 'cover' && getComputedStyle(a, '::after').display === 'none'; }));
+    check('cover is shrunk to 1200px on the long edge', JSON.stringify(await blobDims(page, c0.cover)) === '[1200,600]', JSON.stringify(await blobDims(page, c0.cover)));
+    check('it counts as one change and no request was made', (await page.textContent(saveBtn)).includes('1 change') && fileCalls(gh).length === 0);
+    await openPanel(page);
+    check('changes panel says "Cover changed: <title>"', (await page.textContent('#alcove-admin .admin-changes')).includes('Cover changed: ' + AUTHORED[0]), await page.textContent('#alcove-admin .admin-changes'));
+    await page.click('#alcove-admin .admin-changes li button');
+    check('revert goes back to the pattern and clears the count', !(await sleeveCover(page, 0)).has && (await page.textContent(saveBtn)).trim() === 'Save');
+    await stageCover(page);
+    // draft survives a reload
+    await page.reload(); await page.waitForSelector(`${SG} .admin-song`); await page.waitForFunction(() => document.querySelector('.sleeve').dataset.cover?.startsWith('blob:'));
+    check('after a reload the staged cover is back on its Sleeve and counted', (await sleeveCover(page, 0)).has && (await page.textContent(saveBtn)).includes('1 change'));
+    check('leaving with a staged cover is warned about', await (async () => { await page.evaluate(() => { window.__bu = null; window.addEventListener('beforeunload', e => { window.__bu = e.defaultPrevented; }); }); await page.evaluate(() => window.dispatchEvent(new Event('beforeunload', { cancelable: true }))); return (await page.evaluate(() => window.__bu)) === true; })());
+    await openPanel(page);
+    await page.click(saveBtn); await saveDone(page);
+    const order = puts(gh).map(c => c.path);
+    check('Save uploads the cover first, then content.json', order.length === 2 && /^\/contents\/images\/cover-album-art-[0-9a-f]{8}\.jpg$/.test(order[0]) && order[1] === '/contents/content.json', JSON.stringify(order));
+    const rel = order[0].replace('/contents/', '');
+    const up = Buffer.from(JSON.parse(fileCalls(gh)[0].body).content, 'base64');
+    check('uploaded bytes are the 1200px JPEG, not the original', JSON.stringify(await dims(up)) === '[1200,600]' && up.length < coverImg.length + 5000 && JSON.parse(fileCalls(gh)[0].body).branch === 'content');
+    const saved = songsOf(gh);
+    check('content.json: the song carries its cover, the others do not', saved.length === 4 && saved[0].cover === rel && saved.slice(1).every(x => !('cover' in x)) && saved.map(x => x.file).join() === [F1, F2, F3, F4].join(), JSON.stringify(saved));
+    check('after Save nothing is pending and the Sleeve still shows the cover', (await page.textContent(saveBtn)).trim() === 'Save' && (await sleeveCover(page, 0)).has);
+    check('no console errors; token only to api.github.com', errors.length === 0 && allReqs.every(r => !r.auth || new URL(r.url).host === 'api.github.com'), errors.join(' | '));
+    await ctx.close();
+    extra['/' + rel] = gh.files[order[0]];
+    const v = await open('work.html', { override: gh.file.text });
+    await v.page.waitForFunction(() => document.querySelector('.sleeve').dataset.cover);
+    check('visitor sees the saved cover on that song and the pattern elsewhere', (await sleeveCover(v.page, 0)).cover === rel && !(await sleeveCover(v.page, 1)).has && v.errors.length === 0);
+    await v.ctx.close();
+    delete extra['/' + rel];
+  }
+  {
+    // cover follows its song on reorder (admin), replace again keeps the first until Save, revert goes back to the previous cover
+    const gh = { file: branchWith(withCover(four, 0)), files: { ['/contents/' + COV]: Buffer.from('x') } };
+    const { ctx, page } = await unlocked('work.html', { gh });
+    check('unlocked: the saved cover is shown', (await sleeveCover(page, 0)).cover === COV);
+    await page.click(`${ROW(1)} .admin-song-down`);
+    check('reordering moves the cover with its song', (await page.$$eval('.sleeve', ss => ss.map(s => s.dataset.cover || '-').join())) === '-,' + COV + ',-,-');
+    await openPanel(page);
+    await page.click('#alcove-admin .admin-changes li button'); // revert the order
+    while (!(await atStart(page))) { await flip(page, -1); await settled(page); }
+    check('back at the first Sleeve with its saved cover', (await frontTitle(page)) === AUTHORED[0] && (await sleeveCover(page, 0)).cover === COV);
+    await stageCover(page);
+    check('replacing a saved cover: the new picture shows', (await sleeveCover(page, 0)).cover.startsWith('blob:'));
+    await page.click('#alcove-admin .admin-changes li button');
+    check('revert goes back to the previous cover, not the pattern', (await sleeveCover(page, 0)).cover === COV && (await page.textContent(saveBtn)).trim() === 'Save');
+    check('there is no way to remove a cover (no remove control)', (await page.locator('.admin-cover-remove, [aria-label^="Remove cover"], [aria-label^="Clear cover"]').count()) === 0);
+    await ctx.close();
+  }
+  {
+    // cleanup: a replaced cover nothing else uses is deleted after content.json; a shared one is kept
+    const gh = { file: branchWith(withCover(four, 0)), files: { ['/contents/' + COV]: Buffer.from('x') } };
+    const { ctx, page } = await unlocked('work.html', { gh });
+    await stageCover(page); await openPanel(page); await page.click(saveBtn); await saveDone(page);
+    for (let n = 0; n < 100 && !gh.deleted; n++) await new Promise(r => setTimeout(r, 50));
+    check('replaced cover deleted (with its sha, on the content branch, after content.json)', (gh.deleted || []).join() === '/contents/' + COV && JSON.parse(gh.calls.find(c => c.method === 'DELETE').body).branch === 'content' && gh.calls.findIndex(c => c.method === 'DELETE') > gh.calls.findIndex(c => c.path === '/contents/content.json' && c.method === 'PUT'), JSON.stringify(gh.deleted));
+    check('the new cover is not deleted', Object.keys(gh.files).some(f => /cover-album-art/.test(f)));
+    await ctx.close();
+    const shared = { file: { sha: 'sha-sh', text: JSON.stringify({ version: 1, text: {}, defaults: {}, media: { 'about.photo.portrait': COV }, songs: withCover(four, 0) }) }, files: { ['/contents/' + COV]: Buffer.from('x') } };
+    const b = await unlocked('work.html', { gh: shared });
+    await stageCover(b.page); await openPanel(b.page); await b.page.click(saveBtn); await saveDone(b.page); await b.page.waitForTimeout(600);
+    check('a replaced cover still used by a media slot is kept', !shared.deleted && !!shared.files['/contents/' + COV]);
+    await b.ctx.close();
+    const twice = { file: branchWith(withCover(four.slice(0, 2).map((x, i) => i ? { ...x, cover: COV } : x), 0)), files: { ['/contents/' + COV]: Buffer.from('x') } };
+    const t = await unlocked('work.html', { gh: twice });
+    await stageCover(t.page); await openPanel(t.page); await t.page.click(saveBtn); await saveDone(t.page); await t.page.waitForTimeout(600);
+    check('a replaced cover still used by another song is kept', !twice.deleted && !!twice.files['/contents/' + COV]);
+    await t.ctx.close();
+  }
+  {
+    // Add song: optional cover; with a cover it is staged, uploaded and saved; without, no cover key
+    const gh = { file: { ...BRANCH_FILE } };
+    const { ctx, page } = await unlocked('work.html', { gh });
+    check('the Add song form has an optional cover picture input for images', /image\/jpeg/.test(await page.getAttribute(`${SG} .admin-song-new-cover`, 'accept')) && !/svg/.test(await page.getAttribute(`${SG} .admin-song-new-cover`, 'accept')));
+    await page.setInputFiles(`${SG} .admin-song-new-cover`, coverFile);
+    await addSong(page, 'With Art', songFile);
+    await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 5);
+    check('the new song shows its cover at once; the add form is cleared', (await sleeveCover(page, 4)).cover?.startsWith('blob:') && (await page.inputValue(`${SG} .admin-song-new-cover`)) === '' && (await page.textContent(saveBtn)).includes('1 change'));
+    await page.reload(); await page.waitForSelector(`${SG} .admin-song`);
+    await page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 5);
+    await page.waitForFunction(() => document.querySelectorAll('.sleeve')[4].dataset.cover?.startsWith('blob:'));
+    check('the added song keeps its cover across a reload', (await sleeveCover(page, 4)).has);
+    await openPanel(page); await page.click(saveBtn); await saveDone(page);
+    const order = puts(gh).map(c => c.path);
+    const list = songsOf(gh);
+    check('Save uploads the audio and the cover, then content.json', order.length === 3 && order.filter(p => /\/media\/my-new-jam/.test(p)).length === 1 && order.filter(p => /\/images\/cover-album-art-[0-9a-f]{8}\.jpg$/.test(p)).length === 1 && order[2] === '/contents/content.json', JSON.stringify(order));
+    check('the new song entry has its cover; the rest have none', list.length === 5 && /^images\/cover-album-art-[0-9a-f]{8}\.jpg$/.test(list[4].cover) && list.slice(0, 4).every(x => !('cover' in x)), JSON.stringify(list));
+    await ctx.close();
+    const g2 = { file: { ...BRANCH_FILE } };
+    const n = await unlocked('work.html', { gh: g2 });
+    await addSong(n.page, 'No Art', songFile);
+    await openPanel(n.page); await n.page.click(saveBtn); await saveDone(n.page);
+    check('adding without a cover saves no cover and uploads no image', !('cover' in songsOf(g2).at(-1)) && fileCalls(g2).length === 0 && !(await sleeveCover(n.page, 4)).has);
+    await n.ctx.close();
+    // revert of an added song with a cover drops it (and its staged preview)
+    const r = await unlocked('work.html', { gh: {} });
+    await r.page.setInputFiles(`${SG} .admin-song-new-cover`, coverFile);
+    await addSong(r.page, 'Gone', songFile);
+    await r.page.waitForFunction(() => document.querySelectorAll('.sleeve').length === 5);
+    await openPanel(r.page); await r.page.click('#alcove-admin .admin-changes li button');
+    check('reverting an added song with a cover removes it', (await r.page.locator('.sleeve').count()) === 4 && (await r.page.textContent(saveBtn)).trim() === 'Save');
+    await r.ctx.close();
+  }
+  {
+    // rejections: wrong type, SVG, oversize, unreadable; nothing staged, no request, message shown
+    const gh = { file: { ...BRANCH_FILE } };
+    const { ctx, page } = await unlocked('work.html', { gh });
+    const tmp = await mkdtemp(join(tmpdir(), 'alcove-cover-'));
+    const huge = join(tmp, 'huge.jpg'); await writeFile(huge, ''); await truncate(huge, 91 * 1024 * 1024);
+    for (const [label, f, re] of [
+      ['a text file', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') }, /picture|image|JPG/i],
+      ['an audio file', { name: 'song.mp3', mimeType: 'audio/mpeg', buffer: Buffer.alloc(100) }, /picture|image|JPG/i],
+      ['an SVG', { name: 'art.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>') }, /JPG, PNG or WebP/],
+      ['a broken JPG', { name: 'broken.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('not an image') }, /read|different/i],
+      ['an oversize file', huge, /too large|limit/i]]) {
+      await page.setInputFiles(CI, f);
+      await page.waitForFunction(s => (document.querySelector(s)?.textContent || '').length > 0, mediaErr);
+      check(`cover rejects ${label} with a message, nothing staged`, re.test(await page.textContent(mediaErr)) && !(await sleeveCover(page, 0)).has && (await page.textContent(saveBtn)).trim() === 'Save' && gh.calls.every(c => c.method === 'GET' || c.method === 'OPTIONS'), await page.textContent(mediaErr));
+    }
+    await rm(tmp, { recursive: true, force: true });
+    // a transparent PNG becomes JPEG with a white background (not black)
+    const png = await fixture(300, 300, 'image/png');
+    await page.setInputFiles(CI, { name: 'logo.png', mimeType: 'image/png', buffer: png });
+    await page.waitForFunction(() => document.querySelector('.sleeve').dataset.cover?.startsWith('blob:'));
+    const kind = await page.evaluate(async u => (await (await fetch(u)).blob()).type, (await sleeveCover(page, 0)).cover);
+    check('a PNG cover is saved as JPEG', kind === 'image/jpeg');
+    await ctx.close();
+  }
+  {
+    // conflict: the branch's songs changed after load: the existing message, drafts kept, nothing uploaded
+    const gh = { file: branchWith(four, 'sha-cv-1') };
+    const { ctx, page } = await unlocked('work.html', { gh });
+    await stageCover(page);
+    gh.file = branchWith([{ title: 'Someone Else', file: F3 }], 'sha-cv-2');
+    await openPanel(page); await page.click(saveBtn);
+    await page.waitForFunction(s => /changed|reload/i.test(document.querySelector(s)?.textContent || ''), note);
+    check('songs changed on the branch: cover Save stops, nothing uploaded', fileCalls(gh).length === 0 && contentPuts(gh).length === 0 && (await sleeveCover(page, 0)).has);
+    await ctx.close();
+  }
+  {
+    // a cover on one song with an old content file that lacks songs: saves the whole list with the cover
+    const gh = { file: { ...BRANCH_FILE } };
+    const { ctx, page } = await unlocked('work.html', { gh });
+    await stageCover(page); await page.fill(`${ROW(2)} .admin-song-title`, 'Renamed Too');
+    check('a cover and a rename are two changes', (await page.textContent(saveBtn)).includes('2 changes'));
+    await openPanel(page); await page.click(saveBtn); await saveDone(page);
+    const l = songsOf(gh);
+    check('the saved list has both the cover and the rename', !!l[0].cover && l[1].title === 'Renamed Too');
+    await ctx.close();
+  }
 }
 
 await fxPage.close();

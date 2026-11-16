@@ -109,3 +109,22 @@
 .admin-song-new input[type="file"] { min-height: 44px; max-width: 100%; }
 .admin-song-msg { margin: 0.75rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
 .admin-song-msg:empty { display: none; }
+
+/* Replace cover (admin-media ticket 06): one button over the Sleeve sticking out of the pile; admin.js sets left/top and follows the Sleeve */
+.admin-cover-replace {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 60; /* above every Sleeve (z-index 40 and down) */
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-page);
+  color: var(--text-main);
+  border: 1px solid var(--border-focus);
+  font: 600 0.85rem/1.2 var(--font-sans);
+  cursor: var(--cursor-pointer, pointer);
+}
+.admin-cover-replace[hidden] { display: none; }
+.admin-cover-replace:hover { text-decoration: underline; }
+.admin-cover-replace:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }

@@ -26,7 +26,7 @@
 
 ## Work page
 
-- **Record player**: the Work page sampler, a flat top-down turntable (plinth, platter, record, tonearm) beside a Crate; replaces the old tape-deck sampler. The Voice Memo vs. Master A/B deck stays a tape deck.
-- **Crate**: the plastic milk crate of Sleeves beside the Record player (below it on phones); records tip forward one at a time to flip through it, one Sleeve per Song in the saved order.
-- **Sleeve**: one record in the Crate, a button showing a Song's title over a placeholder cover with a slot for real art; clicking the front Sleeve lifts it so its record slides out onto the platter. _Avoid_: track row, card.
+- **Record player**: the Work page sampler, a photoreal top-down turntable (plinth, platter, record, tonearm) beside a Crate; replaces the old tape-deck sampler. The Voice Memo vs. Master A/B deck stays a tape deck.
+- **Crate**: the messy pile of picture-only Sleeves beside the Record player (below it on phones); the current Sleeve sticks out of the pile, one Sleeve per Song in the saved order. (No longer an actual crate; the name stays in code.)
+- **Sleeve**: one record in the Crate, a button showing only its cover picture (a Cover set in Edit mode with Replace cover, else a printed placeholder pattern) (the Song's title is for screen readers, and on the record's label once playing); clicking the current Sleeve lifts it so its record slides out onto the platter. _Avoid_: track row, card.
 - **Tonearm**: the arm on the Record player; at rest, or on the record while playing (later also a slider to seek).

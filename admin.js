@@ -15,6 +15,10 @@
  * title and an audio file) edits the Crate live through window.AlcoveRecordPlayer. A new song's audio is staged like a clip (Blob, IndexedDB,
  * preview from a blob URL) under media/ (slug + short content hash); Save uploads new audio first, then writes the whole ordered `songs` list
  * with content.json. The working list, titles and order are kept as a draft in localStorage next to the text drafts.
+ * Admin media ticket 06: Sleeve covers. While Edit mode is on, one Replace cover button follows the Sleeve sticking out of the pile (it is
+ * a sibling in .rp-stage, never inside the Sleeve button). A chosen picture is shrunk to 1200px (JPEG), previewed on the Sleeve at once,
+ * staged in IndexedDB under cover:<song file>, kept in the songs draft, and uploaded as images/cover-<slug>-<hash>.jpg before content.json;
+ * the song's `cover` is saved next to its title and file. The Add song form takes an optional cover. Covers can be replaced, not removed.
  * Text is only ever read and written through textContent, never innerHTML.
  */
 (function () {
@@ -28,6 +32,7 @@
   // One size cap for every kind of media (photos, audio and video). Lower it if GitHub rejects big uploads.
   var MAX_MEDIA_BYTES = 90 * 1024 * 1024;
   var MAX_PHOTO_EDGE = 2000;
+  var MAX_COVER_EDGE = 1200; // a Sleeve is at most about 400px wide, so this is 3x
   window.AlcoveAdmin = { MAX_MEDIA_BYTES: MAX_MEDIA_BYTES };
   var DRAFT_KEY = DRAFT_PREFIX + (location.pathname.split('/').pop() || 'index.html');
 
@@ -350,7 +355,7 @@
       if (!list.length) return Promise.resolve(res);
       var used = {};
       Object.keys(merged.media || {}).forEach(function (k) { used[merged.media[k]] = true; });
-      if (Array.isArray(merged.songs)) merged.songs.forEach(function (s) { if (s) used[s.file] = true; });
+      if (Array.isArray(merged.songs)) merged.songs.forEach(function (s) { if (s) { used[s.file] = true; if (typeof s.cover === 'string') used[s.cover] = true; } });
       return authoredRefs().then(function (refs) {
         var chain = Promise.resolve();
         list.filter(function (p) { return !used[p] && !refs[p]; }).forEach(function (p) {
@@ -408,7 +413,10 @@
         var mkeys = Object.keys(mediaChg);
         // Cleanup candidates (ticket 04): what the branch file pointed at before this Save and no longer will.
         mkeys.forEach(function (k) { var o = file.media[k]; if (typeof o === 'string' && o !== mediaChg[k].path) candidates.push(o); });
-        if (songChg && Array.isArray(file.songs)) file.songs.forEach(function (s) { if (s && typeof s.file === 'string') candidates.push(s.file); });
+        if (songChg && Array.isArray(file.songs)) file.songs.forEach(function (s) {
+          if (s && typeof s.file === 'string') candidates.push(s.file);
+          if (s && typeof s.cover === 'string') candidates.push(s.cover);
+        });
         mkeys.forEach(function (k) { file.media[k] = mediaChg[k].path; });
         if (songChg) file.songs = songChg.list;
         var nt = Object.keys(changes).length, nd = Object.keys(defChg).length, nm = mkeys.length, parts = [];
@@ -421,7 +429,7 @@
         merged = { text: JSON.parse(JSON.stringify(file.text)), defaults: JSON.parse(JSON.stringify(file.defaults)), media: JSON.parse(JSON.stringify(file.media || {})), songs: file.songs === undefined ? undefined : JSON.parse(JSON.stringify(file.songs)) };
         // Files first, one at a time; content.json last, so the live content never points at a file that is not there.
         var uploads = mkeys.map(function (k) { return { path: mediaChg[k].path, blob: mediaChg[k].blob }; });
-        if (songChg) songChg.uploads.forEach(function (u) { uploads.push({ path: u.file, blob: u.blob }); });
+        if (songChg) songChg.uploads.forEach(function (u) { uploads.push({ path: u.file, blob: u.blob }); }); // song audio and covers
         var chain = Promise.resolve();
         uploads.forEach(function (u, i) {
           chain = chain.then(function () {
@@ -454,7 +462,11 @@
       var defChg = defChanges();
       var mediaChg = {};
       Object.keys(staged).forEach(function (k) { mediaChg[k] = staged[k]; });
-      var songChg = songChanges().length ? { list: songs.map(function (x) { return { title: x.title.trim(), file: x.file }; }), uploads: songs.filter(function (x) { return x.staged; }) } : null;
+      var songChg = songChanges().length ? { list: songs.map(songEntry), uploads: [], staged: songs.filter(function (x) { return x.staged; }), covered: songs.filter(function (x) { return x.cstage; }) } : null;
+      if (songChg) {
+        songChg.staged.forEach(function (x) { songChg.uploads.push({ file: x.file, blob: x.blob }); });
+        songChg.covered.forEach(function (x) { songChg.uploads.push({ file: x.cstage.path, blob: x.cstage.blob }); });
+      }
       saving = true;
       setNote('Saving…');
       render();
@@ -625,12 +637,15 @@
       return Promise.resolve({ blob: file.slice(0, file.size, type), ext: ext });
     }
     // Resolves { blob, ext }. Rejections carry a message safe to show (e.user).
-    function processPhoto(file) {
+    // cover = true (Sleeve covers): same type and size checks, but no SVG; shrunk to MAX_COVER_EDGE and always saved as JPEG.
+    function processPhoto(file, cover) {
       var type = file.type, ext = (file.name.split('.').pop() || '').toLowerCase();
-      if (!PHOTO_TYPES[type] && !(type === '' && EXT_TYPES[ext])) return Promise.reject(bad('That file is not a photo this site can use. Choose a JPG, PNG, WebP or SVG image.'));
+      if (!PHOTO_TYPES[type] && !(type === '' && EXT_TYPES[ext])) return Promise.reject(bad(cover ? 'That file is not a picture this site can use. Choose a JPG, PNG or WebP image.' : 'That file is not a photo this site can use. Choose a JPG, PNG, WebP or SVG image.'));
       if (!PHOTO_TYPES[type]) type = EXT_TYPES[ext];
+      if (cover && type === 'image/svg+xml') return Promise.reject(bad('A cover has to be a JPG, PNG or WebP picture.'));
       if (file.size > MAX_MEDIA_BYTES) return Promise.reject(tooLarge(file));
       var unreadable = function () { return bad('Could not read that photo. Try a different file.'); };
+      if (cover) type = 'image/jpeg';
       if (type === 'image/svg+xml') {
         return file.text().then(function (t) {
           if (!/<svg[\s>]/i.test(t)) throw unreadable();
@@ -638,11 +653,13 @@
         });
       }
       return createImageBitmap(file).catch(function () { throw unreadable(); }).then(function (bm) {
-        var scale = Math.min(1, MAX_PHOTO_EDGE / Math.max(bm.width, bm.height));
+        var scale = Math.min(1, (cover ? MAX_COVER_EDGE : MAX_PHOTO_EDGE) / Math.max(bm.width, bm.height));
         var w = Math.max(1, Math.round(bm.width * scale)), h = Math.max(1, Math.round(bm.height * scale));
         var c = document.createElement('canvas');
         c.width = w; c.height = h;
-        c.getContext('2d').drawImage(bm, 0, 0, w, h);
+        var cx = c.getContext('2d');
+        if (cover) { cx.fillStyle = '#fff'; cx.fillRect(0, 0, w, h); } // a PNG with transparency must not turn black as a JPEG
+        cx.drawImage(bm, 0, 0, w, h);
         if (bm.close) bm.close();
         return new Promise(function (resolve, reject) {
           c.toBlob(function (b) { if (b) resolve(b); else reject(unreadable()); }, type, 0.86);
@@ -708,7 +725,10 @@
     var MAX_SONGS = 20;
     var songId = 0;
     var songBase = songsOn ? RP.getSongs() : []; // what visitors get now: [{ title, file }]
-    function newSong(x) { return { id: ++songId, title: x.title, file: x.file, staged: false, blob: null, url: null }; }
+    // cover = the saved path (or undefined); coverShown = a blob URL of it kept after Save (the redeploy takes a minute); cstage = a chosen, unsaved cover.
+    function newSong(x) { return { id: ++songId, title: x.title, file: x.file, cover: x.cover, coverShown: null, cstage: null, staged: false, blob: null, url: null }; }
+    function songEntry(x) { var o = { title: x.title.trim(), file: x.file }, c = x.cstage ? x.cstage.path : x.cover; if (c) o.cover = c; return o; }
+    var coverOf = function (x) { return x.cstage ? x.cstage.url : x.coverShown || x.cover; };
     var songs = songBase.map(newSong);            // the working list the editor changes
     var songsUI = null, songErr = '', pendingFocus = null;
     var songTitle = function (x) { return x.title.trim(); };
@@ -719,7 +739,10 @@
       songs.forEach(function (w) { inWork[w.file] = w; });
       songs.forEach(function (w) {
         if (!inBase[w.file]) out.push({ type: 'added', song: w });
-        else if (inBase[w.file].title !== songTitle(w)) out.push({ type: 'renamed', song: w, from: inBase[w.file].title });
+        else {
+          if (inBase[w.file].title !== songTitle(w)) out.push({ type: 'renamed', song: w, from: inBase[w.file].title });
+          if (w.cstage) out.push({ type: 'cover', song: w });
+        }
       });
       songBase.forEach(function (b, i) { if (!inWork[b.file]) out.push({ type: 'removed', base: b, index: i }); });
       var a = songBase.filter(function (b) { return inWork[b.file]; }).map(function (b) { return b.file; });
@@ -731,21 +754,29 @@
       if (c.type === 'added') return 'Song added: ' + songTitle(c.song);
       if (c.type === 'removed') return 'Song removed: ' + c.base.title;
       if (c.type === 'renamed') return 'Song renamed: ' + c.from + ' to ' + songTitle(c.song);
+      if (c.type === 'cover') return 'Cover changed: ' + songTitle(c.song);
       return 'Song order changed';
     }
+    function dropCover(x) {
+      if (!x.cstage) return;
+      URL.revokeObjectURL(x.cstage.url);
+      x.cstage = null;
+      idb('readwrite', function (st) { st.delete('cover:' + x.file); }).catch(function () { /* nothing was kept */ });
+    }
     function dropStagedSong(x) {
+      dropCover(x);
       if (x.url) URL.revokeObjectURL(x.url);
       if (x.staged) idb('readwrite', function (st) { st.delete('song:' + x.file); }).catch(function () { /* nothing was kept */ });
     }
     function saveSongsDraft() {
       try {
-        if (songChanges().length) localStorage.setItem(SONGS_DRAFT_KEY, JSON.stringify({ version: 1, songs: songs.map(function (x) { return { title: x.title, file: x.file, staged: x.staged }; }) }));
+        if (songChanges().length) localStorage.setItem(SONGS_DRAFT_KEY, JSON.stringify({ version: 1, songs: songs.map(function (x) { return { title: x.title, file: x.file, staged: x.staged, cpath: x.cstage ? x.cstage.path : undefined }; }) }));
         else localStorage.removeItem(SONGS_DRAFT_KEY);
       } catch (e) { /* storage blocked: edits still work in memory */ }
     }
     // Every change to the working list ends here: the Crate follows, the draft is kept, the editor and Save count refresh.
     function songsChanged(keepRows) {
-      if (songsOn) RP.setSongs(songs.map(function (x) { return { title: songTitle(x) || x.prev || ' ', file: x.url || x.file }; }));
+      if (songsOn) RP.setSongs(songs.map(function (x) { return { title: songTitle(x) || x.prev || ' ', file: x.url || x.file, cover: coverOf(x) }; }));
       saveSongsDraft();
       if (!keepRows) renderSongs();
       render();
@@ -754,6 +785,7 @@
       if (c.type === 'added') { songs = songs.filter(function (x) { return x !== c.song; }); dropStagedSong(c.song); }
       else if (c.type === 'removed') songs.splice(Math.min(c.index, songs.length), 0, newSong(c.base));
       else if (c.type === 'renamed') c.song.title = c.from;
+      else if (c.type === 'cover') dropCover(c.song); // back to the previous cover, or the pattern if it had none
       else {
         var order = {}, slots = [], base = [];
         songBase.forEach(function (b, i) { order[b.file] = i; });
@@ -764,9 +796,13 @@
       songsChanged();
     }
     function markSongsSaved(chg) {
-      songBase = chg.list.map(function (x) { return { title: x.title, file: x.file }; });
+      songBase = chg.list.map(function (x) { return x.cover ? { title: x.title, file: x.file, cover: x.cover } : { title: x.title, file: x.file }; });
       songs.forEach(function (x) {
-        if (x.staged && chg.uploads.indexOf(x) >= 0) { x.staged = false; idb('readwrite', function (st) { st.delete('song:' + x.file); }).catch(function () { /* ignore */ }); }
+        if (x.cstage && chg.covered.indexOf(x) >= 0 && songEntry(x).cover === x.cstage.path) {
+          x.cover = x.cstage.path; x.coverShown = x.cstage.url; x.cstage = null; // the preview stays; it is what the Sleeve shows until the site redeploys
+          idb('readwrite', function (st) { st.delete('cover:' + x.file); }).catch(function () { /* ignore */ });
+        }
+        if (x.staged && chg.staged.indexOf(x) >= 0) { x.staged = false; idb('readwrite', function (st) { st.delete('song:' + x.file); }).catch(function () { /* ignore */ }); }
       });
       saveSongsDraft();
       renderSongs();
@@ -849,6 +885,17 @@
       setSongErr('');
       songsChanged();
     }
+    // Covers: shrunk to 1200px JPEG, named images/cover-<slug>-<hash>.jpg by code, staged under cover:<song file>.
+    function processCover(file) {
+      return processPhoto(file, true).then(function (r) {
+        return newName(file, r.blob, 'jpg', 'cover').then(function (name) { return { blob: r.blob, path: 'images/cover-' + name }; });
+      });
+    }
+    function setCoverStage(x, blob, path) {
+      if (x.cstage) URL.revokeObjectURL(x.cstage.url);
+      x.cstage = { blob: blob, path: path, url: URL.createObjectURL(blob) };
+      idb('readwrite', function (st) { st.put({ blob: blob, path: path }, 'cover:' + x.file); }).catch(warnNoKeep);
+    }
     function addSongFromForm() {
       var ui = songsUI;
       if (!ui) return;
@@ -858,7 +905,10 @@
       if (songs.length >= MAX_SONGS) { setSongErr(songMsg()); return; }
       if (!title) { setSongErr('Give the song a title.'); return; }
       if (!file) { setSongErr('Choose an audio file for the song.'); return; }
-      processClip(file, 'audio').then(function (r) {
+      var cfile = ui.cover.files && ui.cover.files[0];
+      var cover = cfile ? processCover(cfile) : Promise.resolve(null); // optional; a bad cover stops the add with its own message
+      cover.then(function (cv) { return processClip(file, 'audio').then(function (r) { return { cv: cv, r: r }; }); }).then(function (both) {
+        var r = both.r;
         return newName(file, r.blob, r.ext, 'song').then(function (name) {
           var path = 'media/' + name;
           if (songs.some(function (x) { return x.file === path; })) throw bad('That file is already in the list.');
@@ -866,8 +916,10 @@
           x.staged = true; x.blob = r.blob; x.url = URL.createObjectURL(r.blob);
           songs.push(x);
           idb('readwrite', function (st) { st.put({ blob: r.blob, path: path }, 'song:' + path); }).catch(warnNoKeep);
+          if (both.cv) setCoverStage(x, both.cv.blob, both.cv.path);
           ui.title.value = '';
           ui.file.value = '';
+          ui.cover.value = '';
           songsChanged();
         });
       }).catch(function (e) { setSongErr(e && e.user ? e.message : 'Could not use that file. Try a different one.'); });
@@ -898,16 +950,20 @@
       ft.textContent = 'Audio file (MP3, M4A, WAV, OGG or WebM)';
       fi.type = 'file'; fi.className = 'admin-song-new-file'; fi.accept = ACCEPT.audio;
       fl.append(ft, fi);
+      var cl = document.createElement('label'), ct = document.createElement('span'), ci = document.createElement('input');
+      ct.textContent = 'Cover picture (optional: JPG, PNG or WebP)';
+      ci.type = 'file'; ci.className = 'admin-song-new-cover'; ci.accept = 'image/jpeg,image/png,image/webp';
+      cl.append(ct, ci);
       var add = document.createElement('button');
       add.type = 'button'; add.className = 'admin-song-add'; add.textContent = 'Add song';
       add.addEventListener('click', addSongFromForm);
-      fs.append(lg, tl, fl, add);
+      fs.append(lg, tl, fl, cl, add);
       var msg = document.createElement('p');
       msg.className = 'admin-song-msg';
       msg.setAttribute('role', 'alert');
       sec.append(h, help, ol, fs, msg);
       rp.parentNode.insertBefore(sec, rp.nextSibling);
-      songsUI = { list: ol, title: ti, file: fi, add: add, msg: msg };
+      songsUI = { list: ol, title: ti, file: fi, cover: ci, add: add, msg: msg };
       renderSongs();
     }
     // Draft: titles, order and removals live in localStorage; staged audio lives in IndexedDB (restored with the other staged files).
@@ -915,19 +971,87 @@
       var d;
       try { d = JSON.parse(localStorage.getItem(SONGS_DRAFT_KEY)); } catch (e) { return; }
       if (!songsOn || !d || d.version !== 1 || !Array.isArray(d.songs) || d.songs.length < 1 || d.songs.length > MAX_SONGS) return;
-      var blobs = {}, inBase = {}, out = [];
-      rows.forEach(function (r) { if (typeof r.key === 'string' && r.key.indexOf('song:') === 0 && r.value && r.value.blob instanceof Blob) blobs[r.key.slice(5)] = r.value.blob; });
-      songBase.forEach(function (b) { inBase[b.file] = true; });
+      var blobs = {}, covers = {}, inBase = {}, out = [];
+      rows.forEach(function (r) {
+        if (typeof r.key !== 'string' || !r.value || !(r.value.blob instanceof Blob)) return;
+        if (r.key.indexOf('song:') === 0) blobs[r.key.slice(5)] = r.value.blob;
+        else if (r.key.indexOf('cover:') === 0) covers[r.key.slice(6)] = r.value; // { blob, path }
+      });
+      songBase.forEach(function (b) { inBase[b.file] = b; });
       d.songs.forEach(function (e) {
         if (!e || typeof e.title !== 'string' || !e.title.trim() || typeof e.file !== 'string' || e.file.indexOf('media/') !== 0 || !DELETABLE.test(e.file) || e.file.indexOf('..') >= 0) return;
         if (out.some(function (x) { return x.file === e.file; })) return;
-        var x = newSong({ title: e.title.trim(), file: e.file });
+        var x = newSong({ title: e.title.trim(), file: e.file, cover: inBase[e.file] && inBase[e.file].cover });
         if (inBase[e.file]) out.push(x);
         else if (blobs[e.file]) { x.staged = true; x.blob = blobs[e.file]; x.url = URL.createObjectURL(x.blob); out.push(x); }
+        var cv = covers[e.file]; // a staged cover comes back only with the same whitelist as a new one
+        if (out.indexOf(x) >= 0 && typeof e.cpath === 'string' && cv && cv.path === e.cpath && e.cpath.indexOf('images/cover-') === 0 && DELETABLE.test(e.cpath) && e.cpath.indexOf('..') < 0) setCoverStage(x, cv.blob, cv.path);
       });
       if (!out.length) return;
       songs = out;
       songsChanged();
+    }
+
+    // ---- Replace cover (ticket 06): one button over the Sleeve sticking out of the pile ----
+    var coverUI = null;
+    function songOfFront() {
+      var f = RP && RP.getFront && RP.getFront();
+      if (!f) return null;
+      return songs.filter(function (x) { return (x.url || x.file) === f.dataset.src; })[0] || null;
+    }
+    function placeCover() {
+      var ui = coverUI, f = RP.getFront(), x = songOfFront();
+      if (!ui) return;
+      ui.btn.hidden = !f || !x;
+      if (ui.btn.hidden) return;
+      var r = f.getBoundingClientRect(), sr = ui.stage.getBoundingClientRect();
+      ui.btn.setAttribute('aria-label', 'Replace cover: ' + (songTitle(x) || x.prev || 'song'));
+      ui.btn.style.left = Math.max(4, r.left - sr.left + r.width * 0.06) + 'px'; // over the visible left part of the Sleeve
+      ui.btn.style.top = (r.top - sr.top + (r.height - ui.btn.offsetHeight) / 2) + 'px';
+    }
+    // The Sleeve slides for about half a second after a flip: follow it frame by frame, then stop.
+    function followCover() {
+      var ui = coverUI;
+      if (!ui) return;
+      ui.until = performance.now() + 700;
+      if (ui.raf) return;
+      var tick = function () { ui.raf = 0; placeCover(); if (coverUI === ui && performance.now() < ui.until) ui.raf = requestAnimationFrame(tick); };
+      tick();
+    }
+    function chooseCover() {
+      var ui = coverUI, x = songOfFront(), file = ui && ui.input.files && ui.input.files[0];
+      mediaError('');
+      mediaWarn.textContent = '';
+      if (!file || !x) { if (ui) ui.input.value = ''; return; }
+      processCover(file).then(function (c) {
+        if (songs.indexOf(x) < 0) return; // the song was removed meanwhile
+        setCoverStage(x, c.blob, c.path);
+        songsChanged(true);
+      }).catch(function (e) { mediaError(e && e.user ? e.message : 'Could not use that file. Try a different one.'); })
+        .then(function () { if (ui) ui.input.value = ''; render(); });
+    }
+    function buildCoverUI() {
+      var rp = document.querySelector('.record-player'), stage = rp && rp.querySelector('.rp-stage');
+      if (!songsOn || !stage || !RP.getFront) return;
+      var input = document.createElement('input');
+      input.type = 'file'; input.className = 'admin-cover-input'; input.accept = 'image/jpeg,image/png,image/webp'; input.hidden = true; input.tabIndex = -1;
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'admin-cover-replace'; btn.textContent = 'Replace cover';
+      btn.addEventListener('click', function () { input.click(); });
+      input.addEventListener('change', chooseCover);
+      stage.append(btn, input);
+      var ui = coverUI = { btn: btn, input: input, stage: stage, rp: rp, until: 0, raf: 0, follow: followCover };
+      rp.addEventListener('rp-layout', ui.follow);
+      window.addEventListener('resize', ui.follow);
+      followCover();
+    }
+    function teardownCover() {
+      var ui = coverUI;
+      coverUI = null;
+      if (!ui) return;
+      ui.rp.removeEventListener('rp-layout', ui.follow);
+      window.removeEventListener('resize', ui.follow);
+      if (ui.raf) cancelAnimationFrame(ui.raf);
     }
 
     // Replace controls exist only while Edit mode is on.
@@ -937,11 +1061,13 @@
       video: 'video/mp4,video/webm,.mp4,.webm'
     };
     function syncControls(on) {
-      Array.prototype.forEach.call(document.querySelectorAll('.admin-replace, .admin-replace-input, .admin-songs'), function (n) { n.remove(); });
+      Array.prototype.forEach.call(document.querySelectorAll('.admin-replace, .admin-replace-input, .admin-songs, .admin-cover-replace, .admin-cover-input'), function (n) { n.remove(); });
       songsUI = null;
+      teardownCover();
       Array.prototype.forEach.call(document.querySelectorAll('.admin-media-host'), function (n) { n.classList.remove('admin-media-host'); });
       if (!on) return;
       buildSongsUI();
+      buildCoverUI();
       Object.keys(slotEls).forEach(function (k) {
         var el = slotEls[k], kind = kindOf[k];
         var host = kind === 'audio' ? (el.closest('.ab-player') || el.parentElement) : kind === 'video' || kind === 'poster' ? (el.closest('.media-box') || el.parentElement) : el.tagName === 'IMG' ? (el.closest('.media-box') || el.parentElement) : el.parentElement;

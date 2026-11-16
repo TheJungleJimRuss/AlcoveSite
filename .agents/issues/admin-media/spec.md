@@ -83,3 +83,28 @@ In Edit mode, every **Media slot** (the studio photos, hero photo, session video
 - This folder is not a git repo; the real repo was updated by copying files. Reconcile before Save is used for media.
 - Another contributor is changing the Work page design (Record player, Crate, Sleeves); build against whatever Work markup is current when implementing.
 - Depends on Admin mode (`.agents/issues/admin-mode/spec.md`, ADR 0004) and amends its "out of scope: images and audio" and "developer merges to publish" statements.
+
+## Amendment 2026-11-13: Sleeve covers
+
+**Problem.** Every Sleeve shows one of four printed placeholder patterns; Seth cannot put real cover art on a song.
+
+**Solution.** In Edit mode the Sleeve sticking out of the pile gets a **Replace cover** button. The chosen picture shows on that Sleeve at once and is saved with the song on Save. The Add song form gets an optional cover picture. User decisions (2026-11-13): control on the sleeve only (not in the Songs list); clean photo (full colour over the sleeve face, the paper sleeve's edges and shadow stay around it, no multiply); covers can be replaced but not removed (no way back to the pattern once set).
+
+**User stories**
+1. As Seth, in Edit mode I flip to a song and click Replace cover on the sticking-out Sleeve, pick a photo, and see it on the Sleeve right away.
+2. As Seth, the changes panel lists "Cover changed: <title>" and I can revert it (back to the previous cover, or the pattern if it had none).
+3. As Seth, when I add a song I can pick its cover in the same form; leaving it empty gives the pattern.
+4. As Seth, a reload before Save keeps my staged cover (draft), like other staged media.
+5. As a visitor, after Save the Sleeve shows the cover; a missing or invalid cover path falls back to the pattern and the song still plays.
+6. As Seth, the cover moves with its song when I reorder, and a replaced cover file is deleted after Save if nothing else uses it.
+
+**Implementation decisions**
+- `content.json` `songs` entries gain an optional `cover`: a path under `images/` (same whitelist as photo slots: jpg/png/webp, no `..`). An invalid `cover` is dropped; it never invalidates the song or the list.
+- The editor never chooses a path: covers upload as `images/cover-<slug>-<short hash>.jpg`, shrunk with a canvas to 1200px on the long edge (the Sleeve is at most ~400px wide, so 2x is plenty). Same size cap and type checks as photo slots.
+- Staging, preview, draft and Save reuse the photo-slot flow: Blob in IndexedDB, blob URL preview, uploads before `content.json`, conflict detection through the existing whole-`songs` comparison, cleanup counts `cover` paths as references.
+- `record-player.js` takes `cover` in `getSongs`/`setSongs` and the authored markup; a Sleeve with a cover draws it as a normal (unblended) picture filling the Sleeve face, centre-cropped (`background-size: cover`), and hides the pattern.
+- One Replace cover button follows whichever Sleeve sticks out; it is a real button (keyboard reachable, labelled "Replace cover: <title>"), present only while Edit mode is on.
+
+**Testing.** `tests/admin-check.mjs` (GitHub mocked): replace a cover (preview, change entry, revert), draft survives reload, Save uploads the image before `content.json` and writes `cover`, Add with and without a cover, cleanup deletes a replaced cover, bad `cover` paths are ignored by `content-loader.js`. `tests/record-player-check.mjs`: a song with a cover shows the picture unblended and no pattern.
+
+**Out of scope.** Removing a cover, cropping or positioning tools, covers chosen from the Songs list, cover alt text (the Sleeve's accessible name stays the song title).

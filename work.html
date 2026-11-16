@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#FDFBF7">
   <title>Work - Alcove Recording</title>
   <link rel="stylesheet" href="wireframe.css">
-  <link rel="stylesheet" href="record-player.css?v=8">
+  <link rel="stylesheet" href="record-player.css?v=14">
   <link rel="stylesheet" href="theme-preview.css">
   <link rel="stylesheet" href="logo.css">
   <link rel="stylesheet" href="textures.css?v=etch1">
@@ -69,21 +69,13 @@
               </svg>
             </div>
             <div class="rp-controls">
-              <button type="button" class="rp-play" aria-label="Play" disabled>&#9654;&#xFE0E;</button>
-              <p class="rp-status" id="rp-status" role="status" aria-live="polite">Pick a record from the crate.</p>
-            </div>
-            <div class="player-scrubber-wireframe" role="region" aria-label="Audio timeline">
-              <span class="player-timestamp" id="current-time">0:00</span>
-              <div class="scrubber-track" role="slider" aria-label="Playback position" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-valuetext="No record loaded" aria-disabled="true">
-                <div class="scrubber-progress" id="progress-bar"></div>
-              </div>
-              <span class="player-timestamp" id="total-time">0:00</span>
+              <button type="button" class="rp-play" aria-label="Play" aria-pressed="false" disabled><span class="rp-lamp" aria-hidden="true"></span><span class="rp-play-label" aria-hidden="true">Start<br>Stop</span></button>
+              <p class="rp-status" id="rp-status" role="status" aria-live="polite">Pick a record from the pile.</p>
             </div>
           </div>
 
           <div class="rp-crate" role="group" aria-label="Crate of records">
             <div class="rp-stage">
-              <img class="rp-photo crate-back" src="images/record-player/crate-back-1x.webp" srcset="images/record-player/crate-back-1x.webp 1x, images/record-player/crate-back-2x.webp 2x" alt="" aria-hidden="true" loading="lazy" decoding="async">
               <div class="rp-stack">
               <button type="button" class="sleeve" data-src="media/track-1-indie.wav" aria-pressed="false">
                 <span class="sleeve-strip"><strong class="sleeve-title">Indie Rock Demo</strong></span>
@@ -109,14 +101,9 @@
                 <span class="sleeve-art" aria-hidden="true"></span>
                 <span class="sleeve-tab" aria-hidden="true"></span>
               </button>
-                <img class="rp-photo crate-front" src="images/record-player/crate-front-1x.webp" srcset="images/record-player/crate-front-1x.webp 1x, images/record-player/crate-front-2x.webp 2x" alt="" aria-hidden="true" loading="lazy" decoding="async">
               </div>
             </div>
-            <div class="rp-crate-nav">
-              <button type="button" class="rp-flip rp-prev" aria-label="Previous record">&#8249;</button>
-              <span class="rp-count" aria-hidden="true"></span>
-              <button type="button" class="rp-flip rp-next" aria-label="Next record">&#8250;</button>
-            </div>
+            <div class="rp-crate-nav"></div>
             <p class="visually-hidden" id="rp-crate-status" role="status" aria-live="polite"></p>
           </div>
         </div>

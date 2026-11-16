@@ -19,8 +19,10 @@
   var token = null;
   try { token = localStorage.getItem(TOKEN_KEY); } catch (e) { /* storage blocked: stay a visitor */ }
 
-  // Songs (admin-media ticket 03): ordered [{ title, file }], 1 to 20, file a plain media/ audio path, title a short non-empty string.
+  // Songs (admin-media ticket 03): ordered [{ title, file, cover? }], 1 to 20, file a plain media/ audio path, title a short non-empty string.
   // All or nothing: any bad entry makes the whole list invalid and the authored Work list stays. Titles are only ever set with textContent.
+  // Admin media ticket 06: a song may carry an optional `cover`, a plain images/ path. A bad cover is dropped; the song stays valid.
+  var SAFE_COVER = /^images\/[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.(?:jpe?g|png|webp|svg)$/;
   var SAFE_SONG = /^media\/[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.(?:mp3|m4a|wav|ogg|webm)$/;
   function validSongs(list) {
     if (!Array.isArray(list) || list.length < 1 || list.length > 20) return false;
@@ -38,7 +40,11 @@
     // Media slots (admin-media ticket 01): slot key -> repo path under images/. Anything else is ignored at apply time.
     if (data.media && typeof data.media === 'object' && !Array.isArray(data.media)) content.media = data.media;
     content.songsRaw = data.songs; // what the file holds, valid or not: admin.js compares it to detect conflicts
-    if (validSongs(data.songs)) content.songs = data.songs.map(function (s) { return { title: s.title, file: s.file }; });
+    if (validSongs(data.songs)) content.songs = data.songs.map(function (s) {
+      var o = { title: s.title, file: s.file };
+      if (typeof s.cover === 'string' && SAFE_COVER.test(s.cover) && s.cover.indexOf('..') < 0) o.cover = s.cover;
+      return o;
+    });
     return true;
   }
   var loaded = false;

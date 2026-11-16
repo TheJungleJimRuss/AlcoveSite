@@ -10,10 +10,6 @@
   const playBtn = root.querySelector('.rp-play');
   const statusEl = root.querySelector('.rp-status');
   const labelText = root.querySelector('.rp-label-text');
-  const currentTimeEl = root.querySelector('#current-time');
-  const totalTimeEl = root.querySelector('#total-time');
-  const progressBar = root.querySelector('#progress-bar');
-  const progressTrack = progressBar.parentElement;
   const arm = root.querySelector('.rp-arm');
   const svg = root.querySelector('.rp-arm-svg');
   const idleStatus = statusEl.textContent;
@@ -123,7 +119,7 @@
       if (isCur) s.setAttribute('aria-current', 'true'); else s.removeAttribute('aria-current');
     });
     playBtn.disabled = !current;
-    playBtn.textContent = on ? '⏸︎' : '▶︎';
+    playBtn.setAttribute('aria-pressed', String(on));
     playBtn.setAttribute('aria-label', on ? 'Pause' : 'Play');
     if (!current) { statusEl.textContent = idleStatus; labelText.textContent = ''; return; }
     const title = titleOf(current);
@@ -166,11 +162,10 @@
     io.observe(root);
   } else { near = true; prefetch(); }
 
-  // ---- Crate: the front Sleeve is the only control. Flipping tips it forward (CSS 3D, driven by --r / --m / data-pos) ----
+  // ---- Crate: the front Sleeve is the only tab stop; the current one sticks out of the pile (CSS, driven by --i / --r / --m / data-pos) ----
   const crate = root.querySelector('.rp-crate'), stage = root.querySelector('.rp-stage');
-  const prevBtn = crate.querySelector('.rp-prev'), nextBtn = crate.querySelector('.rp-next');
-  const countEl = crate.querySelector('.rp-count'), liveEl = crate.querySelector('#rp-crate-status');
-  let front = sleeves[0], picking = false, released = Promise.resolve(), release = null, suppressClick = false;
+  const liveEl =crate.querySelector('#rp-crate-status');
+  let front = sleeves[0], picking = false, released = Promise.resolve(), release = null, suppressClick = false; // suppressClick stays false: nothing swipes any more
   const visible = () => sleeves;
 
   function layout(announce) {
@@ -180,14 +175,12 @@
       s.dataset.pos = k === i ? 'front' : k > i ? 'behind' : 'tipped';
       s.style.setProperty('--r', Math.max(k - i, 0));
       s.style.setProperty('--m', Math.max(i - k, 0));
+      s.style.setProperty('--i', k);
       s.tabIndex = k === i ? 0 : -1;
     });
-    const was = document.activeElement;
-    prevBtn.disabled = picking || i <= 0;
-    nextBtn.disabled = picking || i >= list.length - 1;
-    if ((was === prevBtn || was === nextBtn) && was.disabled && front) front.focus({ preventScroll: true });
-    countEl.textContent = list.length ? (i + 1) + ' of ' + list.length : '';
-    if (announce && front) liveEl.textContent = 'Record ' + (i + 1) + ' of ' + list.length + ': ' + titleOf(front);
+    syncFader(i, list.length);
+        if (announce && front) liveEl.textContent = 'Record ' + (i + 1) + ' of ' + list.length + ': ' + titleOf(front);
+    root.dispatchEvent(new CustomEvent('rp-layout')); // admin.js follows the front sleeve
   }
   function flipTo(s) {
     if (picking || !s || s === front) return;
@@ -196,8 +189,6 @@
     if (hadFocus) front.focus({ preventScroll: true }); // the new front sleeve is the new tab stop
   }
   const flipBy = d => { const list = visible(); flipTo(list[list.indexOf(front) + d]); };
-  prevBtn.addEventListener('click', () => flipBy(-1));
-  nextBtn.addEventListener('click', () => flipBy(1));
   crate.addEventListener('keydown', e => {
     if (e.altKey || e.ctrlKey || e.metaKey || e.target.closest('[contenteditable]')) return; // Admin Edit mode: arrows move the caret
     const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key], list = visible();
@@ -207,28 +198,53 @@
     else return;
     e.preventDefault();
   });
-  // Mouse wheel: one flip per gesture; at either end the wheel is left alone so the page keeps scrolling.
-  let wheelAt = 0;
-  stage.addEventListener('wheel', e => {
-    const d = Math.sign(Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX), list = visible();
-    if (!d || e.ctrlKey || !list[list.indexOf(front) + d]) return;
-    e.preventDefault();
-    if (e.timeStamp - wheelAt < 420) return;
-    wheelAt = e.timeStamp; flipBy(d);
-  }, { passive: false });
-  // Touch swipe (touch-action: pan-y keeps vertical page scroll): left/up = next, right/down = previous.
-  let swipe = null;
-  stage.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') swipe = { id: e.pointerId, x: e.clientX, y: e.clientY, done: false }; });
-  stage.addEventListener('pointermove', e => {
-    if (!swipe || swipe.id !== e.pointerId || swipe.done) return;
-    const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
-    if (Math.hypot(dx, dy) < 30) return;
-    swipe.done = true; suppressClick = true;
-    flipBy((Math.abs(dx) >= Math.abs(dy) ? dx : dy) < 0 ? 1 : -1);
+  // Fader: a horizontal slider under the pile slides through the records (wheel and swipe no longer move them).
+  // Dragging picks the nearest record as the cap passes it; letting go snaps the cap to the front record's notch.
+  const fader = document.createElement('div');
+  fader.className = 'rp-fader';
+  fader.tabIndex = 0;
+  fader.setAttribute('role', 'slider');
+  fader.setAttribute('aria-label', 'Browse records');
+  fader.setAttribute('aria-orientation', 'horizontal');
+  fader.innerHTML = '<span class="rp-fader-plate" aria-hidden="true"></span><span class="rp-fader-slot" aria-hidden="true"></span><span class="rp-fader-cap" aria-hidden="true"></span>';
+  crate.querySelector('.rp-crate-nav').after(fader);
+  let fdrag = null;
+  function syncFader(i, n) {
+    fader.hidden = n < 2;
+    fader.setAttribute('aria-disabled', String(picking)); // records can't change while a disc is travelling
+    fader.style.setProperty('--n', n);
+    if (!fdrag) fader.style.setProperty('--p', n > 1 ? i / (n - 1) : 0);
+    fader.setAttribute('aria-valuemin', 1); fader.setAttribute('aria-valuemax', Math.max(n, 1)); fader.setAttribute('aria-valuenow', i + 1);
+    fader.setAttribute('aria-valuetext', front ? (i + 1) + ' of ' + n + ': ' + titleOf(front) : '');
+  }
+  const faderRatio = e => {
+    const r = fader.getBoundingClientRect(), cap = fader.querySelector('.rp-fader-cap').offsetWidth;
+    return Math.min(1, Math.max(0, (e.clientX - r.left - fdrag.grab) / Math.max(1, r.width - cap)));
+  };
+  fader.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    const cap = fader.querySelector('.rp-fader-cap'), cr = cap.getBoundingClientRect();
+    fdrag = { id: e.pointerId, grab: e.target === cap ? e.clientX - cr.left : cr.width / 2 };
+    fader.setPointerCapture(e.pointerId);
+    e.preventDefault(); fader.focus({ preventScroll: true });
+    fader.classList.add('is-dragging');
+    fader.dispatchEvent(new PointerEvent('pointermove', { pointerId: e.pointerId, clientX: e.clientX, bubbles: false }));
   });
-  const endSwipe = () => { if (swipe && swipe.done) setTimeout(() => { suppressClick = false; }, 60); swipe = null; };
-  stage.addEventListener('pointerup', endSwipe);
-  stage.addEventListener('pointercancel', endSwipe);
+  fader.addEventListener('pointermove', e => {
+    if (!fdrag || fdrag.id !== e.pointerId) return;
+    const list = visible(), n = list.length, p = faderRatio(e);
+    fader.style.setProperty('--p', p);
+    const s = list[Math.round(p * (n - 1))];
+    if (s !== front) flipTo(s);
+  });
+  const fend = e => {
+    if (!fdrag || fdrag.id !== e.pointerId) return;
+    fdrag = null; fader.classList.remove('is-dragging');
+    layout(false);
+  };
+  fader.addEventListener('pointerup', fend);
+  fader.addEventListener('pointercancel', fend);
+  fader.addEventListener('lostpointercapture', fend);
 
   // ---- Picking: the sleeve lifts out of the crate, the disc slides out of it and travels to the platter, the sleeve
   // drops back. The disc is one overlay element (.rp-disc) moved with WAAPI from rects measured at run time, so the same
@@ -274,7 +290,7 @@
   const A0 = angleAt(144), A1 = angleAt(68);
   const duration = () => (isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0);
   let drag = null; // { id, t }: the needle position being dragged, committed on release
-  const sliders = [arm, progressTrack];
+  const sliders = [arm]; // the tonearm is the only seek control
 
   function update() {
     const dur = current ? duration() : 0;
@@ -288,9 +304,6 @@
       el.setAttribute('aria-disabled', String(!current));
       if (current) el.setAttribute('tabindex', '0'); else el.removeAttribute('tabindex');
     });
-    currentTimeEl.textContent = fmt(t);
-    totalTimeEl.textContent = fmt(dur);
-    progressBar.style.width = frac * 100 + '%';
     if (current && phase !== 'loading' && !audio.ended) root.style.setProperty('--arm-angle', (A0 + (A1 - A0) * frac).toFixed(2) + 'deg');
     else root.style.removeProperty('--arm-angle');
   }
@@ -334,7 +347,6 @@
       e.preventDefault();
     });
   }
-  bindDrag(progressTrack, e => { const r = progressTrack.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * duration(); });
   bindDrag(arm, e => { // pointer angle around the pivot, clamped to the groove band
     const r = svg.getBoundingClientRect(), k = r.width / 500;
     const dx = (e.clientX - r.left) / k - G.px, dy = (e.clientY - r.top) / k - G.py;
@@ -347,6 +359,14 @@
   const ART = 4; // cover placeholder designs (CSS data-art); picked from the file name so a song keeps its cover when reordered
   const artOf = src => { let h = 0; for (const c of src) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % ART; };
   const markArt = s => { s.dataset.art = String(artOf(s.dataset.src)); };
+  // A cover is a plain picture over the sleeve face (CSS .has-cover: unblended, centre-cropped, pattern hidden). Only plain repo paths or blob: URLs are accepted.
+  const SAFE_COVER = /^[\w.:\/-]+$/;
+  function setCover(s, url) {
+    if (typeof url !== 'string' || !SAFE_COVER.test(url)) return;
+    s.dataset.cover = url;
+    s.style.setProperty('--cover', 'url("' + url + '")');
+    s.classList.add('has-cover');
+  }
   function makeSleeve(song) {
     const el = (tag, cls, text) => { const n = document.createElement(tag); n.className = cls; if (text) n.textContent = text; return n; };
     const s = el('button', 'sleeve');
@@ -360,6 +380,7 @@
     const art = el('span', 'sleeve-art'); art.setAttribute('aria-hidden', 'true');
     const tab = el('span', 'sleeve-tab'); tab.setAttribute('aria-hidden', 'true');
     s.append(strip, band, art, tab);
+    if (song.cover) setCover(s, song.cover);
     return s;
   }
   function setSongs(list, reset) {
@@ -386,8 +407,11 @@
   }
   window.AlcoveRecordPlayer = {
     setSongs,
-    getSongs: () => sleeves.map(s => ({ title: titleOf(s), file: s.dataset.src })),
+    getSongs: () => sleeves.map(s => ({ title: titleOf(s), file: s.dataset.src, ...(s.dataset.cover ? { cover: s.dataset.cover } : {}) })),
+    getFront: () => front,  // the sleeve sticking out of the pile (admin.js puts its Replace cover button on it)
   };
   sleeves.forEach(markArt);
+  sleeves.forEach(s => { if (s.dataset.cover) setCover(s, s.dataset.cover); }); // authored markup: data-cover="images/..."
+
   if (Array.isArray(window.__alcoveSongs)) setSongs(window.__alcoveSongs, true);
 })();
