@@ -139,7 +139,8 @@
   // One clip at a time (the current record first, then the front Sleeve and the rest in pile order), so on a slow
   // link the one about to play is not sharing bandwidth with three others.
   let chain = Promise.resolve();
-  // Only the clips likely to play next (the current record, the front Sleeve and the one behind it) are fetched;
+  // Only the clips likely to play next are fetched: the current record and the front Sleeve, plus the one behind it once
+  // the visitor touches, hovers or focuses the Crate (saves a whole clip for visitors who never use the player);
   // flipping through the pile fetches the new front as it comes up. Shares ab-compare.js's cache (same file = one download).
   const fetchClip = window.__alcoveFetchClip || (window.__alcoveFetchClip = (() => {
     const cache = new Map();
@@ -148,7 +149,8 @@
       return cache.get(u);
     };
   })());
-  const wanted = () => [current, front, sleeves[sleeves.indexOf(front) + 1]].filter(Boolean);
+  let engaged = false; // the visitor has touched, hovered or focused the Crate
+  const wanted = () => [current, front, engaged && sleeves[sleeves.indexOf(front) + 1]].filter(Boolean);
   function prefetch() {
     const todo = wanted().filter((s, k, a) => a.indexOf(s) === k && !asked.has(s.dataset.src));
     todo.forEach(s => {
@@ -188,6 +190,8 @@
   const liveEl =crate.querySelector('#rp-crate-status');
   let front = sleeves[0], picking = false, released = Promise.resolve(), release = null, suppressClick = false; // suppressClick stays false: nothing swipes any more
   const visible = () => sleeves;
+  const engage = () => { if (engaged) return; engaged = true; if (near) prefetchLater(); };
+  ['pointerenter', 'pointerdown', 'focusin'].forEach(t => crate.addEventListener(t, engage, { once: true, passive: true }));
 
   function layout(announce) {
     const list = visible(), i = Math.max(0, list.indexOf(front));

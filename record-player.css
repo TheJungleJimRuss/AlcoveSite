@@ -33,6 +33,14 @@
 .rp-record > .rp-vinyl { position: absolute; inset: -0.62%; inline-size: 101.24%; block-size: 101.24%; }
 .rp-record > .rp-vinyl, .rp-disc > .rp-vinyl { filter: brightness(0.45) contrast(1.1); }
 .rp-sheen { inset-inline-start: 1.49%; inset-block-start: 1.49%; inline-size: 97.03%; block-size: 97.03%; transition: opacity 0.32s ease; }
+/* The sheen is pure white; only its alpha varies, so it ships as a small lossy greyscale luminance mask
+   (images/record-player/vinyl-sheen-mask-*.webp, about 18 KB for both) instead of a lossless-alpha photo (142 KB). */
+.rp-sheen {
+  background: #fff;
+  mask-image: url("images/record-player/vinyl-sheen-mask-2x.webp");
+  mask-image: image-set(url("images/record-player/vinyl-sheen-mask-1x.webp") 1x, url("images/record-player/vinyl-sheen-mask-2x.webp") 2x);
+  mask-mode: luminance; mask-size: 100% 100%; mask-repeat: no-repeat;
+}
 .record-player[data-state="empty"] .rp-record, .record-player[data-state="empty"] .rp-sheen, .record-player[data-state="empty"] .rp-dshadow { visibility: hidden; }
 .record-player:not([data-record="in"]) .rp-sheen, .record-player:not([data-record="in"]) .rp-dshadow { opacity: 0; }
 .rp-spindle { display: none; } /* the render draws the spindle and the record's hole */
