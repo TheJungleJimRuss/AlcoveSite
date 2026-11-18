@@ -12,7 +12,7 @@ const atStart = pg => pg.getAttribute('.rp-fader', 'aria-valuenow').then(v => v 
 const atEnd = pg => Promise.all([pg.getAttribute('.rp-fader', 'aria-valuenow'), pg.getAttribute('.rp-fader', 'aria-valuemax')]).then(([a, b]) => a === b);
 
 const root = join(fileURLToPath(import.meta.url), '..', '..');
-const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.webm': 'video/webm', '.mp3': 'audio/mpeg' };
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.mp3': 'audio/mpeg', '.webm': 'video/webm', '.mp3': 'audio/mpeg' };
 // `content` overrides /content.json: undefined = serve the committed file, null = 404, string = body as-is.
 let content;
 const extra = {}; // path -> Buffer served in place of a file (media the mocked branch "received")
@@ -720,9 +720,8 @@ const SW = '#alcove-admin .admin-edit-switch';
   await page.click('.site-header .nav-links a[data-edit-key="site.nav.about"]');
   await page.waitForTimeout(500);
   check('on: clicking a nav label does not navigate', page.url() === url);
-  check('on: the A/B slide (no text of its own) keeps working', await (async () => { await page.click('.ab-slide'); return (await page.getAttribute('.ab-slide', 'aria-checked')) === 'true'; })());
-  check('on: A/B slide labels are not inside aria-hidden while editable', (await page.locator('.ab-slide-labels[aria-hidden="true"]').count()) === 0);
-  check('A/B switch name comes from visible text, not a copied aria-label', (await page.getAttribute('.ab-slide', 'aria-label')) === null && (await page.getAttribute('.ab-slide', 'aria-labelledby')) === 'ab-master-name');
+  check('on: the Flip Tape key (no editable text of its own) keeps working', await (async () => { await page.click('#ab-key-flip'); await page.waitForFunction(() => !window.__abDeck.state().flipping); return (await page.evaluate(() => document.querySelector('.ab-compare').dataset.version)) === 'master'; })());
+  check('on: side lamp labels are editable text keys', (await page.locator('.side-lamps [data-edit-key]').count()) === 2);
   await ctx.close();
 }
 {
@@ -1052,10 +1051,10 @@ const deckReady = (page, k) => page.waitForFunction(s => { const a = document.qu
   check('staged memo previews in the deck (its own 1.0s clip loaded)', true);
   check('master is untouched by replacing the memo', (await page.getAttribute(clipEl(MASTER), 'data-src')) === masterBefore && (await page.evaluate(s => document.querySelector(s).duration, clipEl(MASTER))) > 5);
   check('staged clip counts as a change; no request yet', (await page.textContent(saveBtn)).includes('1 change') && mediaFileCalls(gh).length === 0 && gh.calls.every(c => c.method === 'GET' || c.method === 'OPTIONS'));
-  await page.click('.ab-play');
+  await page.click('#ab-key-play');
   await page.waitForFunction(s => document.querySelector(s).currentTime > 0.2, clipEl(MEMO), { timeout: 5000 });
   check('the staged memo plays in place before Save', true);
-  await page.click('.ab-play');
+  await page.click('#ab-key-pause');
   await openPanel(page);
   check('panel lists the staged clip by name of slot', /memo/i.test(await page.textContent('#alcove-admin .admin-changes li')));
   await page.setInputFiles(input(MASTER), masterFile);
@@ -1063,11 +1062,12 @@ const deckReady = (page, k) => page.waitForFunction(s => { const a = document.qu
   check('master is replaced independently and previews', (await page.textContent(saveBtn)).includes('2 changes'));
   // switch keeps the playhead with replaced clips
   await page.evaluate(() => { document.querySelector('.ab-player audio[data-version="memo"]').currentTime = 0.5; });
-  await page.click('.ab-slide');
+  await page.click('#ab-key-flip');
+  await page.waitForFunction(() => !window.__abDeck.state().flipping);
   const t = await page.evaluate(() => document.querySelector('.ab-player audio[data-version="master"]').currentTime);
   check('switching with replaced clips keeps the playhead', Math.abs(t - 0.5) < 0.1, String(t));
   await page.click('#alcove-admin .admin-changes li button');
-  check('revert drops the staged memo and restores the authored clip', (await page.textContent(saveBtn)).includes('1 change') && (await page.getAttribute(clipEl(MEMO), 'data-src')) === 'media/voice-memo-rough.wav');
+  check('revert drops the staged memo and restores the authored clip', (await page.textContent(saveBtn)).includes('1 change') && (await page.getAttribute(clipEl(MEMO), 'data-src')) === 'media/voice-memo-rough.mp3');
   await page.setInputFiles(input(MEMO), memoFile);
   await page.waitForFunction(s => { const a = document.querySelector(s); return a.src.startsWith('blob:') && a.duration < 1.1; }, clipEl(MEMO), { timeout: 5000 });
   await page.click(saveBtn);
@@ -1092,9 +1092,9 @@ const deckReady = (page, k) => page.waitForFunction(s => { const a = document.qu
   await v.page.evaluate(() => document.querySelector('.ab-compare').scrollIntoView());
   await deckReady(v.page, MEMO); await deckReady(v.page, MASTER);
   check('visitor: replaced clips load whole as blobs and are the new lengths', (await v.page.evaluate(() => [...document.querySelectorAll('.ab-player audio')].map(a => Math.round(a.duration * 10) / 10))).join() === '1,1.5');
-  await v.page.click('.ab-play');
+  await v.page.click('#ab-key-play');
   await v.page.waitForFunction(() => document.querySelector('.ab-player audio[data-version="memo"]').currentTime > 0.2);
-  await v.page.click('.ab-slide');
+  await v.page.click('#ab-key-flip');
   await v.page.waitForFunction(() => { const m = document.querySelector('.ab-player audio[data-version="master"]'); return !m.paused && m.currentTime > 0.3; });
   check('visitor: deck plays and switches with the replaced clips', true);
   check('visitor: no console errors', v.errors.length === 0, v.errors.join(' | '));
@@ -1242,7 +1242,7 @@ const deckReady = (page, k) => page.waitForFunction(s => { const a = document.qu
 }
 {
   // loader: bad clip paths fall back to the authored files
-  const orig = { [VIDEO]: 'media/placeholder-session.webm', [MEMO]: 'media/voice-memo-rough.wav' };
+  const orig = { [VIDEO]: 'media/placeholder-session.webm', [MEMO]: 'media/voice-memo-rough.mp3' };
   for (const [label, media] of [
     ['traversal', { [MEMO]: 'media/../content.json' }], ['dotdot inside name', { [MEMO]: 'media/a..b-12345678.wav' }],
     ['external URL', { [MEMO]: 'https://evil.example/x.wav' }], ['protocol-relative', { [MEMO]: '//evil.example/x.wav' }],
@@ -1265,7 +1265,7 @@ const deckReady = (page, k) => page.waitForFunction(s => { const a = document.qu
 
 // --- Admin media, ticket 03: Songs on Work (add, remove, rename, reorder; genres retired) -------------------------
 const AUTHORED = ['Indie Rock Demo', 'Bedroom Pop Single', 'Acoustic Folk Song', 'Alternative & Punk Track'];
-const F1 = 'media/track-1-indie.wav', F2 = 'media/track-2-bedroom-pop.wav', F3 = 'media/track-3-acoustic.wav', F4 = 'media/track-4-punk.wav';
+const F1 = 'media/track-1-indie.mp3', F2 = 'media/track-2-bedroom-pop.mp3', F3 = 'media/track-3-acoustic.mp3', F4 = 'media/track-4-punk.mp3';
 const withSongs = songs => JSON.stringify({ version: 1, text: {}, defaults: {}, songs });
 const crateTitles = page => page.$$eval('.sleeve .sleeve-title', t => t.map(x => x.textContent));
 const crateSrcs = page => page.$$eval('.sleeve', t => t.map(x => x.dataset.src));

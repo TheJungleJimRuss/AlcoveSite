@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cassette 3D spike</title>
+<style>
+  :root { --bg:#d9d4c7; --well:#161817; --ink:#1d1f1e; --accent:#e0702a; --paper:#ece4cf; --key:#fff3e0; --fill:#9fb0c8; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1c1d1c; --ink:#ddd; --key:#ffd9b0; --fill:#6f7f99; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.4 ui-monospace, Menlo, monospace; padding:1rem; display:grid; gap:1rem; justify-items:center; }
+  main { inline-size:min(720px,100%); display:grid; gap:.8rem; }
+  .well { background:var(--well); border-radius:10px; aspect-ratio:320/200; position:relative; overflow:hidden; }
+  canvas { inline-size:100%; block-size:100%; display:block; }
+  .fallback { position:absolute; inset:0; display:none; place-items:center; color:#ece4cf; text-align:center; padding:1rem; }
+  .well[data-state="fallback"] .fallback { display:grid; }
+  .controls { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+  button { min-block-size:44px; padding:0 1rem; font:inherit; border:1px solid currentColor; background:transparent; color:inherit; border-radius:6px; cursor:pointer; }
+  button[aria-pressed="true"] { background:var(--accent); color:#111; border-color:var(--accent); }
+  label { display:flex; gap:.5rem; align-items:center; }
+  output { min-inline-size:12ch; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "../../../../vendor/three/build/three.module.js",
+  "three/addons/": "../../../../vendor/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<main>
+  <h1>Cassette 3D spike</h1>
+  <div class="well" id="well" data-state="loading">
+    <canvas id="cv" aria-label="3D cassette, Side A Voice Memo"></canvas>
+    <div class="fallback" id="fb">3D unavailable. The SVG cassette would be shown here.</div>
+  </div>
+  <div class="controls">
+    <button id="flip" type="button">Flip</button>
+    <button id="spin" type="button" aria-pressed="false">Spin reels</button>
+    <label>Progress <input id="prog" type="range" min="0" max="1" step="0.001" value="0"></label>
+    <output id="stat" aria-live="off"></output>
+  </div>
+</main>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const $ = id => document.getElementById(id);
+const well = $('well'), cv = $('cv');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const state = window.__spike = { ready:false, side:'A', flipping:false, spinning:false, progress:0, fps:0, error:null };
+
+function webglOK() { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } }
+if (!webglOK() || new URLSearchParams(location.search).has('nogl')) { well.dataset.state = 'fallback'; state.error = 'no-webgl'; await new Promise(() => {}); /* stop here: the integration shows the SVG cassette instead */ }
+
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(28, 320 / 200, 1, 100);
+camera.position.set(0, 0, 30); camera.lookAt(0, 0, 0);
+
+// palette-matching light: colours come from CSS custom properties, so a theme change re-tints it
+const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.1);
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(-6, 10, 14);
+const fill = new THREE.DirectionalLight(0xffffff, 0.7); fill.position.set(9, -4, 8);
+scene.add(hemi, key, fill);
+function tint() {
+  key.color.set(css('--key')); fill.color.set(css('--fill'));
+  hemi.color.set(css('--paper')); hemi.groundColor.set(css('--well'));
+}
+tint(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', tint);
+
+function resize() {
+  const r = well.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height;
+  // fit the 10 cm wide cassette with ~8% margin
+  const fovV = THREE.MathUtils.degToRad(camera.fov), need = (10.04 * 1.12) / camera.aspect / 2;
+  camera.position.z = Math.max(need / Math.tan(fovV / 2), 6.4 * 1.2 / 2 / Math.tan(fovV / 2));
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(well); resize();
+
+// label textures drawn in 2D canvas (so real text comes from data-edit-key later)
+function labelTex(letter, title, note, stripe) {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 360;
+  const g = c.getContext('2d'), s = c.width / 8.4;
+  g.fillStyle = css('--paper'); g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = stripe; g.fillRect(0, 0, c.width, 70);
+  g.fillStyle = '#fff'; g.font = '700 44px ui-monospace, Menlo, monospace'; g.textBaseline = 'middle';
+  g.fillText(letter, 30, 36); g.textAlign = 'center'; g.font = '600 36px ui-monospace, Menlo, monospace'; g.fillText(title.toUpperCase(), c.width / 2, 36);
+  g.strokeStyle = 'rgba(42,40,32,.3)'; g.lineWidth = 3;
+  for (const y of [160, 230, 300]) { g.beginPath(); g.moveTo(30, y); g.lineTo(c.width - 30, y); g.stroke(); }
+  g.textAlign = 'left'; g.fillStyle = '#2a2820'; g.font = "46px 'Bradley Hand','Segoe Print',cursive"; g.fillText(note, 36, 136);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.anisotropy = 4; return t;
+}
+
+const pivot = new THREE.Group(); scene.add(pivot);
+let reelL, reelR, packL, packR;
+new GLTFLoader().load('../../../../models/cassette.glb', gltf => {
+  const m = gltf.scene; pivot.add(m);
+  const get = n => m.getObjectByName(n);
+  reelL = get('reelL'); reelR = get('reelR'); packL = get('packL'); packR = get('packR');
+  get('sideA').material = new THREE.MeshStandardMaterial({ map: labelTex('A', 'Voice Memo', 'my song (phone, bedroom)', '#8a866f'), roughness: .9 });
+  get('sideB').material = new THREE.MeshStandardMaterial({ map: labelTex('B', 'Finished Master', 'my song (recorded at Alcove)', css('--accent')), roughness: .9 });
+  const names = []; m.traverse(o => names.push(o.name));
+  state.nodes = names; state.ready = true; well.dataset.state = 'ready'; setProgress(0); loop();
+}, undefined, err => { state.error = String(err); well.dataset.state = 'fallback'; });
+
+// pack axis is glTF Z (Blender Y), so a pack scales in X/Y only. 0.9 = full, 0.5 = empty.
+function setProgress(p) {
+  state.progress = p;
+  const a = THREE.MathUtils.lerp(.9, .5, p), b = THREE.MathUtils.lerp(.5, .9, p);
+  packL.scale.set(a, a, 1); packR.scale.set(b, b, 1);
+}
+
+// flip: 180 deg about the vertical axis with a small lift toward the camera
+let flipT = 0, flipFrom = 0;
+function flip() {
+  if (state.flipping) return;
+  const target = state.side === 'A' ? Math.PI : 0;
+  state.side = state.side === 'A' ? 'B' : 'A';
+  cv.setAttribute('aria-label', '3D cassette, Side ' + state.side);
+  if (reduce) { pivot.rotation.y = target; return; }
+  state.flipping = true; flipT = 0; flipFrom = pivot.rotation.y; state.flipTarget = target;
+}
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+const clock = new THREE.Timer(); let acc = 0, frames = 0;
+function loop() { renderer.setAnimationLoop(() => { clock.update(); tick(Math.min(clock.getDelta(), .05)); }); }
+// tick() is also called by tests with a fixed dt (a hidden tab throttles requestAnimationFrame)
+function tick(dt) {
+  if (state.flipping) {
+    flipT = Math.min(1, flipT + dt / .7);
+    pivot.rotation.y = flipFrom + (state.flipTarget - flipFrom) * ease(flipT);
+    const lift = Math.sin(Math.PI * flipT);
+    pivot.position.z = lift * 1.5; pivot.position.y = lift * 0.4; pivot.scale.setScalar(1 + lift * .02);
+    if (flipT >= 1) { state.flipping = false; pivot.position.set(0, 0, 0); pivot.scale.setScalar(1); }
+  }
+  if (state.spinning && !reduce) { reelL.rotation.z -= dt * 6; reelR.rotation.z -= dt * 6; }
+  renderer.render(scene, camera);
+  acc += dt; frames++; if (acc >= 1) { state.fps = Math.round(frames / acc); $('stat').textContent = state.fps + ' fps, side ' + state.side; acc = 0; frames = 0; }
+}
+$('flip').onclick = flip;
+$('spin').onclick = e => { state.spinning = !state.spinning; e.currentTarget.setAttribute('aria-pressed', state.spinning); };
+$('prog').oninput = e => setProgress(e.target.valueAsNumber);
+state.flip = flip; state.tick = tick; state.setProgress = p => setProgress(p);
+</script>
+</body>
+</html>

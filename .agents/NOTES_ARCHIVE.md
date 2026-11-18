@@ -1,6 +1,9 @@
 # Alcove Recording — notes archive
 History moved out of PROJECT_NOTES.md. Newest first. Read only when past context is needed.
 
+## 2026-11-16 — Cassette A/B deck done (tickets 01-06)
+Replaced the slide-switch memo/master deck with a Blender GLB cassette in three.js (vendored 0.187, ~420 KB gzip, Work only) plus SVG fallback, HTML keys, VU needles (shared AudioContext wrapper), J-card table. Spike and prototype kept in `.agents/issues/cassette-ab/`. Ticket 06 pass: all tests green when run one at a time (texture-check has 3 unrelated failures); 3D skipped under forced colors (black slab); dead `.player-scrubber-wireframe`/`.scrubber-*` CSS removed. Old deck detail (`.ab-slide*`, `.deck-reels`, `.transport*`, glossy `.audio-widget` faceplate) was removed in ticket 02.
+
 ## 2026-11-13 — Admin media done (tickets 01-05)
 Replace photos, video, poster and A/B clips; add/remove/rename/reorder up to 20 Songs; genres retired; cleanup of unreferenced files; failure-safe Save order (files first, content.json last); ADR 0006 accepted, ADR 0004 amended (Pages deploys from `content`); docs for Seth in `docs/admin-token-setup.md`. Hardening pass added a path whitelist to stored (IndexedDB/draft) paths and uploads, and a live-region role on the media warning. Not done: the real large-upload test (`docs/large-upload-test.md`).
 
