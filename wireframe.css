@@ -1544,7 +1544,9 @@ html.has-fader::-webkit-scrollbar { display: none; }
 }
 .cassette-stage > canvas { grid-area: 1 / 1; inline-size: 100%; block-size: 100%; }
 .cassette-svg { grid-area: 1 / 1; display: block; inline-size: 100%; block-size: 100%; }
-.cassette-stage[data-webgl] .cassette-svg { visibility: hidden; }
+/* display: none, not visibility: hidden: a hidden SVG still restyles and lays out its flip/reel animations every frame
+   under the 3D canvas. The stage keeps its size from aspect-ratio. */
+.cassette-stage[data-webgl] .cassette-svg { display: none; }
 .cassette-face { transform-box: fill-box; transform-origin: center; }
 /* Fallback player drawing (the 3D model is the real thing) */
 .pl-shadow { fill: #000; opacity: 0.38; }

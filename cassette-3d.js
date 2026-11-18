@@ -251,7 +251,11 @@
     // redraw on side-text edits (Admin Edit) and on palette / scheme changes
     let restyleQueued = false;
     const queueRestyle = () => { if (restyleQueued) return; restyleQueued = true; requestAnimationFrame(() => { restyleQueued = false; restyle(); }); };
-    new MutationObserver(queueRestyle).observe(section, { subtree: true, characterData: true, childList: true });
+    // Only the side names and handwritten notes feed the labels: the deck rewrites its own status/time text on every
+    // Play/Pause/Flip, and redrawing both label canvases for that cost a ~100 ms hitch on each key press.
+    const LABEL_SRC = 'th[data-version], .cs-hand';
+    const touchesLabel = m => { const n = m.target.nodeType === 1 ? m.target : m.target.parentElement; return !!n && (!!n.closest(LABEL_SRC) || (m.type === 'childList' && [...m.addedNodes, ...m.removedNodes].some(x => x.nodeType === 1 && (x.matches(LABEL_SRC) || x.querySelector(LABEL_SRC))))); };
+    new MutationObserver(ms => { if (ms.some(touchesLabel)) queueRestyle(); }).observe(section, { subtree: true, characterData: true, childList: true });
     new MutationObserver(queueRestyle).observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class', 'data-scheme', 'data-palette', 'data-font'] });
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', queueRestyle);
     matchMedia('(forced-colors: active)').addEventListener('change', queueRestyle);
@@ -267,6 +271,7 @@
       camera.position.set(target.x, target.y + dist, target.z);
       camera.lookAt(target);
       camera.updateProjectionMatrix();
+      keysDirty = true;
       request();
     }
     new ResizeObserver(resize).observe(canvas);
@@ -306,6 +311,11 @@
       b.addEventListener('blur', () => { hover[k] = false; request(); });
     });
     const _v = new THREE.Vector3();
+    // The key buttons only move when the layout does (canvas or deck resized), so they are placed then, not every frame:
+    // reading the rects each frame, right after the deck rewrote its text, forced a full layout per frame (~190 ms/s at
+    // 20x CPU throttle during a flip). Pressed keys sink 0.32 units, which projects to well under a pixel from above.
+    let keysDirty = true;
+    new ResizeObserver(() => { keysDirty = true; request(); }).observe(deckTop);
     function placeKeys() {
       const cr = canvas.getBoundingClientRect(), dr = deckTop.getBoundingClientRect();
       if (!cr.width || !dr.width) return;
@@ -360,7 +370,7 @@
         dirty = false;
         applyState();
         renderer.render(scene, camera);
-        placeKeys();
+        if (keysDirty) { keysDirty = false; placeKeys(); }
         dbg.renders++; dbg.rotationY = side.rotation.z + (flip ? lift.rotation.z : 0); dbg.doorOpen = -door.rotation.x;
         if (!stage.hasAttribute('data-webgl')) stage.setAttribute('data-webgl', '');
       }

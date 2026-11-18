@@ -93,21 +93,30 @@
     };
   }
 
+  // sync() runs every frame while playing: write only what changed, and leave the SVG cassette alone while the 3D one
+  // covers it (it is only visibility-hidden, so its per-frame reel/tape edits cost a style + layout pass every frame).
+  const stage = $('cassette-stage');
+  const setText = (el, t) => { if (el && el.textContent !== t) el.textContent = t; };
   function sync() {
     const s = state();
     keyPlay.setAttribute('aria-pressed', String(s.playing));
     root.dataset.playing = s.playing;
-    label.textContent = (s.playing ? 'Now playing: ' : '') + names[version];
-    timeEl.textContent = fmt(s.time);
-    durEl.textContent = fmt(s.duration);
+    setText(label, (s.playing ? 'Now playing: ' : '') + names[version]);
+    setText(timeEl, fmt(s.time));
+    setText(durEl, fmt(s.duration));
+    if (!stage || !stage.hasAttribute('data-webgl')) drawSvg(s);
+    section.dispatchEvent(new CustomEvent('ab:state', { bubbles: true, detail: s }));
+    if (s.playing && !flipping) startLoop();
+  }
+  // the SVG catches up as soon as the 3D cassette steps aside (no WebGL, context lost, reduced motion)
+  if (stage) new MutationObserver(() => { if (!stage.hasAttribute('data-webgl')) drawSvg(state()); }).observe(stage, { attributes: true, attributeFilter: ['data-webgl'] });
+  function drawSvg(s) {
     if (packL) packL.setAttribute('r', (12 + 12 * (1 - s.progress)).toFixed(2));
     if (packR) packR.setAttribute('r', (12 + 12 * s.progress).toFixed(2));
     drawTape(12 + 12 * (1 - s.progress), 12 + 12 * s.progress);
     const a = reel.toFixed(1) + 'deg';
     reelL?.style.setProperty('--reel', a);
     reelR?.style.setProperty('--reel', a);
-    section.dispatchEvent(new CustomEvent('ab:state', { bubbles: true, detail: s }));
-    if (s.playing && !flipping) startLoop();
   }
 
   // Reels spin only while playing and not flipping; none under reduced motion.

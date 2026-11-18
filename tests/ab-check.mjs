@@ -78,8 +78,11 @@ const open = async (opts = {}) => {
   await page.waitForTimeout(500);
   const s1 = await st(page);
   check(s1.reel !== reel0 && await page.evaluate(() => getComputedStyle(document.getElementById('cs-reel-l')).getPropertyValue('--reel').trim()) !== '', 'reels turn while playing');
-  const rL = await page.getAttribute('#cs-pack-l', 'r');
-  check(parseFloat(rL) < 24 && parseFloat(await page.getAttribute('#cs-pack-r', 'r')) > 12, 'tape pack moves left to right with progress');
+  // the visible cassette's packs move: the 3D tape while WebGL draws (the hidden SVG is no longer updated then), else the SVG
+  const packs = await page.evaluate(() => document.getElementById('cassette-stage').hasAttribute('data-webgl')
+    ? { gl: true, l: window.__cassette3d.tape.packL, r: window.__cassette3d.tape.packR }
+    : { gl: false, l: parseFloat(document.getElementById('cs-pack-l').getAttribute('r')), r: parseFloat(document.getElementById('cs-pack-r').getAttribute('r')) });
+  check(packs.gl ? packs.l < 0.9 && packs.r > 0.5 : packs.l < 24 && packs.r > 12, `tape pack moves left to right with progress (${JSON.stringify(packs)})`);
   check(((await page.getAttribute('#cs-tape', 'd')) || '').split('L').length === 4, 'SVG fallback tape path joins both packs via the guide posts');
   // flip while playing keeps playing
   const before = s1.time;

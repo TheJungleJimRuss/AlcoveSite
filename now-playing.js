@@ -46,7 +46,12 @@
     canvas.width = Math.max(1, Math.round(canvas.offsetWidth * dpr));
     canvas.height = Math.max(1, Math.round(canvas.offsetHeight * dpr));
   };
-  const stroke = () => getComputedStyle(header).getPropertyValue('--accent-primary').trim() || 'currentColor';
+  // The accent colour is read once and again only when the palette can have changed (getComputedStyle every frame
+  // cost ~60 ms/s at 20x CPU throttle while audio played).
+  let strokeColor = null;
+  const stroke = () => strokeColor || (strokeColor = getComputedStyle(header).getPropertyValue('--accent-primary').trim() || 'currentColor');
+  new MutationObserver(() => { strokeColor = null; }).observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class', 'data-scheme', 'data-palette'] });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { strokeColor = null; });
 
   function drawLine(sample) {
     const w = canvas.width, h = canvas.height, n = Math.max(96, Math.round(w / 6));
