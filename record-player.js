@@ -136,17 +136,38 @@
   // Range support (python http.server; Safari restarts at 0:00 there). Falls back to the plain URL if fetch fails.
   const blobs = new Map();
   const asked = new Set(), settled = new Set();
+  // One clip at a time (the current record first, then the front Sleeve and the rest in pile order), so on a slow
+  // link the one about to play is not sharing bandwidth with three others.
+  let chain = Promise.resolve();
+  // Only the clips likely to play next (the current record, the front Sleeve and the one behind it) are fetched;
+  // flipping through the pile fetches the new front as it comes up. Shares ab-compare.js's cache (same file = one download).
+  const fetchClip = window.__alcoveFetchClip || (window.__alcoveFetchClip = (() => {
+    const cache = new Map();
+    return u => {
+      if (!cache.has(u)) cache.set(u, fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); }).catch(e => { cache.delete(u); throw e; }));
+      return cache.get(u);
+    };
+  })());
+  const wanted = () => [current, front, sleeves[sleeves.indexOf(front) + 1]].filter(Boolean);
   function prefetch() {
-    const jobs = sleeves.filter(s => !asked.has(s.dataset.src)).map(s => {
+    const todo = wanted().filter((s, k, a) => a.indexOf(s) === k && !asked.has(s.dataset.src));
+    todo.forEach(s => {
       const src = s.dataset.src;
       asked.add(src);
-      return fetch(src)
-        .then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+      chain = chain.then(() => fetchClip(src))
         .then(b => { blobs.set(src, URL.createObjectURL(b)); })
         .catch(() => {})
         .then(() => { settled.add(src); if (current && current.dataset.src === src) upgrade(); });
     });
-    return Promise.all(jobs).then(() => { if (sleeves.every(s => settled.has(s.dataset.src))) root.dataset.loaded = 'true'; });
+    return chain.then(() => { if (wanted().every(s => settled.has(s.dataset.src))) root.dataset.loaded = 'true'; });
+  }
+  // Background prefetch waits for the page (photos, fonts) to finish loading and an idle moment; with Save-Data
+  // on it never runs, and clips stream when played.
+  const saveData = !!(navigator.connection && navigator.connection.saveData);
+  function prefetchLater() {
+    if (saveData) return;
+    const go = () => (window.requestIdleCallback ? requestIdleCallback(() => prefetch(), { timeout: 3000 }) : setTimeout(prefetch, 200));
+    if (document.readyState === 'complete') go(); else addEventListener('load', go, { once: true });
   }
   // The current record started on the plain URL: swap to the blob only if that URL gave no usable duration.
   function upgrade() {
@@ -158,9 +179,9 @@
   }
   let near = false; // the Crate has been near the viewport: new songs are fetched at once
   if ('IntersectionObserver' in window) {
-    const io = new IntersectionObserver(en => { if (en.some(e => e.isIntersecting)) { io.disconnect(); near = true; prefetch(); } }, { rootMargin: '600px 0px' });
+    const io = new IntersectionObserver(en => { if (en.some(e => e.isIntersecting)) { io.disconnect(); near = true; prefetchLater(); } }, { rootMargin: '600px 0px' });
     io.observe(root);
-  } else { near = true; prefetch(); }
+  } else { near = true; prefetchLater(); }
 
   // ---- Crate: the front Sleeve is the only tab stop; the current one sticks out of the pile (CSS, driven by --i / --r / --m / data-pos) ----
   const crate = root.querySelector('.rp-crate'), stage = root.querySelector('.rp-stage');
@@ -186,6 +207,7 @@
     if (picking || !s || s === front) return;
     const hadFocus = sleeves.includes(document.activeElement);
     front = s; layout(true);
+    if (near) prefetchLater();
     if (hadFocus) front.focus({ preventScroll: true }); // the new front sleeve is the new tab stop
   }
   const flipBy = d => { const list = visible(); flipTo(list[list.indexOf(front) + d]); };
@@ -403,7 +425,7 @@
     front = sleeves.find(s => s.dataset.src === frontSrc) || sleeves[0] || null;
     layout(false);
     sync();
-    if (near) prefetch();
+    if (near) prefetchLater();
   }
   window.AlcoveRecordPlayer = {
     setSongs,

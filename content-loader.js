@@ -142,12 +142,24 @@
   if (!keys.length && !mediaKeys.length && !content.songs) return;
   root.setAttribute('data-content-pending', '');
   var esc = function (k) { return k.replace(/["\\]/g, '\\$&'); };
+  // An authored photo carries a WebP srcset of itself; any other src (a saved or staged photo) must drop it, or the
+  // browser keeps showing the srcset. Going back to the authored src brings the srcset back. admin.js uses it too.
+  function setImgSrc(img, src) {
+    if (!img.hasAttribute('data-authored-src')) {
+      img.setAttribute('data-authored-src', img.getAttribute('src') || '');
+      if (img.hasAttribute('srcset')) img.setAttribute('data-authored-srcset', img.getAttribute('srcset'));
+    }
+    var own = src === img.getAttribute('data-authored-src') && img.getAttribute('data-authored-srcset');
+    if (own) img.setAttribute('srcset', own); else img.removeAttribute('srcset');
+    img.setAttribute('src', src);
+  }
+  window.__alcoveSetImgSrc = setImgSrc;
   function applyMedia(slot, path) {
     var box = slot.closest && slot.closest('.photo-slot');
     if (slot.tagName === 'IMG') {
       var authored = slot.getAttribute('src');
-      slot.addEventListener('error', function () { if (slot.getAttribute('src') === path) slot.setAttribute('src', authored); }, { once: true }); // file not there (yet): keep the authored photo
-      slot.setAttribute('src', path);
+      slot.addEventListener('error', function () { if (slot.getAttribute('src') === path) setImgSrc(slot, authored); }, { once: true }); // file not there (yet): keep the authored photo
+      setImgSrc(slot, path);
     } else {
       // CSS background photo (home hero): the authored rule stays the fallback; the saved file is layered on through the style object, not markup.
       var probe = new Image();
@@ -186,4 +198,50 @@
     });
     root.removeAttribute('data-content-pending');
   });
+})();
+
+/**
+ * Lite mode (html[data-lite]): weak devices keep the look but drop the effects that cost frames: the fixed metal
+ * sheen, film grain, hero parallax and SVG filters, card tilt and settle, and the 3D cassette (the SVG one shows).
+ * On when: ?lite (or ?lite=1) / off with ?lite=0, carried through the visit in sessionStorage; Save-Data or a 2G
+ * connection; low memory (deviceMemory <= 2, or <= 4 with <= 4 cores; Chromium only); or a frame probe after load
+ * finds the page drawing under ~40 fps (median over ~1.5s). Probe results are remembered for the visit, so later
+ * pages start lite with no flash. The probe never runs under automation (tests force it with ?lite).
+ * Debug: window.__alcoveLite = { on, why }.
+ */
+(function () {
+  var root = document.documentElement, KEY = 'alcove_lite';
+  var store = { get: function () { try { return sessionStorage.getItem(KEY); } catch (e) { return null; } },
+    set: function (v) { try { sessionStorage.setItem(KEY, v); } catch (e) {} } };
+  function set(on, why) {
+    if (on) root.setAttribute('data-lite', why); else root.removeAttribute('data-lite');
+    window.__alcoveLite = { on: on, why: why };
+    if (on) document.dispatchEvent(new CustomEvent('alcove:lite', { detail: { why: why } }));
+  }
+  var q = null;
+  try { q = new URLSearchParams(location.search).get('lite'); } catch (e) {}
+  if (q !== null) { store.set(q === '0' ? 'off' : 'url'); set(q !== '0', 'url'); return; }
+  var saved = store.get();
+  if (saved === 'off') { set(false, 'off'); return; }
+  if (saved) { set(true, saved); return; }
+  var c = navigator.connection || {}, mem = navigator.deviceMemory, cores = navigator.hardwareConcurrency;
+  if (c.saveData) return set(true, 'save-data');
+  if (/^(slow-2g|2g)$/.test(c.effectiveType || '')) return set(true, 'slow-network');
+  if (mem && (mem <= 2 || (mem <= 4 && cores && cores <= 4))) return set(true, 'low-memory');
+  set(false, 'auto');
+  if (navigator.webdriver || !window.requestAnimationFrame) return;
+  function probe() {
+    if (document.visibilityState !== 'visible') return; // hidden tabs throttle rAF: no verdict
+    var gaps = [], last = 0, until = performance.now() + 1500;
+    requestAnimationFrame(function tick(t) {
+      if (last) gaps.push(t - last);
+      last = t;
+      if (t < until && document.visibilityState === 'visible') return requestAnimationFrame(tick);
+      if (gaps.length < 20) return;
+      gaps.sort(function (a, b) { return a - b; });
+      if (gaps[gaps.length >> 1] > 25) { store.set('slow-frames'); set(true, 'slow-frames'); }
+    });
+  }
+  var later = function () { setTimeout(probe, 500); };
+  if (document.readyState === 'complete') later(); else addEventListener('load', later, { once: true });
 })();

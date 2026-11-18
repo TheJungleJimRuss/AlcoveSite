@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Shrikhand&display=swap');
+/* Default fonts (Fraunces + Shrikhand) are linked from each page's <head> with preconnect, not @import (which waited for this file first). */
 
 /* Wireframe Prototype Styles - Alcove Recording */
 :root {
@@ -336,7 +335,12 @@ p {
   inset: 0;
   z-index: -1;
   background: url('images/studio-live-room.jpg') center / cover no-repeat;
+  /* WebP copies (scripts/make-photos.mjs): phones get the 1280px one; the JPEG stays the fallback. */
+  background-image: image-set(url('images/studio-live-room-2000.webp') type('image/webp'), url('images/studio-live-room.jpg') type('image/jpeg'));
   will-change: transform;
+}
+@media (max-width: 640px) {
+  .hero-media { background-image: image-set(url('images/studio-live-room-1280.webp') type('image/webp'), url('images/studio-live-room.jpg') type('image/jpeg')); }
 }
 
 /* Palette-tinted scrim keeps the wordmark and nav readable in every theme */
@@ -366,6 +370,8 @@ p {
 @media (prefers-reduced-motion: reduce) {
   .hero-media { transform: none !important; }
 }
+/* Lite mode (html[data-lite], content-loader.js): no parallax; the photo sits still behind the wordmark. */
+:root[data-lite] .hero-media { animation: none; transform: none !important; will-change: auto; }
 
 
 .section-block {
@@ -536,15 +542,6 @@ p {
 
 .field-group :is(input, select, textarea):user-invalid + .error-msg {
   display: block;
-}
-
-/* Audio Player Prototype */
-.audio-widget {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  padding: 1.25rem;
-  border-radius: 6px;
-  margin-top: 1rem;
 }
 
 /* Filter Bar */
@@ -762,38 +759,9 @@ p {
   margin-bottom: 0;
 }
 
-/* Audio Timeline Scrubber & Track Meta (Work Page) */
-.player-scrubber-wireframe {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  margin-top: 0.85rem;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
+/* Track meta */
 .player-timestamp {
   white-space: nowrap;
-}
-
-.scrubber-track {
-  flex: 1;
-  height: 6px;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.scrubber-progress {
-  width: 35%;
-  height: 100%;
-  background: var(--text-main);
 }
 
 .track-duration {
@@ -1086,7 +1054,6 @@ h3 { color: var(--accent-tertiary); }
 .faq-item[open] .faq-summary::after { color: var(--accent-primary); }
 .faq-summary::after { color: var(--accent-secondary); }
 .faq-content { border-top-color: var(--tint-2); }
-.scrubber-progress { background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); }
 .track-duration { color: var(--accent-tertiary); }
 .upload-dropzone-wireframe { border-color: var(--accent-secondary); background: color-mix(in srgb, var(--tint-1) 10%, transparent); }
 .field-group textarea:focus, .field-group input:focus, .field-group select:focus { border-color: var(--accent-secondary); }
@@ -1476,25 +1443,6 @@ html.has-fader::-webkit-scrollbar { display: none; }
 }
 @media (max-width: 640px) and (prefers-reduced-motion: reduce) { .nav-thumb { transition: none; } }
 
-/* ===== Ticket 06: tape-deck style audio player (matte) ===== */
-.audio-widget {
-  border: 1px solid var(--key-edge);
-  border-radius: 0.9rem;
-  background: color-mix(in srgb, var(--bg-accent) 35%, var(--bg-surface));
-  box-shadow: 0 3px 0 var(--key-edge);
-  padding: 1rem;
-}
-.deck-display {
-  display: grid;
-  gap: 0.6rem;
-  padding: 0.9rem 1rem;
-  border-radius: 0.6rem;
-  background: color-mix(in srgb, #000 78%, var(--accent-tertiary));
-  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.5);
-}
-.deck-display .deck-label { margin: 0; color: #e8dcc0; font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.85rem; }
-.transport { display: flex; justify-content: center; gap: 0.6rem; margin-block: 0.9rem 0.6rem; }
-.transport-btn { min-inline-size: 3.5rem; font-size: 1.1rem; line-height: 1; }
 
 /* Placeholder photos inside media boxes */
 .media-box.has-photo { padding: 0; overflow: hidden; border-style: solid; display: block; }
@@ -1572,9 +1520,137 @@ html.has-fader::-webkit-scrollbar { display: none; }
 .upload-dropzone-wireframe.is-dragover { border-color: var(--border-focus); background: color-mix(in srgb, var(--text-main) 5%, transparent); }
 .upload-dropzone-wireframe:focus-within { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 
-/* ===== Work page: A/B deck, Voice Memo vs. Finished Master (ab-compare.js) ===== */
+/* ===== Work page: cassette A/B deck (ab-compare.js, spec .agents/issues/cassette-ab/) =====
+   Side A = Voice Memo, Side B = Finished Master. The section's data-version ("memo" | "master")
+   drives which side shows on the cassette, the lamps and the J-card column. Matte: flat fills, no gloss. */
+.ab-compare { --tape-paper: color-mix(in srgb, #fff 78%, var(--bg-accent)); --tape-ink: color-mix(in srgb, #000 82%, var(--accent-tertiary)); }
 .ab-player { margin-block-start: 1.5rem; }
-/* Label-maker strips for the spec table's row names */
+.cassette-deck {
+  --deck-well: color-mix(in srgb, #000 74%, var(--bg-accent));
+  --deck-lit: color-mix(in srgb, var(--accent-secondary) 50%, #fff);
+  display: grid;
+  gap: 0.9rem;
+  max-inline-size: 40rem;
+  margin-inline: auto;
+}
+.deck-top { display: grid; grid-template-columns: minmax(0, 1fr); }
+/* The player sits straight on the page surface (no panel, no frame): a top-down plan view with a soft contact shadow.
+   The three.js canvas is transparent; the SVG is the fallback drawing in the same top-down pose. */
+.cassette-stage {
+  position: relative;
+  display: grid;
+  min-inline-size: 0;
+  aspect-ratio: 16 / 13.5;
+}
+.cassette-stage > canvas { grid-area: 1 / 1; inline-size: 100%; block-size: 100%; }
+.cassette-svg { grid-area: 1 / 1; display: block; inline-size: 100%; block-size: 100%; }
+.cassette-stage[data-webgl] .cassette-svg { visibility: hidden; }
+.cassette-face { transform-box: fill-box; transform-origin: center; }
+/* Fallback player drawing (the 3D model is the real thing) */
+.pl-shadow { fill: #000; opacity: 0.38; }
+.pl-body { fill: color-mix(in srgb, var(--text-main) 30%, var(--bg-surface)); stroke: rgb(0 0 0 / 0.3); stroke-width: 2; }
+.pl-bay { fill: color-mix(in srgb, #000 85%, var(--bg-accent)); stroke: rgb(0 0 0 / 0.4); stroke-width: 2; }
+.cs-tape { fill: none; stroke: #3b2d21; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.cs-notch { fill: rgb(0 0 0 / 0.55); }
+.cs-guide { fill: #8e8870; }
+.pl-slots rect { fill: rgb(0 0 0 / 0.55); }
+.pl-door { fill: none; stroke: color-mix(in srgb, #000 78%, var(--bg-accent)); stroke-width: 10; }
+.pl-glass { fill: rgb(255 255 255 / 0.07); stroke: rgb(0 0 0 / 0.25); }
+.pl-latch { fill: color-mix(in srgb, #000 78%, var(--bg-accent)); }
+.pl-keys rect { fill: color-mix(in srgb, #000 72%, var(--bg-accent)); }
+.pl-glyph { fill: #e6dfc9; }
+.pl-glyph .pl-glyph-play { fill: #d8692b; }
+.pl-screw { fill: color-mix(in srgb, var(--text-main) 40%, var(--bg-surface)); }
+/* Cassette drawn from palette tokens; the paper label stays light in both themes */
+.cs-shell { fill: color-mix(in srgb, var(--text-main) 22%, var(--bg-surface)); stroke: rgb(0 0 0 / 0.25); stroke-width: 2; }
+.cs-paper { fill: var(--tape-paper); }
+.cs-stripe { fill: var(--text-muted); }
+.ab-compare[data-version="master"] .cs-stripe { fill: var(--accent-primary); }
+.cs-stripe-text { fill: var(--bg-surface); font-family: var(--font-mono); }
+.cs-hand { fill: var(--tape-ink); font-family: "Bradley Hand", "Segoe Print", cursive; }
+.cs-rule { stroke: color-mix(in srgb, var(--tape-ink) 30%, transparent); }
+.cs-window { fill: color-mix(in srgb, #000 80%, var(--accent-tertiary)); }
+.cs-window-inner { fill: color-mix(in srgb, #fff 18%, var(--deck-well)); opacity: 0.55; }
+.cs-pack { fill: color-mix(in srgb, var(--accent-tertiary) 55%, #000); }
+.cs-hub { fill: color-mix(in srgb, #fff 90%, var(--bg-accent)); }
+.cs-hole { fill: color-mix(in srgb, #000 90%, var(--accent-tertiary)); }
+.cs-spoke { fill: color-mix(in srgb, #fff 90%, var(--bg-accent)); }
+.cs-foot { fill: rgb(0 0 0 / 0.14); }
+.cs-screw { fill: color-mix(in srgb, var(--text-main) 40%, var(--bg-surface)); }
+/* Reels turn through --reel (ab-compare.js sets an angle such as 40deg); pack sizes are the circles' r attribute */
+.cs-reel { transform-box: fill-box; transform-origin: center; transform: rotate(var(--reel, 0deg)); }
+.cs-side { display: none; }
+.ab-compare[data-version="memo"] .cs-side[data-version="memo"],
+.ab-compare[data-version="master"] .cs-side[data-version="master"] { display: inline; }
+/* Readout: side name, side lamps, counter digits */
+.deck-readout { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 1rem; }
+.deck-readout p { margin: 0; }
+.deck-label { color: var(--text-main); font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.side-lamps { display: flex; gap: 0.9rem; font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.side-lamp { color: var(--text-muted); }
+.side-lamp::before { /* lamp */
+  content: "";
+  display: inline-block;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  margin-inline-end: 0.35rem;
+  border-radius: 50%;
+  vertical-align: 0.05em;
+  background: color-mix(in srgb, var(--text-muted) 40%, transparent);
+}
+.ab-compare[data-version="memo"] .side-lamp[data-version="memo"],
+.ab-compare[data-version="master"] .side-lamp[data-version="master"] { color: var(--text-main); }
+.ab-compare[data-version="memo"] .side-lamp[data-version="memo"]::before,
+.ab-compare[data-version="master"] .side-lamp[data-version="master"]::before { background: var(--accent-secondary); }
+.deck-counter { display: flex; gap: 0.4rem; }
+.deck-digits {
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--deck-well);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.6);
+  color: var(--deck-lit);
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+/* Mechanical keys: matte, solid edge, press down and latch */
+/* Transport keys: transparent buttons laid over the keys drawn on the player (3D or SVG). Default positions match the SVG
+   plan view (480 x 405 units); cassette-3d.js overwrites --kx / --ky from the projected 3D keys. */
+.deck-top { position: relative; }
+.deck-keys { position: absolute; inset: 0; pointer-events: none; }
+.deck-key {
+  --kx: 21.875%; --ky: 81.11%;
+  position: absolute;
+  inset-inline-start: var(--kx);
+  inset-block-start: var(--ky);
+  inline-size: 16.9%;
+  min-inline-size: 2.75rem;
+  block-size: 8.2%;
+  min-block-size: 2.75rem;
+  translate: -50% -50%;
+  padding: 0;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  cursor: var(--cursor-pointer, pointer);
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.deck-key[data-key="pause"] { --kx: 40.625%; }
+.deck-key[data-key="stop"] { --kx: 59.375%; }
+.deck-key[data-key="flip"] { --kx: 78.125%; }
+.deck-key:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
+/* SVG fallback keys react through :has() (the 3D keys react in cassette-3d.js) */
+.pl-keys rect { transition: fill 0.12s; }
+.deck-top:has(#ab-key-play:hover) .pl-key-play, .deck-top:has(#ab-key-pause:hover) .pl-key-pause,
+.deck-top:has(#ab-key-stop:hover) .pl-key-stop, .deck-top:has(#ab-key-flip:hover) .pl-key-flip { fill: color-mix(in srgb, var(--accent-secondary) 30%, #000 70%); }
+.deck-top:has(#ab-key-play[aria-pressed="true"]) .pl-key-play { transform: translateY(2px); fill: color-mix(in srgb, #000 82%, var(--bg-accent)); }
+.deck-top:has(.deck-key:active) .pl-keys rect { transition: none; }
+.ab-hint { margin: 0; text-align: center; font-size: 0.8rem; color: var(--text-muted); }
+/* Label-maker strips for the J-card's row names */
 .ab-strip {
   display: inline-block;
   padding: 0.3rem 0.65rem;
@@ -1588,127 +1664,44 @@ html.has-fader::-webkit-scrollbar { display: none; }
   text-transform: uppercase;
   white-space: nowrap;
 }
-/* Tape-deck slide switch: recessed slot, ridged matte cap, labels printed under each end */
-.ab-slide-row {
-  --slot: 13rem;
-  --cap: 3.6rem;
-  --pad: 0.3rem;
-  display: grid;
-  justify-items: center;
-  gap: 0.5rem;
-  margin-block: 1.2rem 0.4rem;
-}
-.ab-slide {
-  position: relative;
-  box-sizing: border-box;
-  inline-size: var(--slot);
-  block-size: 2.6rem;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, #000 60%, var(--key-edge));
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, #000 78%, var(--accent-tertiary));
-  box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.6), 0 1px 0 color-mix(in srgb, #fff 35%, transparent);
-  cursor: var(--cursor-pointer, pointer);
-}
-.ab-slide::before { /* the groove the cap rides in */
-  content: "";
-  position: absolute;
-  inset-inline: calc(var(--pad) + 0.6rem);
-  inset-block-start: 50%;
-  block-size: 2px;
-  margin-block-start: -1px;
-  border-radius: 1px;
-  background: rgb(0 0 0 / 0.65);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.08);
-}
-.ab-slide-cap {
-  position: absolute;
-  box-sizing: border-box;
-  inset-block: var(--pad);
-  inset-inline-start: var(--pad);
-  inline-size: var(--cap);
-  border: 1px solid var(--key-edge);
-  border-radius: 0.35rem;
-  background:
-    repeating-linear-gradient(90deg, transparent 0 5px, color-mix(in srgb, var(--text-main) 24%, transparent) 5px 6px) center 65% / 60% 45% no-repeat,
-    var(--key-face);
-  box-shadow: 0 2px 0 var(--key-edge), 0 3px 4px rgb(0 0 0 / 0.35);
-  transition: transform 0.3s cubic-bezier(0.3, 0.8, 0.3, 1);
-}
-.ab-slide-cap::after { /* indicator stripe: muted on the memo, accent on the master */
-  content: "";
-  position: absolute;
-  inset-inline: 30%;
-  inset-block-start: 4px;
-  block-size: 3px;
-  border-radius: 2px;
-  background: var(--text-muted);
-  transition: background-color 0.2s ease;
-}
-.ab-slide[aria-checked="true"] .ab-slide-cap { transform: translateX(calc(var(--slot) - 2px - 2 * var(--pad) - var(--cap))); }
-.ab-slide[aria-checked="true"] .ab-slide-cap::after { background: var(--accent-primary); }
-.ab-slide:hover .ab-slide-cap { background-color: color-mix(in srgb, var(--text-main) 7%, var(--key-face)); }
-.ab-slide:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 3px; }
-.ab-slide-labels {
-  display: flex;
-  justify-content: space-between;
-  box-sizing: border-box;
-  inline-size: var(--slot);
-  padding-inline: 0.15rem;
-}
-.ab-slide-label {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  cursor: var(--cursor-pointer, pointer);
-  transition: color 0.2s ease;
-}
-.ab-slide-label::before { /* indicator light */
-  content: "";
-  display: inline-block;
-  inline-size: 0.4rem;
-  block-size: 0.4rem;
-  margin-inline-end: 0.35rem;
-  border-radius: 50%;
-  vertical-align: 0.1em;
-  background: color-mix(in srgb, var(--text-muted) 40%, transparent);
-}
-.ab-compare[data-version="memo"] .ab-slide-label[data-version="memo"],
-.ab-compare[data-version="master"] .ab-slide-label[data-version="master"] { color: var(--text-main); }
-.ab-compare[data-version="memo"] .ab-slide-label[data-version="memo"]::before,
-.ab-compare[data-version="master"] .ab-slide-label[data-version="master"]::before { background: var(--accent-primary); }
-/* Seek bar drawn like the sampler's scrubber track */
-.ab-seek {
-  flex: 1;
-  min-inline-size: 0;
-  block-size: 6px;
-  margin: 0;
-  border: 1px solid var(--border-color);
+/* J-card: the spec table printed on paper under the deck; the playing side's column is at full strength */
+.jcard {
+  max-inline-size: 44rem;
+  margin: 1.5rem auto 0;
+  padding: 0.6rem clamp(0.6rem, 3vw, 1.1rem);
+  background: var(--tape-paper);
+  color: var(--tape-ink);
   border-radius: 3px;
-  background: linear-gradient(var(--text-main), var(--text-main)) 0 0 / var(--pct, 0%) 100% no-repeat;
-  appearance: none;
-  cursor: var(--cursor-pointer, pointer);
+  box-shadow: 0 2px 0 color-mix(in srgb, #000 22%, transparent);
 }
-.ab-seek::-webkit-slider-thumb { appearance: none; inline-size: 14px; block-size: 14px; border-radius: 50%; background: var(--accent-primary); border: 2px solid var(--bg-surface); box-shadow: 0 1px 2px rgb(0 0 0 / 0.35); }
-.ab-seek::-moz-range-thumb { inline-size: 12px; block-size: 12px; border-radius: 50%; background: var(--accent-primary); border: 2px solid var(--bg-surface); }
-.ab-seek:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 4px; }
-.ab-hint { margin: 0.6rem 0 0; text-align: center; font-size: 0.8rem; color: var(--text-muted); }
-/* What changed: label-maker row labels, hairlines, selected column at full strength */
-.ab-specs { inline-size: 100%; margin-block-start: 1.5rem; border-collapse: collapse; font-size: 0.9rem; }
-.ab-specs :is(th, td) { padding: 0.65rem 0.75rem; border-block-end: 1px solid var(--border-color); text-align: start; vertical-align: middle; }
-.ab-specs thead th { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); }
+.ab-specs { inline-size: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.ab-specs :is(th, td) { padding: 0.65rem 0.6rem; border-block-end: 1px solid color-mix(in srgb, var(--tape-ink) 22%, transparent); text-align: start; vertical-align: middle; }
+.ab-specs tbody tr:last-child :is(th, td) { border-block-end: 0; }
+.ab-specs thead th { font-family: var(--font-mono); font-size: 0.8rem; color: color-mix(in srgb, var(--tape-ink) 65%, var(--tape-paper)); }
+.ab-specs thead th[data-version="memo"]::before { content: "A \00b7  "; }
+.ab-specs thead th[data-version="master"]::before { content: "B \00b7  "; }
 .ab-specs tbody th { inline-size: 1%; padding-inline-start: 0; }
-.ab-specs td[data-version] { color: var(--text-muted); transition: color 0.2s ease; }
+.ab-specs td[data-version] { color: color-mix(in srgb, var(--tape-ink) 65%, var(--tape-paper)); transition: color 0.2s ease; }
 .ab-compare[data-version="memo"] .ab-specs [data-version="memo"],
-.ab-compare[data-version="master"] .ab-specs [data-version="master"] { color: var(--text-main); }
+.ab-compare[data-version="master"] .ab-specs [data-version="master"] { color: var(--tape-ink); }
+.ab-compare[data-version="memo"] .ab-specs td[data-version="memo"],
+.ab-compare[data-version="master"] .ab-specs td[data-version="master"] { font-weight: 700; }
 .ab-compare[data-version="memo"] .ab-specs thead [data-version="memo"],
 .ab-compare[data-version="master"] .ab-specs thead [data-version="master"] { box-shadow: inset 0 -2px 0 var(--accent-primary); }
-@media (prefers-reduced-motion: reduce) {
-  .ab-slide-cap, .ab-slide-cap::after, .ab-slide-label, .ab-specs td[data-version] { transition: none; }
+@media (max-width: 640px) {
+  .ab-specs { font-size: 0.82rem; }
+  .ab-specs :is(th, td) { padding-inline: 0.35rem; }
 }
-
+@media (prefers-reduced-motion: reduce) {
+  .ab-specs td[data-version], .pl-keys rect { transition: none; }
+}
+@media (forced-colors: active) {
+  .jcard { border: 1px solid CanvasText; }
+  .deck-key:focus-visible { outline-color: Highlight; }
+  .side-lamp::before { background: GrayText; }
+  .ab-compare[data-version="memo"] .side-lamp[data-version="memo"]::before,
+  .ab-compare[data-version="master"] .side-lamp[data-version="master"]::before { background: Highlight; }
+}
 /* Live waveform in the middle of the header while audio plays (now-playing.js) */
 .nav-wave {
   position: absolute;
@@ -1871,6 +1864,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
       animation-timeline: view();
       animation-range: entry 0% entry 55%;
     }
+    :root[data-lite] :is(.grid-cards > *, .showcase-side-cards > *, .roadmap-step) { animation: none; }
   }
 }
 
@@ -2011,124 +2005,3 @@ html[data-content-pending] body { visibility: hidden; }
 .closing-note { border-top: 1px solid var(--border-color); padding-top: 2.5rem; }
 .closing-note h2 { margin-bottom: 0.5rem; }
 
-/* ===== Work page players: real-hardware faceplate (ADR 0005) =====
-   Brushed-metal panel with screws, glass VFD window with spinning reels, chunky transport keys,
-   machined seek knob. Gloss is allowed here only; the rest of the site stays matte. */
-.audio-widget {
-  /* The faceplate is light metal in every theme, so text and keys inside use fixed dark-on-light tokens */
-  --text-main: #1f1d18;
-  --text-muted: #3b372e;
-  --bg-accent: #d8d0bc;
-  --bg-surface: #f4efe2;
-  --key-face: #f4efe2;
-  --key-edge: #8a826e;
-  --hw-metal-hi: color-mix(in srgb, #fff 55%, #d8d0bc);
-  --hw-metal-lo: color-mix(in srgb, #000 8%, #d8d0bc);
-  color: var(--text-main);
-  --hw-screw: radial-gradient(circle at 35% 30%, #f4f1ea 0 12%, #a9a49a 45%, #5b574f 100%);
-  position: relative;
-  padding: 1.5rem 1.4rem 1.25rem;
-  border: 1px solid color-mix(in srgb, #000 55%, var(--key-edge));
-  border-radius: 0.8rem;
-  background:
-    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.1) 0 1px, rgb(236 229 212 / 0.4) 1px 3px),
-    linear-gradient(180deg, var(--hw-metal-hi), var(--hw-metal-lo));
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.7),
-    inset 0 -2px 0 rgb(0 0 0 / 0.25),
-    0 1px 0 rgb(255 255 255 / 0.25),
-    0 10px 22px rgb(0 0 0 / 0.3);
-}
-.audio-widget::before,
-.audio-widget::after { /* four screws: two per pseudo-element */
-  content: "";
-  position: absolute;
-  inset-inline: 0.5rem;
-  inline-size: auto;
-  block-size: 0.8rem;
-  background:
-    var(--hw-screw) left / 0.8rem 0.8rem no-repeat,
-    var(--hw-screw) right / 0.8rem 0.8rem no-repeat;
-  border-radius: 50%;
-  pointer-events: none;
-}
-.audio-widget::before { inset-block-start: 0.45rem; }
-.audio-widget::after { inset-block-end: 0.45rem; }
-
-/* Glass window: dark VFD, glowing readout, reflection across the top */
-.audio-widget .deck-display {
-  position: relative;
-  overflow: hidden;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  padding: 1rem 1.1rem;
-  border: 2px solid color-mix(in srgb, #000 70%, var(--bg-accent));
-  border-radius: 0.5rem;
-  background: radial-gradient(ellipse at 50% 0%, #1d2a24, #06090a 75%);
-  box-shadow: inset 0 3px 8px rgb(0 0 0 / 0.85), 0 1px 0 rgb(255 255 255 / 0.45);
-}
-.audio-widget .deck-display::after {
-  content: "";
-  position: absolute;
-  inset: 0 0 45% 0;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.02));
-  pointer-events: none;
-}
-.audio-widget .deck-label {
-  color: #9ff5c4;
-  text-shadow: 0 0 6px rgb(110 255 180 / 0.65);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.audio-widget .deck-label.placeholder-text { color: #6fae8e; text-shadow: 0 0 4px rgb(110 255 180 / 0.3); }
-
-/* Tape reels */
-.deck-reels { display: flex; gap: 0.5rem; }
-.reel {
-  inline-size: 2.1rem;
-  block-size: 2.1rem;
-  border-radius: 50%;
-  border: 2px solid #2b2b2b;
-  background:
-    radial-gradient(circle, #111 0 18%, transparent 19%),
-    conic-gradient(from 0deg, #d8d2c4 0 12%, #6d685e 12% 33%, #d8d2c4 33% 45%, #6d685e 45% 66%, #d8d2c4 66% 78%, #6d685e 78% 100%);
-  box-shadow: 0 0 0 2px #0b0b0b;
-}
-.audio-widget[data-playing="true"] .reel { animation: reel-spin 1.6s linear infinite; }
-@keyframes reel-spin { to { transform: rotate(360deg); } }
-
-/* Transport: tall piano keys with a bevel and a deep press */
-.audio-widget .transport { gap: 0.4rem; padding: 0.5rem; border-radius: 0.5rem; background: rgb(0 0 0 / 0.18); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.35), 0 1px 0 rgb(255 255 255 / 0.35); }
-.audio-widget .transport-btn {
-  min-block-size: 3.2rem;
-  border: 1px solid #1a1a1a;
-  border-radius: 0.3rem;
-  background: linear-gradient(180deg, #5a5a5a 0%, #3a3a3a 45%, #262626 100%);
-  color: #ecebe6;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 4px 0 #0d0d0d, 0 6px 6px rgb(0 0 0 / 0.4);
-}
-.audio-widget .transport-btn:hover { background: linear-gradient(180deg, #666, #444 45%, #2d2d2d); color: #fff; border-color: #1a1a1a; }
-.audio-widget .transport-btn:active { transform: translateY(4px); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 0 0 #0d0d0d, 0 1px 2px rgb(0 0 0 / 0.4); }
-.audio-widget .transport-btn.btn-primary {
-  background: linear-gradient(180deg, #b0502f, #8a3a22);
-  color: #fff;
-  border-color: color-mix(in srgb, var(--accent-primary) 40%, #000);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), 0 4px 0 color-mix(in srgb, var(--accent-primary) 45%, #000), 0 6px 6px rgb(0 0 0 / 0.4);
-}
-.audio-widget[data-playing="true"] .transport-btn.btn-primary { transform: translateY(3px); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.4), 0 1px 0 color-mix(in srgb, var(--accent-primary) 45%, #000); }
-
-/* Timeline: recessed groove, lit fill, machined knob on the A/B seek */
-.audio-widget .player-scrubber-wireframe { border: 0; border-radius: 0.4rem; background: rgb(0 0 0 / 0.2); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.4), 0 1px 0 rgb(255 255 255 / 0.35); color: var(--text-main); }
-.audio-widget .scrubber-track,
-.audio-widget .ab-seek { block-size: 8px; border: 0; border-radius: 4px; background-color: #0b0e0d; box-shadow: inset 0 1px 3px #000, 0 1px 0 rgb(255 255 255 / 0.3); }
-.audio-widget .scrubber-progress { background: linear-gradient(180deg, #b6ffd6, #3fd98a); box-shadow: 0 0 6px rgb(80 255 160 / 0.7); }
-.audio-widget .ab-seek { background-image: linear-gradient(180deg, #b6ffd6, #3fd98a); background-size: var(--pct, 0%) 100%; background-repeat: no-repeat; }
-.audio-widget .ab-seek::-webkit-slider-thumb { inline-size: 20px; block-size: 20px; border: 1px solid #333; background: radial-gradient(circle at 35% 30%, #f6f3ec, #a8a398 55%, #5e5a52); box-shadow: 0 2px 4px rgb(0 0 0 / 0.55); }
-.audio-widget .ab-seek::-moz-range-thumb { inline-size: 18px; block-size: 18px; border: 1px solid #333; background: radial-gradient(circle at 35% 30%, #f6f3ec, #a8a398 55%, #5e5a52); }
-
-.audio-widget .track-duration { color: var(--text-main); }
-
-@media (prefers-reduced-motion: reduce) { .audio-widget[data-playing="true"] .reel { animation: none; } }
-@media (forced-colors: active) { .audio-widget::before, .audio-widget::after, .audio-widget .deck-display::after { display: none; } }
-@media (max-width: 640px) { .reel { inline-size: 1.6rem; block-size: 1.6rem; } .audio-widget { padding-inline: 1rem; } }
-.audio-widget .scrubber-progress { width: 0; }

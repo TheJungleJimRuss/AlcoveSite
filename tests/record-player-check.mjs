@@ -11,7 +11,7 @@ const atStart = pg => pg.getAttribute('.rp-fader', 'aria-valuenow').then(v => v 
 const atEnd = pg => Promise.all([pg.getAttribute('.rp-fader', 'aria-valuenow'), pg.getAttribute('.rp-fader', 'aria-valuemax')]).then(([a, b]) => a === b);
 
 const root = join(fileURLToPath(import.meta.url), '..', '..');
-const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.wav': 'audio/wav', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.json': 'application/json' };
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.mp3': 'audio/mpeg', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.json': 'application/json' };
 const mk = range => createServer(async (req, res) => {
   try {
     const path = new URL(req.url, 'http://x').pathname;
@@ -60,12 +60,12 @@ check((await page.getAttribute('.rp-arm', 'aria-disabled')) === 'true' && (await
   check((await st()).state === 'empty' && (await page.evaluate(() => document.getElementById('audio-player').currentTime)) === 0, 'dragging the disabled arm does nothing'); }
 check(s.state === 'empty' && s.arm === 'rest' && !s.src, 'starts empty: no record, arm at rest, nothing loaded');
 check(await page.isDisabled('.rp-play'), 'play/pause key is disabled until a record is loaded');
-check((await page.locator('.sleeve').count()) === 4 && (await page.locator('.record-player .deck-reels, .track-row, .play-btn').count()) === 0 && (await page.locator('.ab-player .deck-reels').count()) === 1, 'four sleeves; old tape display, track rows and Play Preview buttons are gone from the sampler');
+check((await page.locator('.sleeve').count()) === 4 && (await page.locator('.record-player .deck-reels, .track-row, .play-btn').count()) === 0 && (await page.locator('.ab-player #cs-reel-l, .ab-player #cs-reel-r').count()) === 2, 'four sleeves; old tape display, track rows and Play Preview buttons are gone from the sampler');
 
 await page.click(S('indie'));
 await page.waitForFunction(() => !document.getElementById('audio-player').paused);
 s = await st();
-check(s.src === 'media/track-1-indie.wav' && !s.paused && s.arm === 'on' && s.playing === 'true', 'sleeve click loads its src, plays and puts the arm on the record');
+check(s.src === 'media/track-1-indie.mp3' && !s.paused && s.arm === 'on' && s.playing === 'true', 'sleeve click loads its src, plays and puts the arm on the record');
 check((await page.getAttribute(S('indie'), 'aria-pressed')) === 'true' && (await page.getAttribute(S('indie'), 'aria-current')) === 'true', 'current sleeve is marked (aria-pressed, aria-current)');
 check((await page.textContent('.rp-label-text')).trim() === 'Indie Rock Demo', 'centre label shows the title');
 check(/^Now playing: Indie Rock Demo$/.test(await page.textContent('.rp-status')) && (await page.getAttribute('.rp-status', 'aria-live')) === 'polite', 'live region announces "Now playing: ..."');
@@ -92,7 +92,7 @@ check((await st()).paused, 'Space on the focused sleeve pauses');
 await pick(page, 'punk');
 await page.waitForFunction(() => !document.getElementById('audio-player').paused);
 s = await st();
-check(s.src === 'media/track-4-punk.wav' && !s.paused && (await page.getAttribute(S('indie'), 'aria-pressed')) === 'false' && (await page.getAttribute(S('punk'), 'aria-current')) === 'true', 'another sleeve swaps the record and plays it');
+check(s.src === 'media/track-4-punk.mp3' && !s.paused && (await page.getAttribute(S('indie'), 'aria-pressed')) === 'false' && (await page.getAttribute(S('punk'), 'aria-current')) === 'true', 'another sleeve swaps the record and plays it');
 check((await page.textContent('.rp-label-text')).includes('Punk'), 'centre label follows the swap');
 
 // Song list: genres are retired (no tabs, no genre attributes or labels); the crate is a plain list in order
@@ -181,7 +181,7 @@ await page.waitForFunction(() => !document.querySelector('.record-player').datas
 await playing();
 {
   const mk = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.sleeve')].map(x => [__g(x), getComputedStyle(x.querySelector('.sleeve-tab')).display])));
-  check(mk.pop === 'block' && mk.punk === 'none' && (await st()).src === 'media/track-2-bedroom-pop.wav' && (await st()).arm === 'on', 'the loaded marker moved to the front sleeve and its record plays');
+  check(mk.pop === 'block' && mk.punk === 'none' && (await st()).src === 'media/track-2-bedroom-pop.mp3' && (await st()).arm === 'on', 'the loaded marker moved to the front sleeve and its record plays');
 }
 await page.click(S('pop'));
 check((await st()).paused && (await st()).arm === 'lifted', 'clicking the loaded front sleeve toggles pause');
@@ -191,11 +191,11 @@ await playing();
 // A/B deck and record player pause each other
 await page.evaluate(() => document.querySelector('.ab-compare').scrollIntoView());
 await page.waitForFunction(() => [...document.querySelectorAll('.ab-player audio')].every(a => a.src.startsWith('blob:') && a.readyState >= 1));
-await page.evaluate(() => document.querySelector('.ab-play').click());
+await page.evaluate(() => document.querySelector('#ab-key-play').click());
 await page.waitForTimeout(300);
 s = await st();
 check(s.paused && s.arm === 'lifted', 'starting the A/B deck pauses the record player');
-await page.evaluate(() => document.querySelector('.ab-play').click());
+await page.evaluate(() => document.querySelector('#ab-key-pause').click());
 await page.evaluate(() => document.querySelector('.rp-play').click());
 await page.waitForTimeout(300);
 check((await page.evaluate(() => [...document.querySelectorAll('.ab-player audio')].every(a => a.paused))) && !(await st()).paused, 'starting the record player pauses the A/B deck');
@@ -205,7 +205,7 @@ await page.evaluate(() => { const a = document.getElementById('audio-player'); a
 await page.waitForFunction(() => document.getElementById('audio-player').ended, null, { timeout: 5000 });
 await page.waitForTimeout(300);
 s = await st();
-check(s.paused && s.arm === 'rest' && s.state === 'loaded' && s.src === 'media/track-4-punk.wav', 'at track end the arm returns to rest, the record stays, nothing else starts');
+check(s.paused && s.arm === 'rest' && s.state === 'loaded' && s.src === 'media/track-4-punk.mp3', 'at track end the arm returns to rest, the record stays, nothing else starts');
 check((await page.evaluate(() => [...document.querySelectorAll('audio')].every(a => a.paused))), 'no media element is playing after the end');
 await pick(page, 'punk');
 await page.waitForFunction(() => !document.getElementById('audio-player').paused, null, { timeout: 3000 });
@@ -350,7 +350,7 @@ await page.evaluate(() => document.getElementById('audio-player').pause());
   check((await p3.evaluate(() => document.querySelector('.record-player').dataset.arm)) === 'lifted' && (await p3.evaluate(() => document.querySelector('.record-player').getAnimations({ subtree: true }).filter(a => a.playState !== 'finished').length)) === 0, 'reduced motion: pause jumps to the lifted state without animations');
   await flip(p3, 1);
   await p3.click(S('pop'));
-  await p3.waitForFunction(() => document.getElementById('audio-player').dataset.track === 'media/track-2-bedroom-pop.wav' && !document.getElementById('audio-player').paused, null, { timeout: 600 });
+  await p3.waitForFunction(() => document.getElementById('audio-player').dataset.track === 'media/track-2-bedroom-pop.mp3' && !document.getElementById('audio-player').paused, null, { timeout: 600 });
   const rm2 = await p3.evaluate(() => ({ anims: document.querySelector('.record-player').getAnimations({ subtree: true }).filter(a => a.playState !== 'finished').length, front: __g(document.querySelector('.sleeve[data-pos="front"]')), lifted: document.querySelectorAll('.is-lifted').length, disc: getComputedStyle(document.querySelector('.rp-disc')).opacity, picking: document.querySelector('.record-player').dataset.picking || '' }));
   check(rm2.anims === 0 && rm2.front === 'pop' && rm2.lifted === 0 && rm2.disc === '0' && !rm2.picking, 'reduced motion: flipping and selecting change state instantly (no tipping, lift or disc travel)');
   await ctx.close();

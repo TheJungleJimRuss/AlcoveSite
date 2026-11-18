@@ -574,7 +574,7 @@
         el.src = value;
         el.preload = 'auto';
         el.load();
-      } else if (el.tagName === 'IMG') el.setAttribute('src', value);
+      } else if (el.tagName === 'IMG') { if (window.__alcoveSetImgSrc) window.__alcoveSetImgSrc(el, value); else { el.removeAttribute('srcset'); el.setAttribute('src', value); } }
       else el.style.backgroundImage = isBlob ? 'url("' + value + '")' : value;
     }
     function framed(k, on) { var box = slotEls[k] && slotEls[k].closest('.media-box'); if (box && slotBox[k]) box.classList.toggle('photo-slot', on); }
@@ -1162,7 +1162,7 @@
         var host = e.target.closest('a, button, summary, [role="switch"], [role="button"]');
         if (!host || panel.contains(host)) return;
         hit = host.querySelector('[data-edit-key]');
-        if (!hit) return; // a control with no editable text (transport keys, the A/B slide) keeps working
+        if (!hit) return; // a control with no editable text (transport keys) keeps working
       }
       e.preventDefault();
       e.stopPropagation();

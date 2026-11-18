@@ -303,22 +303,33 @@ body::after {
 /* Section rules */
 .page-header { border-bottom-color: var(--etch-dark); box-shadow: var(--etch-groove); }
 .closing-note { border-top-color: var(--etch-dark); box-shadow: inset var(--etch-groove); }
-/* Spec table rules: a 1px dark + 1px light groove drawn at the foot of each cell */
-.ab-specs :is(th, td) {
-  border-block-end: 0;
-  background-image: linear-gradient(to top, var(--etch-light) 0 1px, var(--etch-dark) 1px 2px, transparent 2px);
-}
-/* State marks: a deeper (2px) groove. Filter tab underline, and the master column head on the A/B deck */
-.filter-pill.active, .filter-pill.active:hover { border-bottom-color: var(--etch-dark); box-shadow: var(--etch-groove); }
-.ab-compare[data-version="memo"] .ab-specs thead [data-version="memo"],
-.ab-compare[data-version="master"] .ab-specs thead [data-version="master"] {
-  box-shadow: none;
-  background-image: linear-gradient(to top, var(--etch-light) 0 1px, var(--etch-dark) 1px 3px, transparent 3px);
-}
+/* The A/B J-card is printed paper, not bare metal, so its rules stay plain ink hairlines (wireframe.css) */
 /* Video frame: a recess cut around the clip */
 .media-box.has-video { border: 1px solid var(--etch-dark); box-shadow: var(--etch-groove); }
 
+/* Etched and printed type (2026-11-16, user request): text on the bare metal reads as part of it.
+   Display type (headings, nav, footer, filter tabs) is ENGRAVED and paint-filled: the palette colour
+   stays (it is the enamel in the cut), a 1px dark edge above (the cut's shaded upper wall) and the
+   same light lip below the groove rules use. Body copy is PRINTED: the ink spreads a hair into the
+   metal (soft halo) and is a touch thinner than flat colour. Tokens are per scheme, like the etched
+   lines. Not applied to paper things (J-card, polaroid frames), buttons or the hero wordmark. */
+:root {
+  --etch-cut: rgb(40 20 10 / 0.42);
+  --ink-bleed: 0 0 0.6px color-mix(in srgb, currentColor 55%, transparent);
+  --type-etch: 0 -1px 0 var(--etch-cut), 0 1px 0 var(--etch-light);
+}
+:root[data-scheme="dark"] { --etch-cut: rgb(0 0 0 / 0.7); }
+:is(h1:not(.studio-wordmark), h2, h3, h4, .nav-links a, .site-footer, .filter-pill, .hero-wordmark-subline) {
+  text-shadow: var(--type-etch);
+}
+:is(p, li, dd, label, .page-intro):not(:is(.jcard, .media-box, .btn-placeholder, .site-footer) *) {
+  text-shadow: var(--ink-bleed);
+}
+/* Gradient text (transparent fill + background-clip) shows the shadow THROUGH the glyphs, turning it dark and muddy. */
+:is(.hero-nav .nav-links a, .hero-wordmark-subline, .hero-wordmark-viewport .scroll-cue):is(a, p, span, div, button) { text-shadow: none; }
+
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  :is(h1, h2, h3, h4, .nav-links a, .site-footer, .filter-pill, .hero-wordmark-subline, p, li, dd, label, .page-intro) { text-shadow: none; }
   body::before, body::after, :is(.card, .roadmap-step)::before, :is(h1, h2)::after, :root[data-film]::after { display: none; }
   h1.studio-wordmark { filter: none; }
   .hero-wordmark-viewport { box-shadow: none; }
@@ -331,10 +342,6 @@ body::after {
   .site-footer, .closing-note, .site-header nav { border-top-color: var(--border-color); }
   .media-box.has-video { border-color: var(--border-color); }
   .filter-pill.active, .filter-pill.active:hover { border-bottom-color: var(--accent-primary); }
-  .ab-specs :is(th, td) { background-image: none; border-block-end: 1px solid var(--border-color); }
-  .ab-compare[data-version] .ab-specs thead th[data-version] { background-image: none; }
-  .ab-compare[data-version="memo"] .ab-specs thead [data-version="memo"],
-  .ab-compare[data-version="master"] .ab-specs thead [data-version="master"] { box-shadow: inset 0 -2px 0 var(--accent-primary); }
 }
 
 /* Every sheet cut from a different part of the scan. Polaroid frames: a background cannot be
@@ -389,3 +396,11 @@ body::after {
 .portrait-card.card > .media-box.has-photo:not(.has-video)::before { display: none; }
 .portrait-card.card > .media-box.has-photo:not(.has-video),
 .portrait-card.card:hover > .media-box.has-photo:not(.has-video) { transform: none; margin-block-start: 0; }
+
+/* Lite mode (html[data-lite], set by content-loader.js on weak devices or ?lite): the metal sheet and photos stay,
+   the layers that cost frames go: the fixed sheen, film grain and the hero's SVG filters. Parallax, card tilt and
+   card settle are switched off in wireframe.css; the 3D cassette falls back to the SVG one (cassette-3d.js). */
+:root[data-lite] body::after { display: none; }
+:root[data-lite]::after { content: none !important; animation: none !important; }
+:root[data-lite] { --hero-halation-filter: initial; --hero-edge-filter: initial; }
+:root[data-lite] h1.studio-wordmark { filter: none !important; }

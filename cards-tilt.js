@@ -2,7 +2,7 @@
 if (matchMedia("(hover: hover) and (prefers-reduced-motion: no-preference)").matches) {
   const cards = ".card, .roadmap-step";
   document.addEventListener("pointermove", (e) => {
-    if (e.pointerType !== "mouse") return;
+    if (e.pointerType !== "mouse" || document.documentElement.hasAttribute("data-lite")) return; // lite mode: no tilt
     const card = e.target.closest?.(cards);
     if (!card) return;
     const r = card.getBoundingClientRect();
