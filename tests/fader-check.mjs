@@ -76,6 +76,20 @@ for (const [label, vp, mobile] of [['desktop', { width: 1280, height: 800 }, fal
     t('phone: fader hides when idle', await page.evaluate(() => +getComputedStyle(document.querySelector('.fader')).opacity) === 0);
     const tab = await page.evaluate(() => { const f = document.querySelector('.fader').getBoundingClientRect(), n = document.querySelector('.nav-links').getBoundingClientRect(); return f.bottom <= n.top + 1; });
     t('phone: fader stays above bottom tab bar', tab);
+    // A thumb landing on the strip (idle, or off the cap) must not jump the page (iPhone "jumps back" bug).
+    await page.evaluate(() => scrollTo({ top: 2000, behavior: 'instant' })); await page.waitForTimeout(100);
+    const strip = await page.evaluate(() => { const f = document.querySelector('.fader').getBoundingClientRect(); return { x: f.x + f.width / 2, y: f.y + 8 }; });
+    const before = await page.evaluate(() => scrollY);
+    await page.touchscreen.tap(strip.x, strip.y); await page.waitForTimeout(150);
+    const after = await page.evaluate(() => scrollY);
+    t('phone: touch on the idle strip does not jump the page', Math.abs(after - before) < 2, `${before} -> ${after}`);
+    t('phone: strip allows native vertical pan', await page.evaluate(() => getComputedStyle(document.querySelector('.fader')).touchAction === 'pan-y'));
+    t('phone: film grain sits under the bars', await page.evaluate(() => {
+      const root = document.documentElement; if (!root.dataset.film) root.dataset.film = 'subtle';
+      return +getComputedStyle(root, '::after').zIndex < 100; }));
+    t('phone: tab bar colour extends below the bar', await page.evaluate(() => {
+      const s = getComputedStyle(document.querySelector('.site-header nav'), '::after');
+      return s.content !== 'none' && s.backgroundColor === getComputedStyle(document.querySelector('.site-header nav')).backgroundColor; }));
   }
   t(`${label}: no page errors`, errors.length === 0, errors.join(';'));
   await ctx.close();
