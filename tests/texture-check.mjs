@@ -170,34 +170,6 @@ const pagePaper = page => page.evaluate(() => { const c = getComputedStyle(docum
   await ctx.close();
 }
 
-// Gradient intensity: full (default) sweeps the whole palette; flat collapses the wordmark gradient to the primary accent.
-{
-  const grad = page => page.evaluate(() => { const c = getComputedStyle(document.querySelector('.logo-mark--hero'));
-    const stops = (c.backgroundImage.match(/(rgba?|color)\([^)]*\)/g) || []).map(v => { const n = v.match(/[\d.]+/g).slice(0, 3).map(Number); return (v.startsWith('color') ? n.map(x => Math.round(x * 255)) : n).join(','); }); return { attr: document.documentElement.dataset.gradient, stops }; });
-  let { ctx, page } = await open('?devtoolbar', {}, 'index.html');
-  const full = await grad(page);
-  check(full.attr === 'full' && full.stops.length === 3 && new Set(full.stops).size === 3, 'default gradient is full: three distinct stops', `(gradient=${full.attr})`);
-  const kinds = await page.locator('[data-gradient-btn]').evaluateAll(bs => bs.map(b => b.dataset.gradientBtn).join(','));
-  check(kinds === 'flat,soft,medium,full,bold', 'Gradient control offers flat, soft, medium, full, bold', `(${kinds})`);
-  await page.locator('[data-gradient-btn="soft"]').evaluate(b => b.click()); await page.waitForTimeout(100);
-  let g = await grad(page);
-  check(g.attr === 'soft' && g.stops[0] === full.stops[0] && g.stops[1] !== full.stops[1] && g.stops[1] !== g.stops[0], 'Soft gradient sits between flat and full');
-  await page.locator('[data-gradient-btn="flat"]').evaluate(b => b.click()); await page.waitForTimeout(100);
-  g = await grad(page);
-  check(g.attr === 'flat' && new Set(g.stops).size === 1, 'Flat gradient is one colour', `(${g.stops.join(' ')})`);
-  const raw = page => page.evaluate(() => getComputedStyle(document.querySelector('.logo-mark--hero')).backgroundImage);
-  await page.locator('[data-gradient-btn="full"]').evaluate(b => b.click()); await page.waitForTimeout(100);
-  const fullRaw = await raw(page);
-  await page.locator('[data-gradient-btn="bold"]').evaluate(b => b.click()); await page.waitForTimeout(100);
-  const boldRaw = await raw(page);
-  check(/oklch/.test(boldRaw) && boldRaw !== fullRaw, 'Bold gradient pushes the far stops past the palette', `(${boldRaw.slice(0, 120)})`);
-  await ctx.close();
-  ({ ctx, page } = await open('?gradient=medium', {}, 'index.html'));
-  g = await grad(page);
-  check(g.attr === 'medium' && new Set(g.stops).size === 3, '?gradient= works', `(gradient=${g.attr})`);
-  await ctx.close();
-}
-
 // Film grain: off by default (no layer); Subtle/Medium add one fixed, click-through, animated layer over the page.
 {
   const film = page => page.evaluate(() => { const c = getComputedStyle(document.documentElement, '::after');
@@ -243,31 +215,6 @@ const pagePaper = page => page.evaluate(() => { const c = getComputedStyle(docum
   ({ ctx, page } = await open('?cursor=soft', { forcedColors: 'active' }, 'index.html'));
   c = await cur(page);
   check(c.body === 'auto', 'forced colors: system cursors', c.body.slice(0, 30));
-  await ctx.close();
-}
-
-// Hero halation: off by default; Soft/Strong put an SVG glow filter (a very soft blur of the wordmark itself, so it
-// keeps the gradient's colours) on the wordmark only; the hero photo gets nothing.
-{
-  const hal = page => page.evaluate(() => ({ attr: document.documentElement.dataset.halation,
-    word: getComputedStyle(document.querySelector('h1.studio-wordmark')).filter,
-    photo: getComputedStyle(document.querySelector('.hero-media')).filter, photoBefore: getComputedStyle(document.querySelector('.hero-media'), '::before').content,
-    defs: ['soft', 'strong'].every(k => document.querySelector('#hero-halation-' + k + ' feGaussianBlur')) }));
-  let { ctx, page } = await open('?devtoolbar', {}, 'index.html');
-  let h = await hal(page);
-  check(h.attr === 'off' && h.word === 'none', 'halation is off by default', JSON.stringify(h));
-  await page.locator('[data-halation-btn="soft"]').evaluate(b => b.click()); await page.waitForTimeout(100);
-  h = await hal(page);
-  check(h.attr === 'soft' && /#hero-halation-soft/.test(h.word) && h.defs, 'Soft: wordmark gets the soft-glow filter', JSON.stringify(h));
-  check(h.photo === 'none' && h.photoBefore === 'none', 'halation never touches the hero photo', JSON.stringify(h));
-  await ctx.close();
-  ({ ctx, page } = await open('?halation=strong', {}, 'index.html'));
-  h = await hal(page);
-  check(h.attr === 'strong' && /#hero-halation-strong/.test(h.word), '?halation= works', JSON.stringify(h));
-  const cdp = await ctx.newCDPSession(page);
-  await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] });
-  h = await hal(page);
-  check(h.word === 'none', 'reduced transparency: no halation', JSON.stringify(h));
   await ctx.close();
 }
 

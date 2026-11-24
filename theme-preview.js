@@ -153,21 +153,6 @@
   };
   let activeSurface = pick(SURFACES, urlParams && urlParams.get('surface'), readStored('alcove_theme_surface'), draftDefaults.surface, SITE_DEFAULTS.surface) || 'metal';
 
-  const GRADIENTS = {
-    flat: 'Flat',
-    soft: 'Soft',
-    medium: 'Medium',
-    full: 'Full',
-    bold: 'Bold'
-  };
-  let activeGradient = pick(GRADIENTS, urlParams && urlParams.get('gradient'), readStored('alcove_theme_gradient'), draftDefaults.gradient, SITE_DEFAULTS.gradient) || 'full';
-
-  const HERO_GRAINS = { off: 'Off', soft: 'Soft', strong: 'Strong' };
-  let activeHeroGrain = pick(HERO_GRAINS, urlParams && urlParams.get('herograin'), readStored('alcove_theme_hero_grain'), draftDefaults.heroGrain, SITE_DEFAULTS.heroGrain) || 'off';
-
-  const HALATIONS = { off: 'Off', soft: 'Soft', strong: 'Strong' };
-  let activeHalation = pick(HALATIONS, urlParams && urlParams.get('halation'), readStored('alcove_theme_halation'), draftDefaults.halation, SITE_DEFAULTS.halation) || 'off';
-
 
   const FILM_GRAINS = { off: 'Off', subtle: 'Subtle', medium: 'Medium', high: 'High' };
   let activeFilm = pick(FILM_GRAINS, urlParams && urlParams.get('film'), readStored('alcove_theme_film'), draftDefaults.filmGrain, SITE_DEFAULTS.filmGrain) || 'off';
@@ -178,11 +163,8 @@
   function applyTheme() {
     const root = document.documentElement;
     root.dataset.surface = activeSurface;
-    root.dataset.gradient = activeGradient;
-    root.dataset.heroGrain = activeHeroGrain;
     root.dataset.film = activeFilm;
     root.dataset.cursorShadow = activeCursor;
-    root.dataset.halation = activeHalation;
     root.dataset.scheme = activePalette.endsWith('-dark') ? 'dark' : 'light';
     const pVars = (PALETTES[activePalette] || PALETTES['seth-olive-orange']).vars;
     const fVars = (FONTS[activeFont] || FONTS['retro-display']).vars;
@@ -200,32 +182,20 @@
     document.querySelectorAll('[data-surface-btn]').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.surfaceBtn === activeSurface ? 'true' : 'false');
     });
-    document.querySelectorAll('[data-hero-grain-btn]').forEach(btn => {
-      btn.setAttribute('aria-pressed', btn.dataset.heroGrainBtn === activeHeroGrain ? 'true' : 'false');
-    });
-    document.querySelectorAll('[data-halation-btn]').forEach(btn => {
-      btn.setAttribute('aria-pressed', btn.dataset.halationBtn === activeHalation ? 'true' : 'false');
-    });
     document.querySelectorAll('[data-film-btn]').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.filmBtn === activeFilm ? 'true' : 'false');
     });
     document.querySelectorAll('[data-cursor-btn]').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.cursorBtn === activeCursor ? 'true' : 'false');
     });
-    document.querySelectorAll('[data-gradient-btn]').forEach(btn => {
-      btn.setAttribute('aria-pressed', btn.dataset.gradientBtn === activeGradient ? 'true' : 'false');
-    });
   }
 
   // Option definitions shared with the admin panel (admin.js), so they are never duplicated there.
-  const BUILTIN = { palette: 'seth-olive-orange', font: 'retro-display', surface: 'metal', gradient: 'full', heroGrain: 'off', halation: 'off', filmGrain: 'off', cursorShadow: 'off' };
+  const BUILTIN = { palette: 'seth-olive-orange', font: 'retro-display', surface: 'metal', filmGrain: 'off', cursorShadow: 'off' };
   const OPTIONS = {
     palette: { label: 'Color palette', values: Object.fromEntries(Object.entries(PALETTES).map(([k, p]) => [k, p.name])) },
     font: { label: 'Typography', values: Object.fromEntries(Object.entries(FONTS).map(([k, f]) => [k, f.name])) },
     surface: { label: 'Surface', values: SURFACES },
-    gradient: { label: 'Gradient', values: GRADIENTS },
-    heroGrain: { label: 'Hero grain', values: HERO_GRAINS },
-    halation: { label: 'Hero halation', values: HALATIONS },
     filmGrain: { label: 'Film grain', values: FILM_GRAINS },
     cursorShadow: { label: 'Cursor shadow', values: CURSOR_SHADOWS }
   };
@@ -233,18 +203,15 @@
     options: OPTIONS,
     // Values every visitor gets today: the saved Site Defaults over the built-in look (no URL, no draft).
     saved: () => Object.fromEntries(Object.keys(OPTIONS).map(k => [k, pick(OPTIONS[k].values, SITE_DEFAULTS[k]) || BUILTIN[k]])),
-    get: () => ({ palette: activePalette, font: activeFont, surface: activeSurface, gradient: activeGradient, heroGrain: activeHeroGrain, halation: activeHalation, filmGrain: activeFilm, cursorShadow: activeCursor }),
+    get: () => ({ palette: activePalette, font: activeFont, surface: activeSurface, filmGrain: activeFilm, cursorShadow: activeCursor }),
     // Live preview only; nothing is stored here.
     set(name, value) {
       if (!OPTIONS[name] || !Object.prototype.hasOwnProperty.call(OPTIONS[name].values, value)) return false;
       if (name === 'palette') activePalette = value;
       else if (name === 'font') activeFont = value;
       else if (name === 'surface') activeSurface = value;
-      else if (name === 'gradient') activeGradient = value;
       else if (name === 'filmGrain') activeFilm = value;
       else if (name === 'cursorShadow') activeCursor = value;
-      else if (name === 'halation') activeHalation = value;
-      else activeHeroGrain = value;
       applyTheme();
       return true;
     }
@@ -260,11 +227,8 @@
     lines.push('}');
     lines.push('');
     lines.push(`/* Surface: set <html data-surface="${activeSurface}"> (metal | metal-subtle; metal is the default) */`);
-    lines.push(`/* Gradient: set <html data-gradient="${activeGradient}"> (flat | soft | medium | full | bold; full is the default) */`);
     lines.push(`/* Film grain: set <html data-film="${activeFilm}"> (off | subtle | medium | high; off is the default) */`);
     lines.push(`/* Cursor shadow: set <html data-cursor-shadow="${activeCursor}"> (off | soft | strong; off is the default) */`);
-    lines.push(`/* Hero grain: set <html data-hero-grain="${activeHeroGrain}"> (off | soft | strong; off is the default) */`);
-    lines.push(`/* Hero halation: set <html data-halation="${activeHalation}"> (off | soft | strong; off is the default) */`);
     lines.push(`/* Scheme: set <html data-scheme="${activePalette.endsWith('-dark') ? 'dark' : 'light'}"> */`);
     return lines.join('\n');
   }
@@ -312,36 +276,6 @@
           <div class="theme-option-grid" role="toolbar" aria-label="Surface">
             ${Object.entries(SURFACES).map(([k, label]) => `
               <button type="button" class="theme-btn" data-surface-btn="${k}" aria-pressed="${k === activeSurface}">
-                <span>${label}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-        <div class="theme-section">
-          <div class="theme-section-title">Gradient</div>
-          <div class="theme-option-grid" role="toolbar" aria-label="Gradient">
-            ${Object.entries(GRADIENTS).map(([k, label]) => `
-              <button type="button" class="theme-btn" data-gradient-btn="${k}" aria-pressed="${k === activeGradient}">
-                <span>${label}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-        <div class="theme-section">
-          <div class="theme-section-title">Hero Grain</div>
-          <div class="theme-option-grid" role="toolbar" aria-label="Hero Grain">
-            ${Object.entries(HERO_GRAINS).map(([k, label]) => `
-              <button type="button" class="theme-btn" data-hero-grain-btn="${k}" aria-pressed="${k === activeHeroGrain}">
-                <span>${label}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-        <div class="theme-section">
-          <div class="theme-section-title">Hero Halation</div>
-          <div class="theme-option-grid" role="toolbar" aria-label="Hero Halation">
-            ${Object.entries(HALATIONS).map(([k, label]) => `
-              <button type="button" class="theme-btn" data-halation-btn="${k}" aria-pressed="${k === activeHalation}">
                 <span>${label}</span>
               </button>
             `).join('')}
@@ -429,26 +363,6 @@
         try { localStorage.setItem('alcove_theme_cursor', activeCursor); } catch (err) { /* ignore */ }
         applyTheme();
         return;
-      }
-      const halBtn = e.target.closest('[data-halation-btn]');
-      if (halBtn) {
-        activeHalation = halBtn.dataset.halationBtn;
-        try { localStorage.setItem('alcove_theme_halation', activeHalation); } catch (err) { /* ignore */ }
-        applyTheme();
-        return;
-      }
-      const hgBtn = e.target.closest('[data-hero-grain-btn]');
-      if (hgBtn) {
-        activeHeroGrain = hgBtn.dataset.heroGrainBtn;
-        try { localStorage.setItem('alcove_theme_hero_grain', activeHeroGrain); } catch (err) { /* ignore */ }
-        applyTheme();
-        return;
-      }
-      const gradBtn = e.target.closest('[data-gradient-btn]');
-      if (gradBtn) {
-        activeGradient = gradBtn.dataset.gradientBtn;
-        try { localStorage.setItem('alcove_theme_gradient', activeGradient); } catch (err) { /* ignore */ }
-        applyTheme();
       }
     });
 

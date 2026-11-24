@@ -72,6 +72,7 @@
     dragOffset = e.target === cap ? e.clientY - capRect.top : capRect.height / 2;
     // Freeze the geometry for the whole drag (the iOS toolbar collapsing changes innerHeight and the rects).
     dragMax = maxScroll(); dragTravel = travel(); dragTop = fader.getBoundingClientRect().top;
+    root.style.scrollBehavior = 'auto'; // the page's smooth scrolling would chase every touch move
     drive(true);
     wake();
     move(e);
@@ -82,7 +83,7 @@
     schedule();
   }
   fader.addEventListener('pointermove', (e) => { if (dragging) move(e); });
-  const end = () => { dragging = false; schedule(); drive(false, 200); wake(); };
+  const end = () => { dragging = false; root.style.scrollBehavior = ''; schedule(); drive(false, 200); wake(); };
   fader.addEventListener('pointerup', end);
   fader.addEventListener('pointercancel', end);
 

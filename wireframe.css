@@ -95,7 +95,7 @@ html {
 }
 
 body {
-  min-block-size: 100dvh;
+  min-block-size: 100svh;
   display: flex;
   flex-direction: column;
   line-height: 1.6;
@@ -243,7 +243,7 @@ p {
   margin-bottom: 0;
 }
 
-/* Full 100dvh viewport on Home page */
+/* Full 100svh viewport on Home page */
 .container:has(.hero-wordmark-viewport) {
   padding-block-start: 0;
 }
@@ -251,7 +251,7 @@ p {
 /* Above-The-Fold Viewport: Studio Wordmark & Subheader */
 .hero-wordmark-viewport {
   position: relative;
-  min-block-size: 100dvh;
+  min-block-size: 100svh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -377,7 +377,7 @@ p {
     .hero-media {
       animation: hero-drift linear both;
       animation-timeline: scroll(root);
-      animation-range: 0 100dvh;
+      animation-range: 0 100svh;
     }
   }
 }
@@ -1002,25 +1002,13 @@ p {
    secondary/tints carry borders, stripes and soft washes.
    ========================================================================== */
 :root {
-  /* Gradient intensity (html[data-gradient], toolbar "Gradient", ?gradient=): how far the wordmark
-     gradient travels from the primary accent. 1 = full palette sweep (default), 0 = one flat colour; Bold goes past it. */
-  --grad-intensity: 1;
+  /* Wordmark gradient travels 65% of the way from the primary accent to the palette's far stops (fixed; the Gradient option was removed). */
+  --grad-intensity: 0.65;
   --grad-mid: color-mix(in srgb, var(--accent-secondary) calc(var(--grad-intensity) * 100%), var(--accent-primary));
   --grad-end: color-mix(in srgb, var(--accent-tertiary) calc(var(--grad-intensity) * 100%), var(--accent-primary));
   --palette-stripe: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary) 60%, var(--tint-1));
 }
 
-:root[data-gradient="flat"] { --grad-intensity: 0; }
-:root[data-gradient="soft"] { --grad-intensity: 0.35; }
-:root[data-gradient="medium"] { --grad-intensity: 0.65; }
-/* Bold: past the palette. Same lightness and hue, 40% more chroma on the two far stops, so the sweep
-   away from the primary accent reads stronger. Browsers without relative colours show Full. */
-@supports (color: oklch(from red l c h)) {
-  :root[data-gradient="bold"] {
-    --grad-mid: oklch(from var(--accent-secondary) l calc(c * 1.4) h);
-    --grad-end: oklch(from var(--accent-tertiary) l calc(c * 1.4) h);
-  }
-}
 
 ::selection { background: var(--tint-1); color: var(--text-main); }
 
@@ -1790,7 +1778,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
   border-radius: 1px;
   background-image: linear-gradient(100deg, var(--accent-primary) 8%, var(--grad-mid) 50%, var(--grad-end) 92%);
   background-attachment: fixed;
-  background-size: min(46rem, 88vw) 100dvh;
+  background-size: min(46rem, 88vw) 100svh;
   background-position: 50% 0;
   background-repeat: no-repeat;
   clip-path: inset(0 50%);
@@ -1810,7 +1798,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
 .hero-wordmark-viewport .scroll-cue {
   background-image: linear-gradient(100deg, var(--accent-primary), var(--grad-mid) 55%, var(--grad-end));
   background-attachment: fixed;
-  background-size: 100vw 100dvh;
+  background-size: 100vw 100svh;
   background-position: 0 0;
   background-repeat: no-repeat;
 }
@@ -1821,7 +1809,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
 .hero-nav .nav-links a,
 .hero-wordmark-viewport .scroll-cue {
   background-image: linear-gradient(100deg, var(--accent-primary) 8%, var(--grad-mid) 50%, var(--grad-end) 92%);
-  background-size: min(46rem, 88vw) 100dvh;
+  background-size: min(46rem, 88vw) 100svh;
   background-position: 50% 0;
 }
 

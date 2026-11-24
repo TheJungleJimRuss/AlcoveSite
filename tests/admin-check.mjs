@@ -174,14 +174,14 @@ for (const p of pages) {
 
 // --- Slice 4: saved text and defaults apply on load with no visible flash -----------------------------------
 const H1 = 'Listen In', H1_NEW = 'Hear What We Made';
-const saved = JSON.stringify({ version: 1, text: { 'work.h1.listen-in': H1_NEW, 'work.h2.recent-recordings': '<b>Fresh</b> takes' }, defaults: { palette: 'seth-sage-coral-dark', gradient: 'flat', heroGrain: 'soft', surface: 'metal-subtle' } });
+const saved = JSON.stringify({ version: 1, text: { 'work.h1.listen-in': H1_NEW, 'work.h2.recent-recordings': '<b>Fresh</b> takes' }, defaults: { palette: 'seth-sage-coral-dark', cursorShadow: 'soft', filmGrain: 'subtle', surface: 'metal-subtle' } });
 // Samples every animation frame from document start; records frames where old text or old defaults were actually visible.
 const flashProbe = () => {
   window.__flash = [];
   const tick = () => {
     const h1 = document.querySelector('h1[data-edit-key]'), b = document.body;
     if (h1 && b && getComputedStyle(b).visibility !== 'hidden' && h1.textContent === 'Listen In') window.__flash.push('text');
-    if (b && document.documentElement.dataset.gradient && document.documentElement.dataset.gradient !== 'flat') window.__flash.push('gradient');
+    if (b && document.documentElement.dataset.cursorShadow && document.documentElement.dataset.cursorShadow !== 'soft') window.__flash.push('cursorShadow');
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
@@ -192,8 +192,8 @@ const flashProbe = () => {
   check('saved text replaces authored heading', (await page.locator('h1').innerText()) === H1_NEW);
   check('saved text is plain text, never markup', (await page.locator('[data-edit-key="work.h2.recent-recordings"]').innerText()) === '<b>Fresh</b> takes' && (await page.locator('[data-edit-key="work.h2.recent-recordings"] b').count()) === 0);
   check('untouched text stays authored', (await page.locator('[data-edit-key="work.h2.a-look-inside"]').innerText()) === 'A Look Inside');
-  const d = await page.evaluate(() => ({ g: document.documentElement.dataset.gradient, t: document.documentElement.dataset.heroGrain, s: document.documentElement.dataset.surface, sc: document.documentElement.dataset.scheme }));
-  check('saved defaults set theme data-attributes', d.g === 'flat' && d.t === 'soft' && d.s === 'metal-subtle' && d.sc === 'dark', JSON.stringify(d));
+  const d = await page.evaluate(() => ({ g: document.documentElement.dataset.cursorShadow, t: document.documentElement.dataset.film, s: document.documentElement.dataset.surface, sc: document.documentElement.dataset.scheme }));
+  check('saved defaults set theme data-attributes', d.g === 'soft' && d.t === 'subtle' && d.s === 'metal-subtle' && d.sc === 'dark', JSON.stringify(d));
   check('page visible after load', (await page.evaluate(() => getComputedStyle(document.body).visibility)) === 'visible');
   check('no flash of authored text or default theme', (await page.evaluate(() => window.__flash)).length === 0, JSON.stringify(await page.evaluate(() => window.__flash)));
   check('saved content raises no console errors', errors.length === 0, errors.join(' | '));
@@ -201,16 +201,16 @@ const flashProbe = () => {
 }
 {
   // The URL still wins over a saved default (preview/testing); visitors have no stored choices.
-  const { ctx, page } = await open('work.html?gradient=full', { override: saved });
-  check('URL param beats saved default', (await page.evaluate(() => document.documentElement.dataset.gradient)) === 'full');
+  const { ctx, page } = await open('work.html?cursor=off', { override: saved });
+  check('URL param beats saved default', (await page.evaluate(() => document.documentElement.dataset.cursorShadow)) === 'off');
   await ctx.close();
 }
 
 // --- Slice 5: missing / malformed / wrong-shape file leaves the site unchanged, silently --------------------
-for (const [label, body] of [['missing', null], ['malformed', '{ not json'], ['empty', ''], ['wrong shape', '{"version":1,"text":[1,2],"defaults":"x"}'], ['unknown version', '{"version":9,"text":{"work.h1.listen-in":"Nope"}}'], ['bad option value', '{"version":1,"text":{},"defaults":{"palette":"nonsense","gradient":7}}']]) {
+for (const [label, body] of [['missing', null], ['malformed', '{ not json'], ['empty', ''], ['wrong shape', '{"version":1,"text":[1,2],"defaults":"x"}'], ['unknown version', '{"version":9,"text":{"work.h1.listen-in":"Nope"}}'], ['bad option value', '{"version":1,"text":{},"defaults":{"palette":"nonsense","cursorShadow":7}}']]) {
   const { ctx, page, errors } = await open('work.html', { override: body });
-  const h = await page.evaluate(() => ({ t: document.querySelector('h1').textContent, g: document.documentElement.dataset.gradient, p: document.documentElement.dataset.scheme }));
-  const ok = h.t === H1 && h.g === 'full' && h.p === 'light' && (await page.evaluate(() => getComputedStyle(document.body).visibility)) === 'visible';
+  const h = await page.evaluate(() => ({ t: document.querySelector('h1').textContent, g: document.documentElement.dataset.cursorShadow, p: document.documentElement.dataset.scheme }));
+  const ok = h.t === H1 && h.g === 'off' && h.p === 'light' && (await page.evaluate(() => getComputedStyle(document.body).visibility)) === 'visible';
   check(`${label} content.json falls back to authored site`, ok, JSON.stringify(h));
   check(`${label} content.json logs no console errors`, errors.filter(e => !/404/.test(e)).length === 0, errors.join(' | '));
   await ctx.close();
@@ -551,7 +551,7 @@ for (const [name, extra, re1, re2] of failCases) {
 
 // --- Ticket 04: Site Defaults panel ---------------------------------------------------------------------------
 const sel = n => `#alcove-admin select[name="${n}"]`;
-const optNames = ['palette', 'font', 'surface', 'gradient', 'heroGrain', 'halation', 'filmGrain', 'cursorShadow'];
+const optNames = ['palette', 'font', 'surface', 'filmGrain', 'cursorShadow'];
 const defaultsDraft = page => page.evaluate(() => { try { return JSON.parse(localStorage.getItem('alcove_admin_draft:defaults')); } catch { return null; } });
 const scheme = page => page.evaluate(() => document.documentElement.dataset.scheme);
 {
@@ -563,19 +563,19 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
     for (const k of Object.keys(o)) { const s = document.querySelector(`#alcove-admin select[name="${k}"]`); out[k] = s ? { got: [...s.options].map(x => x.value), want: Object.keys(o[k].values), value: s.value } : null; }
     return out;
   });
-  check('panel lists exactly the eight toolbar options (palette, font, surface, gradient, hero grain, hero halation, film grain, cursor shadow)', optNames.every(n => lists[n]) && Object.keys(lists).length === 8, JSON.stringify(Object.keys(lists)));
+  check('panel lists exactly the five toolbar options (palette, font, surface, film grain, cursor shadow)', optNames.every(n => lists[n]) && Object.keys(lists).length === 5, JSON.stringify(Object.keys(lists)));
   check('each option offers the toolbar\'s choices (shared definitions)', optNames.every(n => JSON.stringify(lists[n].got) === JSON.stringify(lists[n].want)));
   check('no Tape or Cards option', (await page.locator('#alcove-admin select[name="tape"], #alcove-admin select[name="cards"]').count()) === 0);
-  check('current saved default is selected (palette from the branch file, others built-in)', lists.palette.value === 'seth-sage-coral' && lists.gradient.value === 'full' && lists.surface.value === 'metal' && lists.font.value === 'retro-display' && lists.heroGrain.value === 'off', JSON.stringify(lists));
+  check('current saved default is selected (palette from the branch file, others built-in)', lists.palette.value === 'seth-sage-coral' && lists.cursorShadow.value === 'off' && lists.surface.value === 'metal' && lists.font.value === 'retro-display' && lists.filmGrain.value === 'off', JSON.stringify(lists));
   check('theme toolbar is not shown while unlocked', (await page.locator('#theme-dock').count()) === 0);
   check('no selection yet: Save disabled, Revert to saved disabled', await page.locator(saveBtn).isDisabled() && await page.locator('#alcove-admin .admin-defaults-revert').isDisabled());
   await page.selectOption(sel('palette'), 'seth-olive-orange-dark');
   check('live preview: choosing a dark palette restyles the page at once', (await scheme(page)) === 'dark' && (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg-page').trim().toLowerCase())) === '#1f1a0c');
-  await page.selectOption(sel('gradient'), 'flat');
-  check('live preview: gradient option sets its data attribute', (await page.evaluate(() => document.documentElement.dataset.gradient)) === 'flat');
+  await page.selectOption(sel('cursorShadow'), 'soft');
+  check('live preview: cursor shadow option sets its data attribute', (await page.evaluate(() => document.documentElement.dataset.cursorShadow)) === 'soft');
   check('Save count and button include defaults changes', (await page.textContent(saveBtn)).includes('2 changes') && (await page.textContent('#alcove-admin .admin-toggle')).includes('2'));
-  check('defaults draft is stored under its own key', JSON.stringify((await defaultsDraft(page))?.defaults) === JSON.stringify({ palette: 'seth-olive-orange-dark', gradient: 'flat' }));
-  await page.selectOption(sel('gradient'), 'full');
+  check('defaults draft is stored under its own key', JSON.stringify((await defaultsDraft(page))?.defaults) === JSON.stringify({ palette: 'seth-olive-orange-dark', cursorShadow: 'soft' }));
+  await page.selectOption(sel('cursorShadow'), 'off');
   check('choosing the saved value again drops that change', (await page.textContent(saveBtn)).includes('1 change') && !(await page.textContent(saveBtn)).includes('1 changes'));
   await page.reload();
   await page.waitForSelector('#alcove-admin');
@@ -593,7 +593,7 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   const { ctx, page } = await unlocked('work.html', { gh });
   await editAndOpen(page);
   await page.selectOption(sel('palette'), 'seth-olive-orange-dark');
-  await page.selectOption(sel('heroGrain'), 'strong');
+  await page.selectOption(sel('filmGrain'), 'high');
   check('count adds text and defaults changes', (await page.textContent(saveBtn)).includes('3 changes'), await page.textContent(saveBtn));
   await page.click(saveBtn);
   await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
@@ -601,7 +601,7 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   const body = JSON.parse(put[0].body);
   const file = JSON.parse(Buffer.from(body.content, 'base64').toString('utf8'));
   check('one PUT to the content branch with the sha just read', put.length === 1 && body.branch === 'content' && body.sha === 'sha-branch-1');
-  check('PUT carries defaults under "defaults", changed options only, over the existing ones', JSON.stringify(file.defaults) === JSON.stringify({ palette: 'seth-olive-orange-dark', heroGrain: 'strong' }), JSON.stringify(file.defaults));
+  check('PUT carries defaults under "defaults", changed options only, over the existing ones', JSON.stringify(file.defaults) === JSON.stringify({ palette: 'seth-olive-orange-dark', filmGrain: 'high' }), JSON.stringify(file.defaults));
   check('PUT carries the text edit too', file.text['work.h1.listen-in'] === 'Hello There' && file.text['work.h2.recent-recordings'] === 'Kept from branch');
   check('after save: count 0, defaults draft cleared, preview kept', (await page.textContent('#alcove-admin .admin-toggle')).includes('0') && (await defaultsDraft(page)) === null && (await scheme(page)) === 'dark' && await page.locator('#alcove-admin .admin-defaults-revert').isDisabled());
   await page.selectOption(sel('palette'), 'seth-sage-coral');
@@ -610,12 +610,12 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   await page.reload();
   await page.waitForSelector('#alcove-admin');
   await openPanel(page);
-  check('editor reload applies the saved defaults and shows them selected', (await scheme(page)) === 'dark' && (await page.inputValue(sel('heroGrain'))) === 'strong' && (await page.evaluate(() => document.documentElement.dataset.heroGrain)) === 'strong');
+  check('editor reload applies the saved defaults and shows them selected', (await scheme(page)) === 'dark' && (await page.inputValue(sel('filmGrain'))) === 'high' && (await page.evaluate(() => document.documentElement.dataset.film)) === 'high');
   await ctx.close();
   // A visitor loading the committed file gets the same defaults, applied before first paint, with no toolbar or admin UI.
   const v = await open('work.html', { override: gh.file.text, probe: () => { window.__dark = []; const t = () => { const h = document.documentElement; if (document.body && h.dataset.scheme && h.dataset.scheme !== 'dark') window.__dark.push(h.dataset.scheme); requestAnimationFrame(t); }; requestAnimationFrame(t); } });
   await v.page.waitForTimeout(300);
-  check('visitor: saved defaults applied, never shown the old palette', (await scheme(v.page)) === 'dark' && (await v.page.evaluate(() => document.documentElement.dataset.heroGrain)) === 'strong' && (await v.page.evaluate(() => window.__dark)).length === 0);
+  check('visitor: saved defaults applied, never shown the old palette', (await scheme(v.page)) === 'dark' && (await v.page.evaluate(() => document.documentElement.dataset.film)) === 'high' && (await v.page.evaluate(() => window.__dark)).length === 0);
   check('visitor: still no toolbar or admin panel', (await v.page.locator('#theme-dock, #alcove-admin').count()) === 0);
   await v.ctx.close();
 }
@@ -624,15 +624,15 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   const gh = { file: { ...BRANCH_FILE }, putStatus: 409 };
   const { ctx, page } = await unlocked('work.html', { gh });
   await openPanel(page);
-  await page.selectOption(sel('heroGrain'), 'soft');
+  await page.selectOption(sel('filmGrain'), 'subtle');
   await page.click(saveBtn);
   await page.waitForFunction(s => !/^(Saving…)?$/.test(document.querySelector(s)?.textContent || ''), note);
-  check('conflict keeps the defaults draft and the preview', /changed|conflict/i.test(await page.textContent(note)) && (await defaultsDraft(page))?.defaults?.heroGrain === 'soft' && (await page.evaluate(() => document.documentElement.dataset.heroGrain)) === 'soft');
+  check('conflict keeps the defaults draft and the preview', /changed|conflict/i.test(await page.textContent(note)) && (await defaultsDraft(page))?.defaults?.filmGrain === 'subtle' && (await page.evaluate(() => document.documentElement.dataset.film)) === 'subtle');
   gh.putStatus = 0;
   await page.click(saveBtn);
   await page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
   const f = JSON.parse(Buffer.from(JSON.parse(puts(gh).at(-1).body).content, 'base64').toString('utf8'));
-  check('defaults-only Save writes just the default', f.defaults.heroGrain === 'soft' && f.defaults.palette === 'seth-sage-coral' && Object.keys(f.text).length === 2);
+  check('defaults-only Save writes just the default', f.defaults.filmGrain === 'subtle' && f.defaults.palette === 'seth-sage-coral' && Object.keys(f.text).length === 2);
   await ctx.close();
 }
 {
@@ -648,8 +648,8 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   });
   check('phone: theme toolbar is gone, so it cannot overlap the panel or tab bar', g.dock === 0, JSON.stringify(g));
   check('phone: open panel sits above the tab bar and inside the screen', g.pb <= g.nt + 0.5 && g.pt >= 0 && g.pl >= 0 && g.pr <= g.w && g.sw <= g.w, JSON.stringify(g));
-  check('phone: eight selects, each a 44px tap target', g.n === 8 && g.minSel >= 44, JSON.stringify(g));
-  const last = sel('heroGrain');
+  check('phone: five selects, each a 44px tap target', g.n === 5 && g.minSel >= 44, JSON.stringify(g));
+  const last = sel('cursorShadow');
   await page.locator(last).scrollIntoViewIfNeeded();
   check('phone: last option scrolls into view and is operable', await page.locator(last).isVisible() && (await page.locator(last).boundingBox()).y + 44 <= 780);
   await page.selectOption(last, 'strong');
