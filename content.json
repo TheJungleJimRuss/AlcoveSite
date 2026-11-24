@@ -1,6 +1,14 @@
 {
   "version": 1,
-  "text": {},
+  "text": {
+    "index.p.a-relaxed-little-studio-where-your": "A professional studio that doesn't cost $1000 a day.",
+    "site.nav.work": "Listen",
+    "index.h2.first-time-in-a-studio-here": "First Time in a Studio? Here's how it works:",
+    "index.p.nobody-s-born-knowing-how-this": "Recording in a studio is pretty daunting at first. Don't worry, it's a lot simpler than it looks!",
+    "index.h3.01-start-with-what-you-ve": "01. Start with an idea",
+    "index.h3.02-record-at-your-own-pace": "02. Get it recorded",
+    "index.h3.03-hear-it-finished": "03. Publish it"
+  },
   "defaults": {
     "palette": "seth-olive-orange-dark",
     "gradient": "flat",
@@ -8,6 +16,6 @@
     "cursorShadow": "strong"
   },
   "media": {
-    "index.photo.hero": "images/img-7480-64ab570e.jpg"
+    "index.photo.hero": "images/img-7485-fc2521e4.jpg"
   }
 }
