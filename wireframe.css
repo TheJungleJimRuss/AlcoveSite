@@ -905,6 +905,8 @@ p {
     padding-top: calc(0.5rem + env(safe-area-inset-top, 0px));
     flex-wrap: nowrap;
   }
+  /* Rubber-band area above the header and below the tab bar shows the bar colour, not the page */
+  html { background-color: var(--bg-surface); }
   /* Opaque strip behind the status bar / camera cut-out, fixed to the screen top, so scrolled content never shows there. */
   .site-header::before {
     content: "";
@@ -942,6 +944,16 @@ p {
     background-color: var(--bg-surface);
     border-top: 1px solid var(--border-color);
     padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  }
+  /* Solid bar colour continues below the bar, so iOS 26 Safari's floating toolbar / home-indicator strip never
+     shows page content if the fixed viewport ends above the screen bottom. Off-screen (harmless) elsewhere. */
+  .site-header nav::after {
+    content: "";
+    position: absolute;
+    inset: 100% 0 auto 0;
+    block-size: 6rem;
+    background-color: var(--bg-surface);
+    pointer-events: none;
   }
   .site-header .nav-links {
     justify-content: space-around;
@@ -1130,7 +1142,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
   top: 5.5rem;
   bottom: 1.25rem;
   inline-size: 2.75rem; /* keeps a 44px touch target; visuals are thinner */
-  touch-action: none;
+  touch-action: pan-y; /* a touch on the strip scrolls the page natively; only the cap is draggable by touch */
   cursor: default;
   outline: none;
   user-select: none;
@@ -1138,7 +1150,8 @@ html.has-fader::-webkit-scrollbar { display: none; }
   transition: opacity 0.3s;
 }
 .fader.is-away { opacity: 0; pointer-events: none; }
-.fader.is-idle { opacity: 0; } /* phones only; still grabbable so a touch at the edge wakes it */
+.fader.is-idle { opacity: 0; } /* phones only; a touch here scrolls the page (fader.js ignores it) and wakes it */
+.fader-cap { touch-action: none; }
 .fader[hidden] { display: none; }
 
 /* Faceplate: dark anodised plate with bevel and light tick scales either side of the slot */
@@ -2102,8 +2115,8 @@ html[data-content-pending] body { visibility: hidden; }
 }
 @media (max-width: 640px) {
   .site-header nav {
-    background: color-mix(in srgb, var(--bg-surface) 85%, transparent);
-    backdrop-filter: blur(12px);
+    /* Solid, not frosted: iOS 26 Safari only carries a fixed bar's colour into the home-indicator strip when the bar is opaque */
+    background: var(--bg-surface);
     border-top: 1px solid color-mix(in srgb, var(--text-main) 6%, transparent);
   }
   .site-header .nav-links a { block-size: 34px; }
