@@ -899,7 +899,7 @@ p {
     /* Constant on purpose (2026-11-24): iOS 26 Safari changes env(safe-area-inset-bottom) as its toolbar shrinks
        and regrows mid-scroll. Anything sized from it resized the tab bar and the page (hero/footer padding), and the
        height change above the reader made the scroll position jump. 34px = the largest iPhone portrait inset. */
-    --home-inset: max(34px, env(safe-area-inset-bottom, 0px));
+    --home-inset: 12px; /* user 2026-11-24: 34px sat the tabs too high; the sheet behind the bar covers the rest */
     --bar-h: calc(4.35rem + var(--home-inset));
   }
 
@@ -2154,8 +2154,19 @@ html[data-content-pending] body { visibility: hidden; }
   }
   html:is(*) .site-header::before,
   html:is(*) .site-header .logo-placeholder { display: none; }
-  body { padding-top: env(safe-area-inset-top, 0px); }
+  body:not(:has(.hero-wordmark-viewport)) { padding-top: env(safe-area-inset-top, 0px); }
   .fader { top: calc(1rem + env(safe-area-inset-top, 0px)); }
+
+  /* Home (user 2026-11-24): the hero photo fills the whole screen, edge to edge under Safari's bars (lvh is
+     constant, so nothing resizes while Safari's toolbar animates), and the tab bar stays hidden below the screen
+     until the reader scrolls (index.html adds .site-header--visible after a few px). Keyboard focus brings it up. */
+  .hero-wordmark-viewport { min-block-size: 100lvh; padding-bottom: 2rem; }
+  .hero-wordmark-viewport .scroll-cue { inset-block-end: calc(100lvh - 100svh + 1.5rem); }
+  .site-header--smart nav { transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
+  .site-header--smart:not(.site-header--visible):not(:focus-within) nav { transform: translateY(calc(100% + 12rem)); }
+}
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .site-header--smart nav { transition: none; }
 }
 
 /* ===== Buttons (2026-11-20): same native-app keycap as the nav pills. Secondary = tonal keycap, primary = accent fill. ===== */

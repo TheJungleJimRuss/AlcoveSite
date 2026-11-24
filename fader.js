@@ -1,4 +1,6 @@
 // Console-style scroll fader: mirrors page scroll, draggable, keyboard operable. Without JS the native scrollbar stays.
+// Dev probe for the iPhone scroll jump: ?scrolldebug loads scroll-debug.js (an on-screen log).
+if (/[?&]scrolldebug\b/.test(location.search)) document.head.append(Object.assign(document.createElement('script'), { src: 'scroll-debug.js' }));
 (() => {
   const root = document.documentElement;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
