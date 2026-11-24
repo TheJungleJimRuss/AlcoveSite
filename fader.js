@@ -15,9 +15,9 @@
   document.body.append(fader);
   root.classList.add('has-fader');
 
-  const maxScroll = () => Math.max(0, root.scrollHeight - innerHeight);
+  const maxScroll = () => Math.max(0, root.scrollHeight - root.clientHeight);
   const travel = () => Math.max(1, fader.clientHeight - cap.offsetHeight);
-  let dragging = false, dragOffset = 0, driveTimer, idleTimer;
+  let dragging = false, dragOffset = 0, dragRatio = 0, dragMax = 0, dragTravel = 1, dragTop = 0, driveTimer, idleTimer;
   // Phones: fade the fader out after a short idle; scroll, touch or focus brings it back.
   const phone = matchMedia('(max-width: 640px)');
   function wake() {
@@ -43,9 +43,11 @@
     if (fader.hidden !== (max <= 0)) fader.hidden = max <= 0;
     // Stay on screen everywhere except the initial viewport (hero) of the home page.
     fader.classList.toggle('is-away', !!hero && scrollY < hero.offsetHeight * 0.45);
-    const ratio = max ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+    // While dragging the cap follows the finger, not the scroll position: iOS reports shifting innerHeight and
+    // rubber-band scrollY mid-drag, which made the cap (and page) jump.
+    const ratio = dragging ? dragRatio : max ? Math.min(1, Math.max(0, scrollY / max)) : 0;
     const dpr = devicePixelRatio || 1;
-    const y = Math.round(ratio * travel() * dpr) / dpr;
+    const y = Math.round(ratio * (dragging ? dragTravel : travel()) * dpr) / dpr;
     if (y !== lastY) { lastY = y; cap.style.transform = `translateY(${y}px)`; }
     const pct = Math.round(ratio * 100);
     if (pct !== lastPct) {
@@ -68,17 +70,19 @@
     e.preventDefault(); // no focus ring or text selection from a click
     const capRect = cap.getBoundingClientRect();
     dragOffset = e.target === cap ? e.clientY - capRect.top : capRect.height / 2;
+    // Freeze the geometry for the whole drag (the iOS toolbar collapsing changes innerHeight and the rects).
+    dragMax = maxScroll(); dragTravel = travel(); dragTop = fader.getBoundingClientRect().top;
     drive(true);
     wake();
     move(e);
   });
   function move(e) {
-    const top = fader.getBoundingClientRect().top;
-    const ratio = (e.clientY - top - dragOffset) / travel();
-    scrollToY(Math.min(1, Math.max(0, ratio)) * maxScroll(), false);
+    dragRatio = Math.min(1, Math.max(0, (e.clientY - dragTop - dragOffset) / dragTravel));
+    scrollToY(dragRatio * dragMax, false);
+    schedule();
   }
   fader.addEventListener('pointermove', (e) => { if (dragging) move(e); });
-  const end = () => { dragging = false; drive(false, 200); wake(); };
+  const end = () => { dragging = false; schedule(); drive(false, 200); wake(); };
   fader.addEventListener('pointerup', end);
   fader.addEventListener('pointercancel', end);
 
