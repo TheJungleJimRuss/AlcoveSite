@@ -86,6 +86,7 @@
 }
 
 html {
+  overflow-anchor: none; /* iOS: never shift the scroll position when something above the reader changes height */
   overscroll-behavior-y: none; /* no rubber-band: it pulled the sticky header and tab bar away from the screen edges */
   scrollbar-gutter: stable;
   scroll-behavior: smooth;
@@ -895,7 +896,11 @@ p {
 /* Phone layout: bottom tab bar, slim header, 44px touch targets, safe areas */
 @media (max-width: 640px) {
   :root {
-    --bar-h: calc(4.35rem + env(safe-area-inset-bottom, 0px));
+    /* Constant on purpose (2026-11-24): iOS 26 Safari changes env(safe-area-inset-bottom) as its toolbar shrinks
+       and regrows mid-scroll. Anything sized from it resized the tab bar and the page (hero/footer padding), and the
+       height change above the reader made the scroll position jump. 34px = the largest iPhone portrait inset. */
+    --home-inset: max(34px, env(safe-area-inset-bottom, 0px));
+    --bar-h: calc(4.35rem + var(--home-inset));
   }
 
   /* Header: logo only. Drop view-transition-name/transform so the fixed nav anchors to the viewport. */
@@ -943,15 +948,17 @@ p {
     z-index: 100;
     background-color: var(--bg-surface);
     border-top: 1px solid var(--border-color);
-    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    padding: 0 env(safe-area-inset-right, 0px) var(--home-inset) env(safe-area-inset-left, 0px);
   }
-  /* Solid bar colour continues below the bar, so iOS 26 Safari's floating toolbar / home-indicator strip never
-     shows page content if the fixed viewport ends above the screen bottom. Off-screen (harmless) elsewhere. */
+  /* An oversized sheet of the bar colour hidden behind the bar (z -1 inside the bar's stacking context: above its
+     background, under its tabs) and running 12rem past its bottom. When Safari 26 moves the fixed bar a beat after
+     its toolbar animates, the sheet still covers the gap, so page content never shows under the bar. */
   .site-header nav::after {
     content: "";
     position: absolute;
-    inset: 100% 0 auto 0;
-    block-size: 6rem;
+    inset: 0 0 auto 0;
+    block-size: calc(100% + 12rem);
+    z-index: -1;
     background-color: var(--bg-surface);
     pointer-events: none;
   }
@@ -1424,7 +1431,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
   .site-header nav {
     background: var(--bg-surface);
     border-top: 1px solid var(--border-color);
-    padding: 0.5rem calc(0.75rem + env(safe-area-inset-right, 0px)) calc(0.5rem + env(safe-area-inset-bottom, 0px)) calc(0.75rem + env(safe-area-inset-left, 0px));
+    padding: 0.5rem calc(0.75rem + env(safe-area-inset-right, 0px)) calc(0.5rem + var(--home-inset)) calc(0.75rem + env(safe-area-inset-left, 0px));
   }
   .site-header .nav-links {
     position: relative;
@@ -2130,6 +2137,25 @@ html[data-content-pending] body { visibility: hidden; }
 }
 @media (min-width: 641px) {
   .site-header { padding-block: 0.1rem; }
+}
+
+/* Phones (user 2026-11-24): no top bar and no logo. The header keeps only the fixed bottom tab bar (its nav), so it
+   collapses to nothing; html:is(*) out-ranks the smart-header and textures.css header rules. Content starts below
+   the status bar / camera area. */
+@media (max-width: 640px) {
+  html:is(*) .site-header,
+  html:is(*) .site-header--smart.site-header--visible {
+    position: static;
+    padding: 0;
+    min-block-size: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+  html:is(*) .site-header::before,
+  html:is(*) .site-header .logo-placeholder { display: none; }
+  body { padding-top: env(safe-area-inset-top, 0px); }
+  .fader { top: calc(1rem + env(safe-area-inset-top, 0px)); }
 }
 
 /* ===== Buttons (2026-11-20): same native-app keycap as the nav pills. Secondary = tonal keycap, primary = accent fill. ===== */
