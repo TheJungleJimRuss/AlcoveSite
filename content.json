@@ -3,8 +3,11 @@
   "text": {},
   "defaults": {
     "palette": "seth-olive-orange-dark",
-    "gradient": "medium",
+    "gradient": "flat",
     "filmGrain": "subtle",
     "cursorShadow": "strong"
+  },
+  "media": {
+    "index.photo.hero": "images/img-7480-64ab570e.jpg"
   }
 }
