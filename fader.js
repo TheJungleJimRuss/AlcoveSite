@@ -17,7 +17,7 @@
 
   const maxScroll = () => Math.max(0, root.scrollHeight - root.clientHeight);
   const travel = () => Math.max(1, fader.clientHeight - cap.offsetHeight);
-  let dragging = false, dragOffset = 0, dragRatio = 0, dragMax = 0, dragTravel = 1, dragTop = 0, driveTimer, idleTimer;
+  let dragging = false, dragRatio = 0, dragMax = 0, dragTravel = 1, dragStartY = 0, dragStartRatio = 0, driveTimer, idleTimer;
   // Phones: fade the fader out after a short idle; scroll, touch or focus brings it back.
   const phone = matchMedia('(max-width: 640px)');
   function wake() {
@@ -47,7 +47,7 @@
     // rubber-band scrollY mid-drag, which made the cap (and page) jump.
     const ratio = dragging ? dragRatio : max ? Math.min(1, Math.max(0, scrollY / max)) : 0;
     const dpr = devicePixelRatio || 1;
-    const y = Math.round(ratio * (dragging ? dragTravel : travel()) * dpr) / dpr;
+    const y = Math.round(ratio * travel() * dpr) / dpr;
     if (y !== lastY) { lastY = y; cap.style.transform = `translateY(${y}px)`; }
     const pct = Math.round(ratio * 100);
     if (pct !== lastPct) {
@@ -69,16 +69,21 @@
     fader.setPointerCapture(e.pointerId);
     e.preventDefault(); // no focus ring or text selection from a click
     const capRect = cap.getBoundingClientRect();
-    dragOffset = e.target === cap ? e.clientY - capRect.top : capRect.height / 2;
-    // Freeze the geometry for the whole drag (the iOS toolbar collapsing changes innerHeight and the rects).
-    dragMax = maxScroll(); dragTravel = travel(); dragTop = fader.getBoundingClientRect().top;
+    dragMax = maxScroll(); dragTravel = travel();
+    // A touch on the plate (not the cap) centres the cap under the finger; a touch on the cap grabs it where it is.
+    const ratioNow = dragMax ? Math.min(1, Math.max(0, scrollY / dragMax)) : 0;
+    dragStartRatio = e.target === cap ? ratioNow
+      : Math.min(1, Math.max(0, (e.clientY - fader.getBoundingClientRect().top - capRect.height / 2) / dragTravel));
+    dragStartY = e.screenY;
     root.style.scrollBehavior = 'auto'; // the page's smooth scrolling would chase every touch move
     drive(true);
     wake();
     move(e);
   });
   function move(e) {
-    dragRatio = Math.min(1, Math.max(0, (e.clientY - dragTop - dragOffset) / dragTravel));
+    // Move by how far the finger travelled in SCREEN pixels. clientY is relative to the layout viewport, which shifts
+    // when Safari's toolbars collapse mid-drag; using it made the page and cap flip between two positions.
+    dragRatio = Math.min(1, Math.max(0, dragStartRatio + (e.screenY - dragStartY) / dragTravel));
     scrollToY(dragRatio * dragMax, false);
     schedule();
   }
