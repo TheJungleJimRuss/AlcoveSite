@@ -4,6 +4,7 @@
   "defaults": {
     "palette": "seth-olive-orange-dark",
     "gradient": "medium",
-    "filmGrain": "subtle"
+    "filmGrain": "subtle",
+    "cursorShadow": "strong"
   }
 }
