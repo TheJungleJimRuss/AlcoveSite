@@ -21,7 +21,21 @@
     "index.p.there-s-real-gear-around-to": "The room where it happens. This room can comfortably fit up to 5 musicians, and is where most work gets done. If you're a solo songwriter, or a 4-piece band, this is where the recording happens. When you book a session, you get full access to the great collection of instruments and gear that you need to make a great record. From an original golden-era custom OCDP drum kit, to a genuine Korg MS-20 synthesizer, you don't have to worry about the quality of your instrument- we have everything you'll need. Along with the great collection of instruments, there is also a great collection of gadgets, gizmos, and doohickeys to keep you inspired throughout the whole process. No matter where you look, theres always something to catch your eye and give you an idea for your next lyric. Creativity is something that's hard to control, so having a comfortable space is extremely important for recording.",
     "index.p.it-feels-more-like-a-friend": "This room is mainly used for live bands, choirs, string sections, and horn sections that call for a larger space to record effectively. It comes with great-sounding acoustics, a large floor space, and a Kawai grand piano to ensure that no project is too large to record.",
     "index.h3.a-creative-partner": "The Studio House",
-    "index.p.i-m-here-to-help-you": "Built in the 60's, the home of the Alcove is filled with character and wonder that is hard to find anywhere else."
+    "index.p.i-m-here-to-help-you": "Built in the 60's, the home of the Alcove is filled with character and wonder that is hard to find anywhere else.",
+    "index.h2.what-we-record": "Clients & Photos",
+    "index.p.all-kinds-of-music-all-kinds": "Any type of business is welcome. We've recorded everything from pop musicians, to jazz quartets, and even podcast episodes.",
+    "index.h3.indie-and-alternative": "Gwynneth Teasdale",
+    "index.p.bands-playing-together-in-the-room": "Singer / Songwriter",
+    "index.h3.singer-songwriters-and-acoustic": "Streetlight Syndicate",
+    "index.p.just-you-a-guitar-and-a": "Pop / Rock Band",
+    "index.h3.bedroom-pop-and-electronic": "KENNETH",
+    "index.p.layers-textures-and-weird-little-ideas": "Jazz / Funk Duo",
+    "index.h3.rap-hip-hop-and-vocals": "Sam Rich",
+    "index.p.clear-punchy-vocals-that-sit-right": "Pop / Jazz Vocalist",
+    "index.h2.ready-to-record-your-first-track": "Ready to Record?",
+    "index.a.start-a-conversation": "Book a Session",
+    "index.a.explore-songs-demos-session-photos": "Come Listen!",
+    "index.p.you-don-t-need-any-experience": "Don't feel rushed! When you're ready, go ahead and fill out the form and I'll get back to you ASAP."
   },
   "defaults": {
     "palette": "seth-olive-orange-dark",
@@ -30,6 +44,15 @@
     "cursorShadow": "strong"
   },
   "media": {
-    "index.photo.hero": "images/img-7485-fc2521e4.jpg"
+    "index.photo.hero": "images/img-7485-fc2521e4.jpg",
+    "index.photo.guitars-and-gear-ready-to": "images/img-8914-1990709a.jpg",
+    "index.photo.the-live-room-at-alcove": "images/img-6990-1caab2bf.jpg",
+    "index.photo.the-piano-in-the-studio": "images/img-8917-21149cb9.jpg",
+    "index.photo.instruments-and-amps-set-up": "images/img-7485-fc2521e4.jpg",
+    "index.photo.the-relaxed-acoustic-room-at": "images/img-8915-7c26955d.jpg",
+    "index.photo.the-live-room-set-up": "images/img-7480-64ab570e.jpg",
+    "index.photo.the-piano-in-the-studio-2": "images/img-4520-0bfdd23c.jpg",
+    "index.photo.the-acoustic-room": "images/img-5767-9acb5abb.jpg",
+    "index.photo.microphones-and-gear-set-up": "images/retro-3521fbab-99d6-4cd2-883a-b1b5759ece-fcab9292.jpg"
   }
 }
