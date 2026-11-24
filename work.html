@@ -5,26 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#FDFBF7">
   <title>Work - Alcove Recording</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Shrikhand&display=swap">
-  <link rel="stylesheet" href="wireframe.css">
-  <link rel="stylesheet" href="record-player.css?v=14">
+  <!-- content-loader.js first (perf pass 4): its blocking content.json read then overlaps the stylesheet downloads
+       instead of waiting for them. It needs no CSS; theme-preview.js below still runs after it. -->
+  <script src="content-loader.js"></script>
+  <link rel="stylesheet" href="wireframe.css?v=cd7">
+  <link rel="stylesheet" href="record-player.css?v=16">
   <link rel="stylesheet" href="theme-preview.css">
   <link rel="stylesheet" href="logo.css">
   <link rel="stylesheet" href="textures.css?v=etch1">
-  <script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }</script>
-  <script src="content-loader.js"></script>
   <script src="theme-preview.js"></script>
   <script src="fader.js" defer></script>
   <script src="nav-switch.js" defer></script>
   <script src="ab-compare.js" defer></script>
-  <script type="module" src="cassette-3d.js"></script>
   <script src="record-player.js" defer></script>
   <script src="now-playing.js" defer></script>
   <script src="cards-tilt.js" defer></script>
 </head>
 <body>
+
 
   <!-- Global Header & Navigation -->
   <header class="site-header">
@@ -73,10 +71,6 @@
                 </g>
               </svg>
             </div>
-            <div class="rp-controls">
-              <button type="button" class="rp-play" aria-label="Play" aria-pressed="false" disabled><span class="rp-lamp" aria-hidden="true"></span><span class="rp-play-label" aria-hidden="true">Start<br>Stop</span></button>
-              <p class="rp-status" id="rp-status" role="status" aria-live="polite">Pick a record from the pile.</p>
-            </div>
           </div>
 
           <div class="rp-crate" role="group" aria-label="Crate of records">
@@ -112,6 +106,14 @@
             <p class="visually-hidden" id="rp-crate-status" role="status" aria-live="polite"></p>
           </div>
         </div>
+        <div class="rp-console" role="group" aria-label="Deck controls">
+          <span class="rp-screw" aria-hidden="true"></span><span class="rp-screw" aria-hidden="true"></span><span class="rp-screw" aria-hidden="true"></span><span class="rp-screw" aria-hidden="true"></span>
+          <div class="rp-controls">
+            <button type="button" class="rp-play" aria-label="Play" aria-pressed="false" disabled><span class="rp-lamp" aria-hidden="true"></span><span class="rp-play-label" aria-hidden="true">Start<br>Stop</span></button>
+            <p class="rp-status" id="rp-status" role="status" aria-live="polite">Pick a record from the pile.</p>
+          </div>
+          <div class="rp-bay"><span class="rp-bay-label" aria-hidden="true">Records</span></div>
+        </div>
       </div>
 
       <p class="placeholder-text mt-1" data-edit-key="work.p.from-rough-bedroom-voice-memos-to">From rough bedroom voice memos to finished songs, recorded and mixed right here.</p>
@@ -127,53 +129,28 @@
         <audio data-version="master" data-media-clip="work.ab.master" preload="none" data-src="media/track-3-acoustic.mp3"></audio>
 
         <div class="deck-top">
-          <!-- Canvas slot: the SVG cassette is the no-WebGL / reduced-motion fallback; cassette-3d.js adds a three.js canvas here and sets data-webgl. -->
-          <div class="cassette-stage" id="cassette-stage">
-            <svg class="cassette-svg" id="cassette-svg" viewBox="0 0 480 405" aria-hidden="true" focusable="false">
-              <!-- Fallback for the 3D model: the same top-down player, standalone (no panel). 30 px per cm. -->
-              <defs><filter id="pl-shadow-blur" x="-15%" y="-15%" width="130%" height="130%"><feGaussianBlur stdDeviation="11"/></filter></defs>
-              <rect class="pl-shadow" x="32" y="52" width="432" height="324" rx="16" filter="url(#pl-shadow-blur)"/>
-              <rect class="pl-body" x="24" y="40.5" width="432" height="324" rx="14"/>
-              <rect class="pl-bay" x="81" y="72" width="318" height="234" rx="4"/>
-              <g class="pl-slots"><rect x="39" y="272.5" width="30" height="4" rx="2"/><rect x="39" y="247.0" width="30" height="4" rx="2"/><rect x="39" y="221.5" width="30" height="4" rx="2"/><rect x="39" y="196.0" width="30" height="4" rx="2"/><rect x="39" y="170.5" width="30" height="4" rx="2"/><rect x="39" y="145.0" width="30" height="4" rx="2"/><rect x="39" y="119.5" width="30" height="4" rx="2"/><rect x="39" y="94.0" width="30" height="4" rx="2"/><rect x="39" y="68.5" width="30" height="4" rx="2"/><rect x="411" y="272.5" width="30" height="4" rx="2"/><rect x="411" y="247.0" width="30" height="4" rx="2"/><rect x="411" y="221.5" width="30" height="4" rx="2"/><rect x="411" y="196.0" width="30" height="4" rx="2"/><rect x="411" y="170.5" width="30" height="4" rx="2"/><rect x="411" y="145.0" width="30" height="4" rx="2"/><rect x="411" y="119.5" width="30" height="4" rx="2"/><rect x="411" y="94.0" width="30" height="4" rx="2"/><rect x="411" y="68.5" width="30" height="4" rx="2"/></g>
-              <g transform="translate(85.5 92.4) scale(0.965)">
-              <g class="cassette-face" id="cassette-face">
-                <rect class="cs-shell" x="4" y="4" width="312" height="192" rx="10"/>
-                <rect class="cs-paper" x="22" y="14" width="276" height="92" rx="4"/>
-                <g class="cs-side" data-version="memo">
-                  <rect class="cs-stripe" x="22" y="14" width="276" height="22"/>
-                  <text class="cs-stripe-text" x="32" y="30" font-size="13" font-weight="700">A</text>
-                  <text class="cs-stripe-text" x="160" y="30" font-size="11" text-anchor="middle">VOICE MEMO</text>
-                  <text class="cs-hand" x="34" y="57" font-size="13">my song (phone, bedroom)</text>
-                </g>
-                <g class="cs-side" data-version="master">
-                  <rect class="cs-stripe" x="22" y="14" width="276" height="22"/>
-                  <text class="cs-stripe-text" x="32" y="30" font-size="13" font-weight="700">B</text>
-                  <text class="cs-stripe-text" x="160" y="30" font-size="11" text-anchor="middle">FINISHED MASTER</text>
-                  <text class="cs-hand" x="34" y="57" font-size="13">my song (recorded at Alcove)</text>
-                </g>
-                <line class="cs-rule" x1="32" y1="60" x2="288" y2="60"/><line class="cs-rule" x1="32" y1="76" x2="288" y2="76"/><line class="cs-rule" x1="32" y1="92" x2="288" y2="92"/>
-                <rect class="cs-window" x="80" y="112" width="160" height="62" rx="31"/>
-                <rect class="cs-window-inner" x="94" y="118" width="132" height="50" rx="25"/>
-                <rect class="cs-notch" x="38" y="180" width="244" height="16" rx="3"/>
-                <circle class="cs-pack" id="cs-pack-l" cx="116" cy="143" r="22"/>
-                <circle class="cs-pack" id="cs-pack-r" cx="204" cy="143" r="12"/>
-                <path class="cs-tape" id="cs-tape" d="M0 0"/>
-                <circle class="cs-guide" cx="48" cy="187" r="5"/><circle class="cs-guide" cx="272" cy="187" r="5"/>
-                <g class="cs-reel" id="cs-reel-l"><circle class="cs-hub" cx="116" cy="143" r="12"/><circle class="cs-hole" cx="116" cy="143" r="5"/><rect class="cs-spoke" x="114.5" y="130" width="3" height="8" transform="rotate(0 116 143)"/><rect class="cs-spoke" x="114.5" y="130" width="3" height="8" transform="rotate(60 116 143)"/><rect class="cs-spoke" x="114.5" y="130" width="3" height="8" transform="rotate(120 116 143)"/><rect class="cs-spoke" x="114.5" y="130" width="3" height="8" transform="rotate(180 116 143)"/><rect class="cs-spoke" x="114.5" y="130" width="3" height="8" transform="rotate(240 116 143)"/><rect class="cs-spoke" x="114.5" y="130" width="3" height="8" transform="rotate(300 116 143)"/></g>
-                <g class="cs-reel" id="cs-reel-r"><circle class="cs-hub" cx="204" cy="143" r="12"/><circle class="cs-hole" cx="204" cy="143" r="5"/><rect class="cs-spoke" x="202.5" y="130" width="3" height="8" transform="rotate(0 204 143)"/><rect class="cs-spoke" x="202.5" y="130" width="3" height="8" transform="rotate(60 204 143)"/><rect class="cs-spoke" x="202.5" y="130" width="3" height="8" transform="rotate(120 204 143)"/><rect class="cs-spoke" x="202.5" y="130" width="3" height="8" transform="rotate(180 204 143)"/><rect class="cs-spoke" x="202.5" y="130" width="3" height="8" transform="rotate(240 204 143)"/><rect class="cs-spoke" x="202.5" y="130" width="3" height="8" transform="rotate(300 204 143)"/></g>
-              </g>
-              </g>
-              <rect class="pl-door" x="75" y="64.5" width="330" height="234" rx="4"/>
-              <rect class="pl-glass" x="82.5" y="72" width="315" height="219" rx="2"/>
-              <rect class="pl-latch" x="210" y="305" width="60" height="8" rx="3"/>
-              <g class="pl-keys"><rect class="pl-key-play" x="64.5" y="312" width="81" height="33" rx="5"/><rect class="pl-key-pause" x="154.5" y="312" width="81" height="33" rx="5"/><rect class="pl-key-stop" x="244.5" y="312" width="81" height="33" rx="5"/><rect class="pl-key-flip" x="334.5" y="312" width="81" height="33" rx="5"/></g>
-              <g class="pl-glyph"><path class="pl-glyph-play" d="M97 319 L97 338 L114 328.5 Z"/><rect x="187" y="319" width="6" height="19"/><rect x="197" y="319" width="6" height="19"/><rect x="276" y="319.5" width="18" height="18"/><path d="M375 318 L385 331 L365 331 Z"/><rect x="365" y="335" width="20" height="4"/></g>
-              <circle class="pl-screw" cx="37.5" cy="57" r="6"/><circle class="pl-screw" cx="442.5" cy="57" r="6"/><circle class="pl-screw" cx="37.5" cy="328.5" r="6"/><circle class="pl-screw" cx="442.5" cy="328.5" r="6"/>
-            </svg>
+          <!-- Top-down cassette deck: Blender renders stacked like the record player (assets-src/cassette-player/render_layers.py,
+               positions from images/cassette/layout.json). ab-compare.js turns the reels, sizes the tape packs and opens the door to flip. -->
+          <div class="cassette-stage" id="cassette-stage" aria-hidden="true">
+            <img class="cd-deck" src="images/cassette/deck-1x.webp?v=2" srcset="images/cassette/deck-1x.webp?v=2 1x, images/cassette/deck-2x.webp?v=2 2x" alt="" decoding="async" fetchpriority="low">
+            <div class="cd-cassette">
+              <div class="cd-under">
+                <img class="cd-pack cd-pack-l" src="images/cassette/pack-1x.webp?v=2" srcset="images/cassette/pack-1x.webp?v=2 1x, images/cassette/pack-2x.webp?v=2 2x" alt="" decoding="async" fetchpriority="low">
+                <img class="cd-pack cd-pack-r" src="images/cassette/pack-1x.webp?v=2" srcset="images/cassette/pack-1x.webp?v=2 1x, images/cassette/pack-2x.webp?v=2 2x" alt="" decoding="async" fetchpriority="low">
+                <img class="cd-reel cd-reel-l" src="images/cassette/reel-1x.webp?v=2" srcset="images/cassette/reel-1x.webp?v=2 1x, images/cassette/reel-2x.webp?v=2 2x" alt="" decoding="async" fetchpriority="low">
+                <img class="cd-reel cd-reel-r" src="images/cassette/reel-1x.webp?v=2" srcset="images/cassette/reel-1x.webp?v=2 1x, images/cassette/reel-2x.webp?v=2 2x" alt="" decoding="async" fetchpriority="low">
+              </div>
+              <img class="cd-shell" src="images/cassette/shell-1x.webp?v=2" srcset="images/cassette/shell-1x.webp?v=2 1x, images/cassette/shell-2x.webp?v=2 2x" alt="" decoding="async" fetchpriority="low">
+              <img class="cd-shell cd-shell-b" src="images/cassette/shell-b-1x.webp?v=2" srcset="images/cassette/shell-b-1x.webp?v=2 1x, images/cassette/shell-b-2x.webp?v=2 2x" alt="" decoding="async" fetchpriority="low">
+              <div class="cd-flip" id="cassette-flip"></div>
+              <div class="cd-label">
+                <p class="cs-side" data-version="memo"><span class="cd-stripe"><b>A</b><span class="cd-title">Voice Memo</span></span><span class="cs-hand">my song (phone, bedroom)</span></p>
+                <p class="cs-side" data-version="master"><span class="cd-stripe"><b>B</b><span class="cd-title">Finished Master</span></span><span class="cs-hand">my song (recorded at Alcove)</span></p>
+              </div>
+            </div>
+            <div class="cd-door" id="cassette-door"><img class="cd-door-strip" src="images/cassette/door-sheet-1x.webp?v=2" srcset="images/cassette/door-sheet-1x.webp?v=2 1x, images/cassette/door-sheet-2x.webp?v=2 2x" alt="" decoding="async" fetchpriority="low"></div>
           </div>
-          <!-- The transport keys ARE the keys drawn on the player (3D model or SVG fallback): these transparent buttons sit over them
-               (cassette-3d.js re-projects them from the model), so keyboard, screen readers and touch all work with or without WebGL. -->
+          <!-- The transport keys ARE the keys in the deck image: these transparent buttons sit over them, so keyboard, screen readers and touch all work. -->
           <div class="deck-keys">
             <button type="button" class="deck-key" id="ab-key-play" data-key="play" aria-pressed="false" aria-label="Play"></button>
             <button type="button" class="deck-key" id="ab-key-pause" data-key="pause" aria-label="Pause"></button>
@@ -182,7 +159,8 @@
           </div>
         </div>
 
-        <div class="deck-readout">
+        <div class="deck-readout" role="group" aria-label="Deck readout">
+          <span class="rp-screw" aria-hidden="true"></span><span class="rp-screw" aria-hidden="true"></span><span class="rp-screw" aria-hidden="true"></span><span class="rp-screw" aria-hidden="true"></span>
           <p class="deck-label" aria-live="polite">Voice Memo</p>
           <p class="side-lamps">
             <span class="side-lamp" data-version="memo"><span class="side-lamp-side" aria-hidden="true">A</span> <span data-edit-key="work.ab.label-memo">Memo</span></span>
@@ -194,20 +172,6 @@
         <p class="ab-hint" data-edit-key="work.p.slide-the-switch-while-it-plays">Flip the tape while it plays. The song keeps its place.</p>
       </div>
 
-      <div class="jcard">
-        <table class="ab-specs">
-          <caption class="visually-hidden">What changed between the voice memo and the master</caption>
-          <thead>
-            <tr><td></td><th scope="col" data-version="memo" data-edit-key="work.ab.col-memo">Voice Memo</th><th scope="col" data-version="master" id="ab-master-name" data-edit-key="work.ab.col-master">Finished Master</th></tr>
-          </thead>
-          <tbody>
-            <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.mic.name">Mic</span></th><td data-version="memo" data-edit-key="work.ab.mic.memo">Phone mic</td><td data-version="master" data-edit-key="work.ab.mic.master">Studio mics</td></tr>
-            <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.room.name">Room</span></th><td data-version="memo" data-edit-key="work.ab.room.memo">Bedroom, some room noise</td><td data-version="master" data-edit-key="work.ab.room.master">Live room</td></tr>
-            <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.takes.name">Takes</span></th><td data-version="memo" data-edit-key="work.ab.takes.memo">One take</td><td data-version="master" data-edit-key="work.ab.takes.master">Layered takes and harmonies</td></tr>
-            <tr><th scope="row"><span class="ab-strip" data-edit-key="work.ab.mix.name">Mix</span></th><td data-version="memo" data-edit-key="work.ab.mix.memo">None</td><td data-version="master" data-edit-key="work.ab.mix.master">Mixed and finished</td></tr>
-          </tbody>
-        </table>
-      </div>
     </section>
 
     <!-- Section: Studio Video (placeholder) -->

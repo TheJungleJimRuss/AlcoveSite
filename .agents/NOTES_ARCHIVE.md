@@ -1,5 +1,11 @@
+## 2026-11-20 Cassette deck realism pass
+See PROJECT_NOTES Status: refine_deck.py, HDRI lighting, LED removed, door handle moved, window pane hidden at render.
+
 # Alcove Recording — notes archive
 History moved out of PROJECT_NOTES.md. Newest first. Read only when past context is needed.
+
+## 2026-11-18 — Cassette deck: three.js -> Blender image layers
+Old (2026-11-16..18): Blender GLB cassette in three.js 0.187 (vendored, lazy near the viewport), SVG twin `#cassette-svg` for `?nogl`/no WebGL/reduced motion/forced colors/Lite, flip = cassette rolls over, label textures drawn on 2D canvases, debug hook `__cassette3d`, perf rules for `placeKeys` and label redraws. All removed; see ADR 0007 amendment 2026-11-18.
 
 ## 2026-11-16 — Cassette A/B deck done (tickets 01-06)
 Replaced the slide-switch memo/master deck with a Blender GLB cassette in three.js (vendored 0.187, ~420 KB gzip, Work only) plus SVG fallback, HTML keys, VU needles (shared AudioContext wrapper), J-card table. Spike and prototype kept in `.agents/issues/cassette-ab/`. Ticket 06 pass: all tests green when run one at a time (texture-check has 3 unrelated failures); 3D skipped under forced colors (black slab); dead `.player-scrubber-wireframe`/`.scrubber-*` CSS removed. Old deck detail (`.ab-slide*`, `.deck-reels`, `.transport*`, glossy `.audio-widget` faceplate) was removed in ticket 02.

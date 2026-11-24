@@ -5,14 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#FDFBF7">
   <title>Contact - Alcove Recording</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Shrikhand&display=swap">
+  <!-- content-loader.js first (perf pass 4): its blocking content.json read then overlaps the stylesheet downloads
+       instead of waiting for them. It needs no CSS; theme-preview.js below still runs after it. -->
+  <script src="content-loader.js"></script>
   <link rel="stylesheet" href="wireframe.css">
   <link rel="stylesheet" href="theme-preview.css">
   <link rel="stylesheet" href="logo.css">
-  <link rel="stylesheet" href="textures.css?v=etch1">
-  <script src="content-loader.js"></script>
+  <link rel="stylesheet" href="textures.css?v=fp11">
   <script src="theme-preview.js"></script>
   <script src="fader.js" defer></script>
   <script src="nav-switch.js" defer></script>
@@ -21,6 +20,7 @@
   <script src="booking-form.js" defer></script>
 </head>
 <body>
+
 
   <!-- Global Header & Navigation -->
   <header class="site-header">
@@ -53,7 +53,9 @@
       </noscript>
 
       <!-- Hidden until booking-form.js runs, so nothing can post without JavaScript. The endpoint URL lives in the action; see docs/booking-setup.md. -->
-      <form id="booking-form" action="https://script.google.com/macros/s/AKfycby3birL6gLMHPlvJw5nhwxl7bplL1DvlfIRYqd99vjwe4sVU_-yj9g15xwVoVnjBOLqjQ/exec" method="post" class="mt-15" hidden>
+      <form id="booking-form" action="https://script.google.com/macros/s/AKfycby3birL6gLMHPlvJw5nhwxl7bplL1DvlfIRYqd99vjwe4sVU_-yj9g15xwVoVnjBOLqjQ/exec" method="post" class="faceplate mt-15" hidden>
+        <i class="fp-screw" aria-hidden="true"></i><i class="fp-screw" aria-hidden="true"></i><i class="fp-screw" aria-hidden="true"></i><i class="fp-screw" aria-hidden="true"></i>
+        <p class="fp-title" aria-hidden="true">Inquiry</p>
         <div class="visually-hidden" aria-hidden="true">
           <label for="website-field">Leave this field empty</label>
           <input type="text" id="website-field" name="website" tabindex="-1" autocomplete="off">
@@ -62,53 +64,43 @@
           <div class="field-group">
             <label for="contact-name">Your Name</label>
             <span id="contact-name-hint" class="hint">Who's filling this out?</span>
-            <input type="text" id="contact-name" name="contactName" required autocomplete="name" aria-describedby="contact-name-hint" data-error="contact-name-error">
+            <span class="slot"><input type="text" id="contact-name" name="contactName" required autocomplete="name" aria-describedby="contact-name-hint" data-error="contact-name-error"><i class="led" aria-hidden="true"></i></span>
             <div id="contact-name-error" class="error-msg">Enter your name.</div>
           </div>
 
           <div class="field-group">
             <label for="artist-name">Artist or Band Name <span class="hint">(optional)</span></label>
             <span id="name-hint" class="hint">Leave blank if it's just you.</span>
-            <input type="text" id="artist-name" name="artistName" autocomplete="off" aria-describedby="name-hint">
+            <span class="slot"><input type="text" id="artist-name" name="artistName" autocomplete="off" placeholder=" " aria-describedby="name-hint"><i class="led" aria-hidden="true"></i></span>
           </div>
 
           <div class="field-group">
             <label for="artist-email">Email Address</label>
             <span id="email-hint" class="hint">Format: you@example.com</span>
-            <input type="email" id="artist-email" name="artistEmail" required autocomplete="email" autocapitalize="none" spellcheck="false" aria-describedby="email-hint" data-error="email-error">
+            <span class="slot"><input type="email" id="artist-email" name="artistEmail" required autocomplete="email" autocapitalize="none" spellcheck="false" aria-describedby="email-hint" data-error="email-error"><i class="led" aria-hidden="true"></i></span>
             <div id="email-error" class="error-msg">Enter an email address in the format you@example.com.</div>
           </div>
 
           <div class="field-group">
             <label for="artist-phone">Phone Number</label>
             <span id="phone-hint" class="hint">So Seth can text you. US numbers only.</span>
-            <input type="tel" id="artist-phone" name="artistPhone" required autocomplete="tel" inputmode="tel" aria-describedby="phone-hint" data-error="phone-error">
+            <span class="slot"><input type="tel" id="artist-phone" name="artistPhone" required autocomplete="tel" inputmode="tel" aria-describedby="phone-hint" data-error="phone-error"><i class="led" aria-hidden="true"></i></span>
             <div id="phone-error" class="error-msg">Enter a US phone number with 10 digits, like (555) 123-4567.</div>
           </div>
 
-          <div class="field-group">
-            <label for="exp-level">Experience Level</label>
+          <fieldset class="field-group fp-group" aria-describedby="exp-hint">
+            <legend>Experience Level</legend>
             <span id="exp-hint" class="hint">Have you recorded in a studio before?</span>
-            <select id="exp-level" name="experienceLevel" required aria-describedby="exp-hint" data-error="exp-error">
-              <option value="">Select experience level</option>
-              <option value="first-time">First time in a real studio</option>
-              <option value="home-recorders">Recorded at home / bedroom before</option>
-              <option value="experienced">Have recorded in studios before</option>
-            </select>
+            <div class="fp-row"><div class="push-keys"><label class="fp-opt"><input type="radio" name="experienceLevel" value="first-time" required data-error="exp-error"><span class="fp-opt-text">First time in a real studio</span></label><label class="fp-opt"><input type="radio" name="experienceLevel" value="home-recorders" required data-error="exp-error"><span class="fp-opt-text">Recorded at home&nbsp;/ bedroom before</span></label><label class="fp-opt"><input type="radio" name="experienceLevel" value="experienced" required data-error="exp-error"><span class="fp-opt-text">Have recorded in studios before</span></label></div><i class="led" aria-hidden="true"></i></div>
             <div id="exp-error" class="error-msg">Choose the option that fits you best.</div>
-          </div>
+          </fieldset>
 
-          <div class="field-group">
-            <label for="session-type">Session Type</label>
+          <fieldset class="field-group fp-group" aria-describedby="session-hint">
+            <legend>Session Type</legend>
             <span id="session-hint" class="hint">What are you looking to book?</span>
-            <select id="session-type" name="sessionType" required aria-describedby="session-hint" data-error="session-error">
-              <option value="">Choose a session type</option>
-              <option>Recording / Tracking</option>
-              <option>Songwriting</option>
-              <option>Production / Mixing / Mastering</option>
-            </select>
+            <div class="fp-row"><div class="push-keys"><label class="fp-opt"><input type="radio" name="sessionType" value="Recording / Tracking" required data-error="session-error"><span class="fp-opt-text">Recording&nbsp;/ Tracking</span></label><label class="fp-opt"><input type="radio" name="sessionType" value="Songwriting" required data-error="session-error"><span class="fp-opt-text">Songwriting</span></label><label class="fp-opt"><input type="radio" name="sessionType" value="Production / Mixing / Mastering" required data-error="session-error"><span class="fp-opt-text">Production&nbsp;/ Mixing&nbsp;/ Mastering</span></label></div><i class="led" aria-hidden="true"></i></div>
             <div id="session-error" class="error-msg">Choose a session type.</div>
-          </div>
+          </fieldset>
         </div>
 
         <div class="field-group demo-field mt-15" role="group" aria-labelledby="demo-label">
@@ -127,11 +119,11 @@
         <div class="field-group mt-15">
           <label for="anything-else">Anything else? (Optional)</label>
           <span id="else-hint" class="hint">Songs, questions, instruments, anything you'd like Seth to know.</span>
-          <textarea id="anything-else" name="anythingElse" rows="4" aria-describedby="else-hint"></textarea>
+          <span class="slot"><textarea id="anything-else" name="anythingElse" rows="4" placeholder=" " aria-describedby="else-hint"></textarea><i class="led" aria-hidden="true"></i></span>
         </div>
 
         <div class="button-group mt-15">
-          <button type="submit" class="btn-placeholder btn-primary">Send Message to Seth</button>
+          <button type="submit" class="btn-placeholder btn-primary send-key">Send Message to Seth</button>
         </div>
         <p id="booking-status" class="form-status" role="status" tabindex="-1"></p>
       </form>

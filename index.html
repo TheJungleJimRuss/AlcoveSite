@@ -5,14 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#FDFBF7">
   <title>Home - Alcove Recording</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Shrikhand&display=swap">
+  <!-- content-loader.js first (perf pass 4): its blocking content.json read then overlaps the stylesheet downloads
+       instead of waiting for them. It needs no CSS; theme-preview.js below still runs after it. -->
+  <script src="content-loader.js"></script>
   <link rel="stylesheet" href="wireframe.css">
   <link rel="stylesheet" href="theme-preview.css">
   <link rel="stylesheet" href="logo.css">
   <link rel="stylesheet" href="textures.css?v=etch1">
-  <script src="content-loader.js"></script>
   <script src="theme-preview.js"></script>
   <script src="fader.js" defer></script>
   <script src="nav-switch.js" defer></script>
@@ -20,6 +19,7 @@
   <script src="cards-tilt.js" defer></script>
 </head>
 <body>
+
 
   <!-- Global Header & Navigation (Smart Reveal on Scroll) -->
   <header class="site-header site-header--smart">
@@ -52,19 +52,6 @@
           <feComponentTransfer in="wide" result="glow"><feFuncA type="linear" slope="0.85"/></feComponentTransfer>
           <feGaussianBlur in="SourceGraphic" stdDeviation="0.8" result="soft"/>
           <feMerge><feMergeNode in="glow"/><feMergeNode in="soft"/></feMerge>
-        </filter>
-        <!-- Hero edge roughness (textures.css): fractal noise nudges the wordmark's edges, like ink on rough stock -->
-        <filter id="hero-edge-subtle" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
-          <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="3" seed="7" result="noise"/>
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
-        </filter>
-        <filter id="hero-edge-medium" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
-          <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="3" seed="7" result="noise"/>
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/>
-        </filter>
-        <filter id="hero-edge-rough" x="-5%" y="-10%" width="110%" height="120%" color-interpolation-filters="sRGB">
-          <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="3" seed="7" result="noise"/>
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="9" xChannelSelector="R" yChannelSelector="G"/>
         </filter>
       </svg>
       <h1 class="studio-wordmark"><span class="logo-mark logo-mark--hero" role="img" aria-label="Alcove Recording"></span></h1>
@@ -202,7 +189,8 @@
       const header = document.querySelector('.site-header--smart');
       const hero = document.querySelector('.hero-wordmark-viewport');
       const heroMedia = hero ? hero.querySelector('.hero-media') : null;
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        || window.matchMedia('(max-width: 640px), (hover: none)').matches; // phones: no parallax
       const cssParallax = window.CSS && CSS.supports('animation-timeline: scroll()');
       if (!header || !hero) return;
 

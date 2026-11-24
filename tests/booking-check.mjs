@@ -96,9 +96,9 @@ const fill = async page => {
   await page.fill('#contact-name', 'Sam Rivera');
   await page.fill('#artist-name', 'The Test Band');
   await page.fill('#artist-email', 'band@example.com');
-  await page.selectOption('#exp-level', 'first-time');
+  await page.locator('.push-keys .fp-opt-text', { hasText: 'First time' }).click();
   await page.fill('#artist-phone', '+1 (555) 123-4567');
-  await page.selectOption('#session-type', 'Songwriting');
+  await page.locator('.push-keys .fp-opt-text', { hasText: 'Songwriting' }).click();
   await page.fill('#anything-else', 'Two songs, acoustic.');
 };
 const statusText = page => page.locator('#booking-status').textContent();
@@ -117,6 +117,38 @@ const btn = page => page.locator('#booking-form button[type="submit"]');
   check('invalid field links its error via aria-describedby/aria-invalid', linked);
   check('empty submit sends nothing', requests.length === 0);
   check('no Demo shows a worded, visible error', (await demoErr(page)).includes('Add at least one Demo') && await page.locator('#demo-error').isVisible());
+  await ctx.close();
+}
+
+// 1a. Push keys (Session Type and Experience Level): error only after interaction, mouse and keyboard choose, LEDs
+{
+  const { ctx, page } = await open();
+  const vis = id => page.locator(id).isVisible();
+  check('pristine: no group errors, LEDs dark', !(await vis('#exp-error')) && !(await vis('#session-error')));
+  const ledPristine = await page.locator('.fp-group .led').first().evaluate(el => getComputedStyle(el).backgroundColor);
+  const radios = n => page.locator(`input[name="${n}"]`);
+  check('radios are required and focusable', (await radios('sessionType').count()) === 3 && await radios('sessionType').first().evaluate(el => el.required && el.type === 'radio'));
+  const box = await page.locator('.push-keys .fp-opt').first().boundingBox();
+  check('push key tap target >= 44px', box.height >= 44, String(box.height));
+  const val = n => page.evaluate(n => new FormData(document.getElementById('booking-form')).get(n), n);
+  // mouse
+  await page.locator('.push-keys .fp-opt-text', { hasText: 'Production' }).click();
+  check('mouse: push key sets sessionType', (await val('sessionType')) === 'Production / Mixing / Mastering');
+  await page.locator('.push-keys .fp-opt-text', { hasText: 'Recorded at home' }).click();
+  check('mouse: slide switch label sets experienceLevel', (await val('experienceLevel')) === 'home-recorders');
+  check('experience key lights (pressed)', await page.locator('.push-keys .fp-opt:has(input[value="home-recorders"]:checked)').count() === 1);
+  // keyboard
+  await radios('sessionType').nth(2).focus();
+  await page.keyboard.press('ArrowUp');
+  check('keyboard: arrow moves push key', (await val('sessionType')) === 'Songwriting');
+  await radios('experienceLevel').nth(1).focus();
+  await page.keyboard.press('ArrowRight');
+  check('keyboard: arrow moves slide switch', (await val('experienceLevel')) === 'experienced');
+  await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft');
+  check('keyboard: arrow back to first', (await val('experienceLevel')) === 'first-time');
+  check('groups are valid, errors hidden', !(await vis('#exp-error')) && !(await vis('#session-error')));
+  const ledOn = await page.locator('.fp-group .led').first().evaluate(el => getComputedStyle(el).backgroundColor);
+  check('LED lit when valid', ledOn !== ledPristine, ledOn);
   await ctx.close();
 }
 
@@ -225,6 +257,35 @@ const btn = page => page.locator('#booking-form button[type="submit"]');
   release();
   await page.locator('#booking-status[data-state="success"]').waitFor();
   check('status focused after send', await page.evaluate(() => document.activeElement.id === 'booking-status'));
+  await ctx.close();
+}
+
+// 2c. tactile Demo slot and Send key (ticket 03)
+{
+  let release;
+  const gate = new Promise(r => { release = r; });
+  const { ctx, page } = await open({ drive: async (route, rec) => { await gate; return 'default'; } });
+  const lit = () => page.locator('#demo-drop').evaluate(el => getComputedStyle(el).boxShadow);
+  const before = await lit();
+  await page.evaluate(() => document.getElementById('demo-drop').dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true })));
+  check('drag-over lights the slot', (await page.locator('#demo-drop.is-dragover').count()) === 1 && (await lit()) !== before);
+  await page.evaluate(() => document.getElementById('demo-drop').dispatchEvent(new DragEvent('dragleave', { bubbles: true, cancelable: true })));
+  check('drag-leave unlights the slot', (await page.locator('#demo-drop.is-dragover').count()) === 0);
+  check('Browse Files tap target >= 44px', (await page.locator('#demo-browse').boundingBox()).height >= 44);
+  await fill(page);
+  await attach(page, [memo()]);
+  check('attached Demo shows as a label strip', (await page.locator('#demo-list li').count()) === 1 && (await page.locator('#demo-list li').evaluate(el => getComputedStyle(el).borderTopWidth)) === '1px');
+  await page.locator('.demo-remove').click();
+  check('Demo removed from the strip list', (await page.locator('#demo-list li').count()) === 0);
+  await attach(page, [memo()]);
+  check('Send idle: not busy, enabled', (await btn(page).getAttribute('aria-busy')) !== 'true' && await btn(page).isEnabled());
+  await btn(page).click();
+  await page.waitForFunction(() => document.getElementById('booking-status').textContent.includes('Uploading'));
+  check('progress bar visible with a lit bar while uploading', await page.locator('#demo-progress').isVisible() && (await page.locator('#demo-progress').boundingBox()).height >= 6);
+  check('Send disabled and lamp lit (aria-busy) while sending', (await btn(page).isDisabled()) && (await btn(page).getAttribute('aria-busy')) === 'true');
+  release();
+  await page.locator('#booking-status[data-state="success"]').waitFor();
+  check('Send key resets after sending', (await btn(page).isEnabled()) && (await btn(page).getAttribute('aria-busy')) === 'false');
   await ctx.close();
 }
 

@@ -3,7 +3,9 @@
 // Both clips are fetched whole into memory (blob URLs) so seeking works in every browser,
 // even on hosts that ignore HTTP Range requests (Safari restarts at 0:00 there otherwise).
 //
-// Events (all bubble from section.ab-compare), for the 3D player (cassette-3d.js):
+// The deck is stacked Blender renders (images/cassette/): this file turns the reels, sizes the tape packs and swings the
+// door open to flip the tape, all through compositor-only properties (rotate, scale, translate). The door is a strip of Blender frames.
+// Events (all bubble from section.ab-compare), for anything that wants to follow the deck:
 //   ab:state       after every state change and each animation frame while playing
 //                  detail {version, playing, flipping, progress 0-1, time, duration, reel (deg), audio}
 //   ab:flip-start  detail {from, to, outMs, inMs}   (the version swaps after outMs)
@@ -16,29 +18,37 @@
   const tracks = {};
   root.querySelectorAll('audio[data-version]').forEach(a => { tracks[a.dataset.version] = a; });
   const fallback = { memo: 'Voice Memo', master: 'Finished Master' };
-  // Names come from the table's column headers so an edited wording shows up on the deck too.
-  const names = new Proxy(fallback, { get: (t, v) => (section.querySelector(`th[data-version="${v}"]`)?.textContent.trim()) || t[v] });
+  const names = fallback;
   const $ = id => document.getElementById(id);
   const keyPlay = $('ab-key-play'), keyPause = $('ab-key-pause'), keyStop = $('ab-key-stop'), keyFlip = $('ab-key-flip');
   const timeEl = $('ab-time'), durEl = $('ab-dur');
   const label = root.querySelector('.deck-label');
-  const face = $('cassette-face');
-  const reelL = $('cs-reel-l'), reelR = $('cs-reel-r'), packL = $('cs-pack-l'), packR = $('cs-pack-r');
-  // SVG fallback tape: from each pack's tangent to its guide post and across the bottom edge (same maths as cassette-3d.js)
-  const tapePath = $('cs-tape');
-  function drawTape(rL, rR) {
-    if (!tapePath) return;
-    const end = (sx, cx, rp) => {
-      const cy = 143, gx = sx < 0 ? 48 : 272, gy = 187, g = 5, dx = gx - cx, dy = gy - cy, L = Math.hypot(dx, dy);
-      const ux = dx / L, uy = dy / L, sn = (rp - g) / L, cs = Math.sqrt(1 - sn * sn);
-      const nx = sx * uy * cs + ux * sn, ny = -sx * ux * cs + uy * sn;
-      return [[cx + nx * rp, cy + ny * rp], [gx + nx * g, gy + ny * g]];
-    };
-    const l = end(-1, 116, rL), r = end(1, 204, rR);
-    tapePath.setAttribute('d', `M${l[0][0].toFixed(1)} ${l[0][1].toFixed(1)}L${l[1][0].toFixed(1)} ${l[1][1].toFixed(1)}L${r[1][0].toFixed(1)} ${r[1][1].toFixed(1)}L${r[0][0].toFixed(1)} ${r[0][1].toFixed(1)}`);
-  }
+  const stage = $('cassette-stage'), door = $('cassette-door')?.querySelector('.cd-door-strip');
+  const reels = root.querySelectorAll('.cd-reel'), packL = root.querySelector('.cd-pack-l'), packR = root.querySelector('.cd-pack-r');
+  const titles = root.querySelectorAll('.cs-side[data-version] .cd-title');
   const reduceMq = matchMedia('(prefers-reduced-motion: reduce)');
-  const OUT_MS = 700, IN_MS = 700; // eject-lift-flip-insert: the door opens, the tape turns over, drops back in
+  const OUT_MS = 380, IN_MS = 380; // the door swings up, the tape turns over while it is open, the door closes
+  const TURN_MS = 640; // the cassette lifts out, turns over (edge-on at the middle) and drops back in while the door is open
+  const cassette = root.querySelector('.cd-cassette'), under = root.querySelector('.cd-under'), labelEl = root.querySelector('.cd-label');
+  const FLIP_FRAMES = 15; // frames in images/cassette/flip-sheet-*.webp: the shell lifting, turning 180 degrees and settling (Blender)
+  const flipBox = $('cassette-flip');
+  let flipStrip = null;
+  const DOOR_FRAMES = 10; // frames in images/cassette/door-sheet-*.webp, shut first
+
+  // Decode the door strip once the page is idle so the first flip does not decode/raster it on demand.
+  const warmDoor = () => { door?.decode?.().catch(() => {}); };
+  if (door) (window.requestIdleCallback || setTimeout)(() => { if (door.complete) warmDoor(); else door.addEventListener('load', warmDoor, { once: true }); }, { timeout: 3000 });
+
+  // The turning-tape strip (~100-300 KB) loads after the page is idle, never with Save-Data; until it is ready the flip uses the squash below.
+  const conn = navigator.connection;
+  if (flipBox && !conn?.saveData && !/2g/.test(conn?.effectiveType || '')) (window.requestIdleCallback || setTimeout)(() => {
+    if (document.documentElement.hasAttribute('data-lite')) return; // Lite mode (low memory / slow): the 2x sheet decodes to ~29 MB, keep the squash
+    const img = new Image();
+    img.className = 'cd-flip-strip'; img.alt = ''; img.decoding = 'async';
+    img.srcset = 'images/cassette/flip-sheet-1x.webp?v=2 1x, images/cassette/flip-sheet-2x.webp?v=2 2x';
+    img.src = 'images/cassette/flip-sheet-1x.webp?v=2';
+    img.decode().then(() => { flipBox.append(img); flipStrip = img; }).catch(() => {});
+  }, { timeout: 5000 });
 
   let version = 'memo';
   let active = tracks[version];
@@ -93,30 +103,27 @@
     };
   }
 
-  // sync() runs every frame while playing: write only what changed, and leave the SVG cassette alone while the 3D one
-  // covers it (it is only visibility-hidden, so its per-frame reel/tape edits cost a style + layout pass every frame).
-  const stage = $('cassette-stage');
+  // sync() runs every frame while playing: write only what changed. The reels and packs take `rotate` / `scale`,
+  // which skip layout and paint.
   const setText = (el, t) => { if (el && el.textContent !== t) el.textContent = t; };
+  let shownReel = null, shownProg = null;
   function sync() {
     const s = state();
     keyPlay.setAttribute('aria-pressed', String(s.playing));
     root.dataset.playing = s.playing;
-    setText(label, (s.playing ? 'Now playing: ' : '') + names[version]);
+    setText(label, (s.playing ? 'Playing: ' : '') + names[version]);
     setText(timeEl, fmt(s.time));
     setText(durEl, fmt(s.duration));
-    if (!stage || !stage.hasAttribute('data-webgl')) drawSvg(s);
+    titles.forEach(t => setText(t, names[t.closest('[data-version]').dataset.version]));
+    drawDeck(s);
     section.dispatchEvent(new CustomEvent('ab:state', { bubbles: true, detail: s }));
     if (s.playing && !flipping) startLoop();
   }
-  // the SVG catches up as soon as the 3D cassette steps aside (no WebGL, context lost, reduced motion)
-  if (stage) new MutationObserver(() => { if (!stage.hasAttribute('data-webgl')) drawSvg(state()); }).observe(stage, { attributes: true, attributeFilter: ['data-webgl'] });
-  function drawSvg(s) {
-    if (packL) packL.setAttribute('r', (12 + 12 * (1 - s.progress)).toFixed(2));
-    if (packR) packR.setAttribute('r', (12 + 12 * s.progress).toFixed(2));
-    drawTape(12 + 12 * (1 - s.progress), 12 + 12 * s.progress);
-    const a = reel.toFixed(1) + 'deg';
-    reelL?.style.setProperty('--reel', a);
-    reelR?.style.setProperty('--reel', a);
+  function drawDeck(s) {
+    const p = Math.round(s.progress * 400) / 400; // tape packs: 0.9 -> 0.5 of the rendered pack on the left, the reverse on the right
+    if (p !== shownProg) { shownProg = p; }
+    const r = reel.toFixed(1);
+    if (r !== shownReel) { shownReel = r; reels.forEach(el => { el.style.rotate = r + 'deg'; }); }
   }
 
   // Reels spin only while playing and not flipping; none under reduced motion.
@@ -177,23 +184,93 @@
     const wasPlaying = !active.paused;
     const t = pendingTime ?? active.currentTime;
     active.pause();
-    const anim = !reduced() && !!face?.animate;
-    section.dispatchEvent(new CustomEvent('ab:flip-start', { bubbles: true, detail: { from, to, outMs: anim ? OUT_MS : 0, inMs: anim ? IN_MS : 0 } }));
+    const anim = !reduced() && !!door?.animate;
+    section.dispatchEvent(new CustomEvent('ab:flip-start', { bubbles: true, detail: { from, to, outMs: anim ? OUT_MS : 0, inMs: anim ? IN_MS : 0, turnMs: anim ? TURN_MS : 0 } }));
     sync();
-    const run = (frames, opts) => face.animate(frames, { ...opts, fill: 'forwards' }).finished.catch(() => {});
+    // The door strip holds one rendered frame per step; hold each frame until the next (steps) so it never shows two halves.
+    const swing = (open, duration) => door.animate(Array.from({ length: DOOR_FRAMES }, (_, i) => {
+      const f = open ? i : DOOR_FRAMES - 1 - i;
+      return { translate: `0 ${(-100 * f / DOOR_FRAMES).toFixed(3)}%`, offset: i / (DOOR_FRAMES - 1), easing: 'steps(1, end)' };
+    }), { duration, fill: 'forwards' }).finished.catch(() => {});
     try {
-      if (anim) await run([{ transform: 'translateY(0) scale(1) rotateY(0)' }, { transform: 'translateY(-14px) scale(1.06) rotateY(90deg)' }], { duration: OUT_MS, easing: 'ease-in' });
-      active = tracks[to];
-      version = to;
-      section.dataset.version = to;
-      seekTo(active, t);
-      sync();
+      if (anim) { door.style.willChange = 'translate'; section.dataset.door = 'open'; await swing(true, OUT_MS); }
+      const swap = () => {
+        active = tracks[to];
+        version = to;
+        section.dataset.version = to;
+        seekTo(active, t);
+        sync();
+      };
+      if (anim && flipStrip && cassette?.animate) {
+        // The Blender strip is the shell; packs, reels and label are HTML scaled to match each frame (the camera is orthographic,
+        // so turning by theta is scaleX(|cos|) plus a shift of the face 0.6 cm off the axis, and lifting is a slight grow).
+        // Slow at the ends (lift, settle), fast through the middle. All compositor-only.
+        const ease = u => { let lo = 0, hi = 1; for (let k = 0; k < 20; k++) { const m = (lo + hi) / 2; (3 * m * m - 2 * m * m * m < u ? lo = m : hi = m); } return lo; };
+        const T = Array.from({ length: FLIP_FRAMES }, (_, i) => ease(i / (FLIP_FRAMES - 1)));
+        const mid = (FLIP_FRAMES - 1) / 2;
+        const xf = i => {
+          const u = i / (FLIP_FRAMES - 1), th = Math.PI * u, lift = 1 + 0.09 * Math.sin(th);
+          const sx = Math.abs(Math.cos(th)) * lift, shift = (i <= mid ? 1 : -1) * 3.75 * Math.sin(th) * lift;   // 0.6 cm of a 16 cm canvas
+          return `translateX(${shift.toFixed(3)}%) scale(${sx.toFixed(4)}, ${lift.toFixed(4)})`;
+        };
+        // A -> B plays the strip forwards; B -> A plays it backwards (the tape turns back the way it came). The ease is symmetric.
+        const fwd = to === 'master', last = FLIP_FRAMES - 1;
+        const run = (from, to, ms) => {
+          const step = from <= to ? 1 : -1;
+          const frames = Array.from({ length: Math.abs(to - from) + 1 }, (_, k) => from + step * k);
+          const kf = f => frames.map(i => ({ ...f(i), offset: (T[i] - T[from]) / (T[to] - T[from]), easing: 'steps(1, end)' }));
+          const opts = { duration: ms, fill: 'forwards' };
+          return Promise.all([
+            flipStrip.animate(kf(i => ({ translate: `0 ${(-100 * i / FLIP_FRAMES).toFixed(3)}%` })), opts).finished,
+            under.animate(kf(i => ({ transform: xf(i) })), opts).finished,
+            labelEl.animate(kf(i => ({ transform: xf(i) })), opts).finished
+          ]).catch(() => {});
+        };
+        flipStrip.style.translate = `0 ${fwd ? 0 : (-100 * last / FLIP_FRAMES).toFixed(3)}%`;
+        // The strip and the resting shell are separate renders, so a hard swap shows a faint pop at the edges: crossfade both ends.
+        const XF = 140, shown = { visibility: 'visible' };
+        const restShell = [...cassette.querySelectorAll('.cd-shell')].find(el => getComputedStyle(el).visibility === 'visible');
+        section.dataset.turn = '1';
+        restShell?.animate([shown, shown], { duration: XF });
+        flipBox.animate([{ opacity: 0, ...shown }, { opacity: 1, ...shown }], { duration: XF, easing: 'ease-in-out' });
+        if (fwd) {
+          await run(0, mid, TURN_MS * T[mid]);
+          swap();
+          await run(mid, last, TURN_MS * (1 - T[mid]));
+        } else {
+          await run(last, mid, TURN_MS * (1 - T[mid]));
+          swap();
+          await run(mid, 0, TURN_MS * T[mid]);
+        }
+        [flipStrip, under, labelEl].forEach(el => el.getAnimations().forEach(a => a.cancel()));
+        flipStrip.style.translate = `0 ${fwd ? (-100 * last / FLIP_FRAMES).toFixed(3) : 0}%`;   // hold the final frame while the crossfade ends, not the inline start frame
+        delete section.dataset.turn;
+        flipBox.animate([{ opacity: 1, ...shown }, { opacity: 0, ...shown }], { duration: XF, easing: 'ease-in-out' });   // the new resting shell is already underneath
+      } else if (anim && cassette?.animate) {
+        // Compositor-only (scale + translate): up and squashed edge-on, swap the side, then back down.
+        cassette.style.willChange = 'scale, translate';
+        const half = TURN_MS / 2;
+        await cassette.animate([
+          { scale: '1 1', translate: '0 0', easing: 'cubic-bezier(.5,0,.9,.6)' },
+          { scale: '0.02 1.1', translate: '0 -4%' }
+        ], { duration: half, fill: 'forwards' }).finished.catch(() => {});
+        swap();
+        await cassette.animate([
+          { scale: '0.02 1.1', translate: '0 -4%', easing: 'cubic-bezier(.1,.4,.5,1)' },
+          { scale: '1 1', translate: '0 0' }
+        ], { duration: half, fill: 'forwards' }).finished.catch(() => {});
+        cassette.getAnimations().forEach(a => a.cancel());
+        cassette.style.willChange = '';
+      } else swap();
       if (anim) {
-        await run([{ transform: 'translateY(-14px) scale(1.06) rotateY(-90deg)' }, { transform: 'translateY(0) scale(1) rotateY(0)' }], { duration: IN_MS, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
-        face.getAnimations().forEach(a => a.cancel());
+        await swing(false, IN_MS);
+        door.getAnimations().forEach(a => a.cancel());
+        door.style.willChange = '';
       }
     } finally {
+      delete section.dataset.turn;
       flipping = false;
+      delete section.dataset.door;
     }
     if (wasPlaying) active.play().catch(() => {});
     sync();
@@ -204,7 +281,7 @@
   keyPause.addEventListener('click', pause);
   keyStop.addEventListener('click', stop);
   keyFlip.addEventListener('click', flip);
-  $('cassette-stage')?.addEventListener('click', flip);
+  stage?.addEventListener('click', flip);
 
   // Space / F anywhere on the Work page while the deck is on screen, unless focus is on a control or text.
   addEventListener('keydown', e => {

@@ -34,16 +34,25 @@
     else driveTimer = setTimeout(() => delete root.dataset.faderDrive, linger);
   }
 
+  // Runs once per scrolled frame, so it writes only what changed (perf pass 4): the cap moves in whole device
+  // pixels through its own transform, and the ARIA value changes only when the whole percent does.
+  const hero = document.querySelector('.hero-wordmark-viewport');
+  let lastY = -1, lastPct = -1;
   function update() {
     const max = maxScroll();
-    fader.hidden = max <= 0;
+    if (fader.hidden !== (max <= 0)) fader.hidden = max <= 0;
     // Stay on screen everywhere except the initial viewport (hero) of the home page.
-    const hero = document.querySelector('.hero-wordmark-viewport');
     fader.classList.toggle('is-away', !!hero && scrollY < hero.offsetHeight * 0.45);
     const ratio = max ? Math.min(1, Math.max(0, scrollY / max)) : 0;
-    cap.style.setProperty('--fader-y', `${ratio * travel()}px`);
-    fader.setAttribute('aria-valuenow', Math.round(ratio * 100));
-    fader.setAttribute('aria-valuetext', `${Math.round(ratio * 100)}% down the page`);
+    const dpr = devicePixelRatio || 1;
+    const y = Math.round(ratio * travel() * dpr) / dpr;
+    if (y !== lastY) { lastY = y; cap.style.transform = `translateY(${y}px)`; }
+    const pct = Math.round(ratio * 100);
+    if (pct !== lastPct) {
+      lastPct = pct;
+      fader.setAttribute('aria-valuenow', pct);
+      fader.setAttribute('aria-valuetext', `${pct}% down the page`);
+    }
   }
   let queued = false;
   const schedule = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; update(); }); } };

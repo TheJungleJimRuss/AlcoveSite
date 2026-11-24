@@ -279,6 +279,7 @@
   const setBusy = (on) => {
     busy = on;
     button.disabled = on;
+    button.setAttribute('aria-busy', String(on)); // lights the Send key lamp
     syncLock();
     if (on) window.addEventListener('beforeunload', warnUnload);
     else window.removeEventListener('beforeunload', warnUnload);

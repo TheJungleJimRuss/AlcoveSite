@@ -24,6 +24,8 @@ for (const t of themes) for (const f of ['retro-display']) for (const p of ['ind
     const out = [];
     for (const el of document.querySelectorAll('h1,h2,h3,h4,p,li,label,a,button,span')) {
       if (el.closest('.hero-wordmark, .studio-wordmark, .hero-nav, .scroll-cue, .site-header--smart, [class*=hero]')) continue;
+      // WCAG 1.4.3 exempts inactive (disabled) controls; clipped 1px screen-reader text is not visible.
+      if (el.closest('button:disabled, [disabled], .sleeve-band, .visually-hidden')) continue;
       if (!el.childNodes.length || ![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
       const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || !el.offsetParent && cs.position !== 'fixed') continue;
       let bg = [255,255,255], layers = [], stops = [];

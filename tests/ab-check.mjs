@@ -58,7 +58,6 @@ const open = async (opts = {}) => {
   check(/Finished Master/.test(await page.textContent('.ab-player .deck-label')), 'deck label names the master');
   const ev = await page.evaluate(() => window.__ev);
   check(ev.length === 2 && ev[0][0] === 'ab:flip-start' && ev[0][1].from === 'memo' && ev[0][1].to === 'master' && ev[1][0] === 'ab:flip-end' && ev[1][1].version === 'master', `double flip ran once, events fired (${JSON.stringify(ev.map(e => e[0]))})`);
-  check(await page.evaluate(() => getComputedStyle(document.querySelector('.ab-specs thead [data-version="master"]')).boxShadow + getComputedStyle(document.querySelector('.ab-specs thead [data-version="master"]')).backgroundImage).then(v => /3px|inset|gradient|rgb/.test(v)), 'master column styled after flip');
   // tapping the cassette flips back
   await page.click('#cassette-stage');
   await page.waitForFunction(() => !window.__abDeck.state().flipping);
@@ -77,13 +76,9 @@ const open = async (opts = {}) => {
   const reel0 = (await st(page)).reel;
   await page.waitForTimeout(500);
   const s1 = await st(page);
-  check(s1.reel !== reel0 && await page.evaluate(() => getComputedStyle(document.getElementById('cs-reel-l')).getPropertyValue('--reel').trim()) !== '', 'reels turn while playing');
-  // the visible cassette's packs move: the 3D tape while WebGL draws (the hidden SVG is no longer updated then), else the SVG
-  const packs = await page.evaluate(() => document.getElementById('cassette-stage').hasAttribute('data-webgl')
-    ? { gl: true, l: window.__cassette3d.tape.packL, r: window.__cassette3d.tape.packR }
-    : { gl: false, l: parseFloat(document.getElementById('cs-pack-l').getAttribute('r')), r: parseFloat(document.getElementById('cs-pack-r').getAttribute('r')) });
-  check(packs.gl ? packs.l < 0.9 && packs.r > 0.5 : packs.l < 24 && packs.r > 12, `tape pack moves left to right with progress (${JSON.stringify(packs)})`);
-  check(((await page.getAttribute('#cs-tape', 'd')) || '').split('L').length === 4, 'SVG fallback tape path joins both packs via the guide posts');
+  check(s1.reel !== reel0 && await page.evaluate(() => document.querySelector('.cd-reel-l').style.rotate) !== '', 'reels turn while playing (rotate on the reel images)');
+  const packs = await page.evaluate(() => ({ l: parseFloat(document.querySelector('.cd-pack-l').style.scale), r: parseFloat(document.querySelector('.cd-pack-r').style.scale) }));
+  check(packs.l < 0.9 && packs.r > 0.5, `tape pack moves left to right with progress (${JSON.stringify(packs)})`);
   // flip while playing keeps playing
   const before = s1.time;
   await page.click('#ab-key-flip');
@@ -129,7 +124,7 @@ const open = async (opts = {}) => {
   await page.evaluate(() => { window.__abDeck.seek(2); window.__abDeck.play(); });
   await page.waitForTimeout(300);
   await page.click('#ab-key-flip');
-  const instant = await page.evaluate(() => ({ s: window.__abDeck.state().flipping, v: document.querySelector('.ab-compare').dataset.version, anims: document.getElementById('cassette-face').getAnimations().length }));
+  const instant = await page.evaluate(() => ({ s: window.__abDeck.state().flipping, v: document.querySelector('.ab-compare').dataset.version, anims: document.querySelector('.cd-door-strip').getAnimations().length }));
   await page.waitForTimeout(100);
   check(instant.anims === 0 && (await st(page)).version === 'master' && !(await st(page)).flipping, 'reduced motion: flip has no animation and lands on B');
   check((await st(page)).playing, 'reduced motion: flip while playing keeps playing');
@@ -168,7 +163,7 @@ const open = async (opts = {}) => {
   await ctx.close();
 }
 
-// Controls live on the player: transparent buttons sit over the drawn keys (3D or SVG). Click each at its centre with a real mouse.
+// Controls live on the player: transparent buttons sit over the rendered keys. Click each at its centre with a real mouse.
 async function keyChecks(page, label) {
   await page.evaluate(() => document.querySelector('.deck-top').scrollIntoView({ block: 'center' }));
   await page.waitForTimeout(600);
@@ -198,47 +193,35 @@ async function keyChecks(page, label) {
 }
 
 {
-  // 3D cassette: canvas appears (software GL in headless), follows the flip; ?nogl and reduced motion keep the SVG.
+  // Image deck: Blender layers, no canvas or three.js; the door swings through its rendered frames on a flip and ends shut.
   const { ctx, page, errors } = await open({ reducedMotion: 'no-preference' });
+  const reqs = [];
+  page.on('request', r => reqs.push(r.url()));
   await loaded(page);
-  const gl = await page.waitForFunction(() => document.getElementById('cassette-stage').hasAttribute('data-webgl') || window.__cassette3d?.error, null, { timeout: 15000 }).then(() => page.evaluate(() => ({ webgl: document.getElementById('cassette-stage').hasAttribute('data-webgl'), err: window.__cassette3d.error }))).catch(() => ({ webgl: false, err: 'timeout' }));
-  if (gl.webgl) {
-    check(await page.evaluate(() => !!document.querySelector('#cassette-stage > canvas')), '3D canvas is in the stage and data-webgl is set');
-    await page.click('#ab-key-flip');
-    await page.waitForFunction(() => !window.__abDeck.state().flipping);
-    await page.waitForFunction(() => Math.abs(window.__cassette3d.rotationY - Math.PI) < 0.01);
-    check(true, '3D cassette turned to Side B after the flip');
-    check(await page.evaluate(() => window.__cassette3d.doorOpen === 0), 'player door is closed again after the flip');
-    await page.evaluate(() => window.__abDeck.seek(5)); await page.evaluate(() => window.__abDeck.play());
-    await page.waitForFunction(() => window.__abDeck.state().reel > 0 && window.__cassette3d.renders > 3);
-    check(true, 'reels drive renders while playing');
-    // Standalone: no panel, frame or reserved space; tape ribbon joins both packs and follows their size
-    const chrome = await page.evaluate(() => { const st = getComputedStyle(document.getElementById('cassette-stage')), dk = getComputedStyle(document.querySelector('.cassette-deck')); return { stBg: st.backgroundColor, stPad: st.paddingTop, dkBorder: dk.borderTopWidth, dkBg: dk.backgroundColor, dkPad: dk.paddingTop }; });
-    check(chrome.stBg === 'rgba(0, 0, 0, 0)' && chrome.stPad === '0px' && chrome.dkBorder === '0px' && chrome.dkBg === 'rgba(0, 0, 0, 0)' && chrome.dkPad === '0px', 'player has no panel, frame or padding around it (' + JSON.stringify(chrome) + ')');
-    check(await page.evaluate(() => window.__cassette3d.tape?.segments === 3), 'tape ribbon (3 segments) is built between the reels');
-    const tapeAt = async sec => { await page.evaluate(t => window.__abDeck.seek(t), sec); await page.evaluate(() => window.__cassette3d.render()); return page.evaluate(() => { const t = window.__cassette3d.tape; return { r: [t.packL, t.packR], d: [Math.hypot(t.left.pack[0] + 1.4, t.left.pack[1] + 1.37), Math.hypot(t.right.pack[0] - 1.4, t.right.pack[1] + 1.37)] }; }); };
-    const t0 = await tapeAt(0), t1 = await tapeAt(19);
-    check(Math.abs(t0.d[0] - t0.r[0]) < 0.01 && Math.abs(t1.d[1] - t1.r[1]) < 0.01 && t0.r[0] > t1.r[0] + 0.1, 'tape leaves each pack at its current edge as the pack sizes change');
-    await keyChecks(page, '3D');
-    check(await page.evaluate(() => { const b = document.getElementById('ab-key-play').getBoundingClientRect(), c = document.querySelector('#cassette-stage > canvas').getBoundingClientRect(); return b.top > c.top + c.height * 0.7; }), '3D: Play key button is projected onto the front key row of the model');
-  } else console.log('skip  3D canvas checks (no WebGL in this browser: ' + gl.err + ')');
-  check(errors.length === 0, 'no console errors with the 3D cassette (' + errors.join('|') + ')');
-  await ctx.close();
-}
-
-{
-  const ctx = await browser.newContext(); const page = await ctx.newPage();
-  await page.goto(url + '?nogl');
-  await page.evaluate(() => document.querySelector('.ab-compare').scrollIntoView());
-  await page.waitForTimeout(800);
-  check(await page.evaluate(() => !document.getElementById('cassette-stage').hasAttribute('data-webgl') && !document.querySelector('#cassette-stage > canvas') && window.__cassette3d.error === 'nogl'), '?nogl keeps the SVG cassette');
-  await keyChecks(page, 'SVG fallback');
-  await ctx.close();
-}
-{
-  const { ctx, page } = await open({ reducedMotion: 'reduce' });
-  await page.waitForTimeout(800);
-  check(await page.evaluate(() => !document.getElementById('cassette-stage').hasAttribute('data-webgl') && !document.querySelector('#cassette-stage > canvas')), 'reduced motion keeps the SVG cassette');
+  const imgs = await page.evaluate(() => [...document.querySelectorAll('#cassette-stage img')].map(i => ({ src: i.currentSrc.split('/').pop(), ok: i.complete && i.naturalWidth > 0 })));
+  check((imgs.length === 8 || imgs.length === 9) && imgs.every(i => i.ok), 'all deck layers load (' + imgs.map(i => i.src + (i.ok ? '' : ' MISSING')).join(', ') + ')');
+  check(await page.evaluate(() => !document.querySelector('#cassette-stage canvas')), 'no canvas in the stage');
+  check(!reqs.some(u => /three|\.glb/.test(u)), 'no three.js or GLB requests');
+  const door = await page.evaluate(async () => {
+    const strip = document.querySelector('.cd-door-strip'), seen = new Set();
+    window.__abDeck.flip();
+    const a = strip.getAnimations()[0]; if (!a) return { anim: false };
+    a.pause();
+    for (let t = 0; t <= 380; t += 19) { a.currentTime = t; seen.add(getComputedStyle(strip).translate); }
+    const mid = window.__abDeck.state().version;
+    a.play();
+    await new Promise(r => { const w = () => (window.__abDeck.state().flipping ? setTimeout(w, 30) : r()); w(); });
+    return { anim: true, frames: seen.size, mid, end: window.__abDeck.state().version, rest: strip.getAnimations().length, tr: getComputedStyle(strip).translate };
+  });
+  check(door.anim && door.frames >= 8, `door steps through its rendered frames while opening (${door.frames} frames)`);
+  check(door.mid === 'memo' && door.end === 'master', 'side swaps while the door is open, B after the flip');
+  check(door.rest === 0 && /^(none|0px( 0px| 0%)?)$/.test(door.tr), `door is shut again after the flip (${door.tr})`);
+  const label = await page.evaluate(() => [...document.querySelectorAll('.cd-label .cs-side')].filter(e => getComputedStyle(e).display !== 'none').map(e => e.dataset.version));
+  check(label.join() === 'master', 'label shows Side B only (' + label.join() + ')');
+  const chrome = await page.evaluate(() => { const st = getComputedStyle(document.getElementById('cassette-stage')), dk = getComputedStyle(document.querySelector('.cassette-deck')); return { stBg: st.backgroundColor, stPad: st.paddingTop, dkBorder: dk.borderTopWidth, dkBg: dk.backgroundColor, dkPad: dk.paddingTop }; });
+  check(chrome.stBg === 'rgba(0, 0, 0, 0)' && chrome.stPad === '0px' && chrome.dkBorder === '0px' && chrome.dkBg === 'rgba(0, 0, 0, 0)' && chrome.dkPad === '0px', 'player has no panel, frame or padding around it (' + JSON.stringify(chrome) + ')');
+  await keyChecks(page, 'image deck');
+  check(errors.length === 0, 'no console errors with the image deck (' + errors.join('|') + ')');
   await ctx.close();
 }
 

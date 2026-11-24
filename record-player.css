@@ -90,8 +90,8 @@
 .rp-record { transition: opacity 0.32s ease; }
 .record-player:not([data-record="in"]) .rp-record { opacity: 0; }
 .record-player[data-record="in"] .rp-record { transition: none; }
-.rp-arm { touch-action: none; }
-.rp-arm-hit { stroke: transparent; stroke-width: 72; pointer-events: stroke; touch-action: none; cursor: grab; }
+.rp-arm { touch-action: none; -webkit-tap-highlight-color: transparent; }
+.rp-arm-hit { -webkit-tap-highlight-color: transparent; stroke: transparent; stroke-width: 72; pointer-events: stroke; touch-action: none; cursor: grab; }
 .rp-arm[aria-disabled="true"] .rp-arm-hit { pointer-events: none; cursor: default; }
 .rp-arm:active .rp-arm-hit { cursor: grabbing; }
 .rp-arm:focus { outline: none; }
@@ -101,34 +101,52 @@
 
 /* Start/Stop key: a latching matte key with a lamp, like the one on a real deck. Pressing it sinks it; it stays down
    while the record plays and the lamp glows. The label is printed on the key and never changes. */
-.rp-controls { display: flex; align-items: center; gap: 1.1rem; }
+.rp-controls { display: flex; align-items: center; gap: 1.1rem; min-inline-size: 0; }
+/* One deck: Start/Stop key, readout and record fader share a single screwed-down metal chassis under the turntable and crate */
+.rp-console {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: center; gap: 1.5rem;
+  margin-block-start: 1.25rem; padding: 1.1rem 1.6rem 1.3rem;
+  border-radius: 0.6rem; border: 1px solid #0b0b0c;
+  background: linear-gradient(180deg, #2f2f33, #232326 45%, #1a1a1d);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), inset 0 -2px 0 rgb(0 0 0 / 0.4), 0 6px 0 #0d0d0e, 0 12px 14px rgb(0 0 0 / 0.35);
+}
+.rp-screw { position: absolute; inline-size: 0.55rem; block-size: 0.55rem; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #d8d8d8, #6a6a6a); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.4), 0 1px 0 rgb(255 255 255 / 0.35); }
+.rp-screw::after { content: ""; position: absolute; inset: 45% 15%; background: rgb(0 0 0 / 0.55); transform: rotate(var(--r, 35deg)); }
+.rp-screw:nth-child(1) { inset: 0.4rem auto auto 0.4rem; } .rp-screw:nth-child(2) { inset: 0.4rem 0.4rem auto auto; --r: 80deg; }
+.rp-screw:nth-child(3) { inset: auto auto 0.4rem 0.4rem; --r: -10deg; } .rp-screw:nth-child(4) { inset: auto 0.4rem 0.4rem auto; --r: 60deg; }
+.rp-bay { position: relative; display: grid; gap: 0.15rem; min-inline-size: 0; }
+.rp-bay-label { font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: rgb(255 255 255 / 0.6); text-shadow: 0 -1px 0 #000; }
+.rp-status { padding: 0.45rem 0.7rem; border-radius: 0.25rem; background: #1a1d18; color: #ff9a3c; box-shadow: inset 0 2px 5px #000, 0 1px 0 rgb(255 255 255 / 0.12); }
 .rp-play {
-  --edge: color-mix(in srgb, var(--text-main) 30%, var(--bg-accent));
+  --wall: #0b0b0c;
+  --cap: #3a3a3f;
   flex: none; position: relative;
   display: grid; place-items: center; align-content: center; gap: 0.15rem;
-  inline-size: 5.2rem; min-block-size: 3.6rem; padding: 0.5rem 0.4rem 0.35rem;
-  font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; line-height: 1.15; text-transform: uppercase; text-align: center;
-  color: var(--text-main);
+  inline-size: 5.6rem; min-block-size: 4rem; padding: 0.7rem 0.4rem 0.45rem;
+  font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; line-height: 1.2; text-transform: uppercase; text-align: center;
+  color: color-mix(in srgb, #fff 88%, var(--cap));
+  text-shadow: 0 -1px 0 rgb(0 0 0 / 0.6);
   cursor: var(--cursor-pointer, pointer);
-  border: 1px solid var(--edge);
-  border-radius: 0.4rem;
-  background: color-mix(in srgb, var(--bg-accent) 55%, var(--bg-surface));
-  box-shadow: 0 5px 0 var(--edge), 0 8px 6px rgb(0 0 0 / 0.25);
+  border: 1px solid var(--wall);
+  border-radius: 0.45rem;
+  background: linear-gradient(180deg, color-mix(in srgb, #fff 16%, var(--cap)), var(--cap) 40%, color-mix(in srgb, #000 20%, var(--cap)));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), inset 0 -3px 4px rgb(0 0 0 / 0.25), 0 5px 0 var(--wall), 0 8px 8px rgb(0 0 0 / 0.3);
   transition: transform 0.09s, box-shadow 0.09s;
+  -webkit-tap-highlight-color: transparent;
 }
 .rp-play-label { display: block; }
 .rp-lamp {
   position: absolute; inset-block-start: 0.4rem; inset-inline-end: 0.45rem;
-  inline-size: 0.5rem; block-size: 0.5rem; border-radius: 50%;
+  inline-size: 0.55rem; block-size: 0.55rem; border-radius: 50%;
   background: color-mix(in srgb, var(--text-main) 20%, var(--bg-accent));
   box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.5);
   transition: background-color 0.12s, box-shadow 0.12s;
 }
-.rp-play:active:not(:disabled), .rp-play[aria-pressed="true"] { transform: translateY(4px); box-shadow: 0 1px 0 var(--edge), inset 0 2px 4px rgb(0 0 0 / 0.3); }
+.rp-play:active:not(:disabled), .rp-play[aria-pressed="true"] { transform: translateY(5px); box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.45), 0 1px 0 var(--wall); }
 .rp-play[aria-pressed="true"] .rp-lamp { background: #ff9a3c; box-shadow: 0 0 6px 1px rgb(255 154 60 / 0.85), inset 0 1px 1px rgb(255 255 255 / 0.5); }
 .rp-play:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 4px; }
-.rp-play:disabled { cursor: not-allowed; color: var(--text-muted); box-shadow: 0 5px 0 var(--border-color); border-color: var(--border-color); }
-.rp-status { margin: 0; min-inline-size: 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-main); overflow-wrap: anywhere; }
+.rp-play:disabled { cursor: not-allowed; color: rgb(255 255 255 / 0.4); filter: saturate(0.6); }
+.rp-status { margin: 0; min-inline-size: 0; flex: 1; font-family: var(--font-mono); font-size: 0.85rem; overflow-wrap: anywhere; }
 
 /* ===== Crate: a messy pile of record sleeves on the bare surface, seen from straight above (spec amendment 3) =====
    Sleeves are record-sized: --sleeve is the vinyl diameter on the turntable (+3%, like a real 12" jacket), worked out from
@@ -172,31 +190,34 @@ html:has(.record-player), body:has(.record-player) { overflow-x: clip; } /* the 
   cursor: var(--cursor-pointer, pointer);
   border: 0;
   border-radius: 0.1rem;
-  background-color: #ebe5d9; /* card photo paints over it */
-  transform: translate(calc(sin(var(--i) * 2.3rad) * var(--sleeve) * 0.08), calc(cos(var(--i) * 1.7rad) * var(--sleeve) * 0.07)) rotate(calc(sin(var(--i) * 2.1rad + 0.7rad) * 9deg));
+  background-color: transparent; /* paper colour lives on .sleeve-art, which bleeds 0.5px past the box so no fringe shows */
+  transform: translate(calc(sin(var(--i) * 2.3rad) * var(--sleeve) * 0.08), calc(cos(var(--i) * 1.7rad) * var(--sleeve) * 0.07)) rotate(calc(sin(var(--i) * 2.1rad + 0.7rad) * 5deg));
   transition: transform 0.45s cubic-bezier(0.3, 0.75, 0.25, 1), filter 0.3s ease;
 }
 .sleeve[data-pos="front"] { transform: var(--out); } /* keeps its place in the pile: slides out from under the ones above it */
 /* picking: the sleeve is lifted toward the camera (bigger, softer shadow) while the disc slides out */
 .sleeve[data-pos="front"].is-lifted { transform: var(--out) translateY(calc(var(--sleeve) * -0.02)) scale(1.04); transition-duration: 0.28s; }
-.sleeve.is-lifted::before { filter: drop-shadow(calc(var(--sleeve) * 0.016) calc(var(--sleeve) * 0.032) calc(var(--sleeve) * 0.032) rgb(0 0 0 / 0.35)); }
+.sleeve.is-lifted { box-shadow: 0 6px 14px rgb(0 0 0 / 0.35); }
 /* The card is a render (paper grain, wear, soft shadow in its margin); it sits 16% of --sleeve outside the button box on every side. */
-.sleeve::before { content: ""; position: absolute; inset: calc(var(--sleeve) * -0.16); z-index: -1; pointer-events: none; background: image-set(url(images/record-player/sleeve-flat-1x.webp) 1x, url(images/record-player/sleeve-flat-2x.webp) 2x) center / 100% 100% no-repeat; }
-.sleeve:hover::before { filter: brightness(1.05); } /* faint lift only */
+/* A stack: every jacket throws a soft shadow onto the ones under it, and the deeper ones sit in shade, so the pile has depth. */
+.sleeve {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 5px 10px rgb(0 0 0 / 0.4), 0 12px 26px rgb(0 0 0 / 0.3);
+  filter: brightness(max(0.5, calc(1 - var(--r) * 0.075)));
+} /* one flat image: no card render */
+.sleeve:hover .sleeve-art { filter: brightness(1.05); } /* faint lift only */
 .sleeve:focus-visible { outline: 3px solid var(--border-focus); outline-offset: 2px; }
 /* pictures only: the text names the button for screen readers but is not drawn */
 .sleeve-strip, .sleeve-band { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .sleeve-art::after { content: ""; position: absolute; inset: 0; mix-blend-mode: multiply; }
-.sleeve-art { position: absolute; inset: 0; display: block; overflow: hidden; }
+.sleeve-art { isolation: isolate; position: absolute; inset: 0; background-color: #ebe5d9; display: block; overflow: hidden; }
 .sleeve-art::before { content: ""; position: absolute; inset: 0; z-index: 1; background: var(--cover) center / cover no-repeat; mix-blend-mode: multiply; }
 /* A real cover (admin media ticket 06): the picture as it is, over the sleeve face; the printed pattern is gone. */
 .sleeve.has-cover .sleeve-art::before { mix-blend-mode: normal; }
 .sleeve.has-cover .sleeve-art::after { display: none; }
 /* "On the platter" tab: sticks out of the loaded sleeve's left edge (the on-screen side), so it shows even under the pile. */
-.sleeve-tab { display: none; position: absolute; z-index: 2; inset-block-start: calc(var(--sleeve) * 0.06); inset-inline-start: calc(var(--sleeve) * -0.112); inline-size: calc(var(--sleeve) * 0.128); block-size: calc(var(--sleeve) * 0.104); border-radius: 0.3rem 0 0 0.3rem; background: var(--accent-primary); box-shadow: 0 1px 3px rgb(0 0 0 / 0.4); }
+.sleeve-tab { display: none !important; position: absolute; z-index: 2; inset-block-start: calc(var(--sleeve) * 0.06); inset-inline-start: calc(var(--sleeve) * -0.112); inline-size: calc(var(--sleeve) * 0.128); block-size: calc(var(--sleeve) * 0.104); border-radius: 0.3rem 0 0 0.3rem; background: var(--accent-primary); box-shadow: 0 1px 3px rgb(0 0 0 / 0.4); }
 .sleeve-tab::before { content: ""; position: absolute; inset: calc(var(--sleeve) * 0.014) calc(var(--sleeve) * 0.008) calc(var(--sleeve) * 0.014) calc(var(--sleeve) * 0.02); border-radius: 50%; background: radial-gradient(circle, var(--tint-1) 0 18%, #111 20%); }
 .sleeve.is-current .sleeve-tab { display: block; }
-.sleeve.is-current { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
 .sleeve.is-current:focus-visible { outline: 3px solid var(--border-focus); outline-offset: 2px; }
 
 /* Cover placeholders: printed (multiplied) onto the paper render so the grain shows through.
@@ -213,7 +234,7 @@ html:has(.record-player), body:has(.record-player) { overflow-x: clip; } /* the 
 /* Fader under the pile: slides through the records (dark anodised plate, slotted track, ribbed cap, as the page fader) */
 .rp-fader {
   --cap-w: 2.6rem; --cap-h: 2.1rem;
-  position: relative; inline-size: min(100%, 22rem); block-size: 2.75rem; margin-inline: auto;
+  position: relative; inline-size: 100%; block-size: 2.75rem;
   touch-action: none; user-select: none; outline: none; cursor: var(--cursor-pointer, pointer);
   -webkit-tap-highlight-color: transparent;
 }
@@ -246,7 +267,7 @@ html:has(.record-player), body:has(.record-player) { overflow-x: clip; } /* the 
   transition: inset-inline-start 0.18s ease-out;
 }
 .rp-fader.is-dragging .rp-fader-cap { transition: none; }
-.rp-fader:focus-visible .rp-fader-cap { outline: 2px solid var(--border-focus); outline-offset: 3px; }
+.rp-fader.is-keyboard:focus-visible .rp-fader-cap { outline: 2px solid var(--border-focus); outline-offset: 3px; }
 
 /* The disc that travels from the sleeve to the platter: sized and moved by record-player.js (WAAPI) */
 .record-player { position: relative; }
@@ -259,6 +280,7 @@ html:has(.record-player), body:has(.record-player) { overflow-x: clip; } /* the 
   .rp-layout { grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
   .rp-crate { --sleeve: calc(100cqi * 0.663); }
   .rp-controls { gap: 0.7rem; }
+  .rp-console { grid-template-columns: minmax(0, 1fr); gap: 0.9rem; padding-inline: 1.2rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

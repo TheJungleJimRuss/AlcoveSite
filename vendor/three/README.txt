@@ -1,1 +1,0 @@
-three 0.187.0 (npm), MIT. Files copied unmodified from the package: build/three.module.js, build/three.core.js, examples/jsm/loaders/GLTFLoader.js, examples/jsm/utils/{BufferGeometryUtils,SkeletonUtils}.js.

@@ -60,7 +60,7 @@ check((await page.getAttribute('.rp-arm', 'aria-disabled')) === 'true' && (await
   check((await st()).state === 'empty' && (await page.evaluate(() => document.getElementById('audio-player').currentTime)) === 0, 'dragging the disabled arm does nothing'); }
 check(s.state === 'empty' && s.arm === 'rest' && !s.src, 'starts empty: no record, arm at rest, nothing loaded');
 check(await page.isDisabled('.rp-play'), 'play/pause key is disabled until a record is loaded');
-check((await page.locator('.sleeve').count()) === 4 && (await page.locator('.record-player .deck-reels, .track-row, .play-btn').count()) === 0 && (await page.locator('.ab-player #cs-reel-l, .ab-player #cs-reel-r').count()) === 2, 'four sleeves; old tape display, track rows and Play Preview buttons are gone from the sampler');
+check((await page.locator('.sleeve').count()) === 4 && (await page.locator('.record-player .deck-reels, .track-row, .play-btn').count()) === 0 && (await page.locator('.ab-player .cd-reel').count()) === 2, 'four sleeves; old tape display, track rows and Play Preview buttons are gone from the sampler');
 
 await page.click(S('indie'));
 await page.waitForFunction(() => !document.getElementById('audio-player').paused);

@@ -551,7 +551,7 @@ for (const [name, extra, re1, re2] of failCases) {
 
 // --- Ticket 04: Site Defaults panel ---------------------------------------------------------------------------
 const sel = n => `#alcove-admin select[name="${n}"]`;
-const optNames = ['palette', 'font', 'surface', 'gradient', 'heroGrain', 'halation', 'heroEdge', 'filmGrain', 'cursorShadow'];
+const optNames = ['palette', 'font', 'surface', 'gradient', 'heroGrain', 'halation', 'filmGrain', 'cursorShadow'];
 const defaultsDraft = page => page.evaluate(() => { try { return JSON.parse(localStorage.getItem('alcove_admin_draft:defaults')); } catch { return null; } });
 const scheme = page => page.evaluate(() => document.documentElement.dataset.scheme);
 {
@@ -563,7 +563,7 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
     for (const k of Object.keys(o)) { const s = document.querySelector(`#alcove-admin select[name="${k}"]`); out[k] = s ? { got: [...s.options].map(x => x.value), want: Object.keys(o[k].values), value: s.value } : null; }
     return out;
   });
-  check('panel lists exactly the nine toolbar options (palette, font, surface, gradient, hero grain, hero halation, hero edge, film grain, cursor shadow)', optNames.every(n => lists[n]) && Object.keys(lists).length === 9, JSON.stringify(Object.keys(lists)));
+  check('panel lists exactly the eight toolbar options (palette, font, surface, gradient, hero grain, hero halation, film grain, cursor shadow)', optNames.every(n => lists[n]) && Object.keys(lists).length === 8, JSON.stringify(Object.keys(lists)));
   check('each option offers the toolbar\'s choices (shared definitions)', optNames.every(n => JSON.stringify(lists[n].got) === JSON.stringify(lists[n].want)));
   check('no Tape or Cards option', (await page.locator('#alcove-admin select[name="tape"], #alcove-admin select[name="cards"]').count()) === 0);
   check('current saved default is selected (palette from the branch file, others built-in)', lists.palette.value === 'seth-sage-coral' && lists.gradient.value === 'full' && lists.surface.value === 'metal' && lists.font.value === 'retro-display' && lists.heroGrain.value === 'off', JSON.stringify(lists));
@@ -648,7 +648,7 @@ const scheme = page => page.evaluate(() => document.documentElement.dataset.sche
   });
   check('phone: theme toolbar is gone, so it cannot overlap the panel or tab bar', g.dock === 0, JSON.stringify(g));
   check('phone: open panel sits above the tab bar and inside the screen', g.pb <= g.nt + 0.5 && g.pt >= 0 && g.pl >= 0 && g.pr <= g.w && g.sw <= g.w, JSON.stringify(g));
-  check('phone: nine selects, each a 44px tap target', g.n === 9 && g.minSel >= 44, JSON.stringify(g));
+  check('phone: eight selects, each a 44px tap target', g.n === 8 && g.minSel >= 44, JSON.stringify(g));
   const last = sel('heroGrain');
   await page.locator(last).scrollIntoViewIfNeeded();
   check('phone: last option scrolls into view and is operable', await page.locator(last).isVisible() && (await page.locator(last).boundingBox()).y + 44 <= 780);
