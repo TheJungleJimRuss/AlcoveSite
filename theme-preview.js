@@ -168,8 +168,6 @@
   const HALATIONS = { off: 'Off', soft: 'Soft', strong: 'Strong' };
   let activeHalation = pick(HALATIONS, urlParams && urlParams.get('halation'), readStored('alcove_theme_halation'), draftDefaults.halation, SITE_DEFAULTS.halation) || 'off';
 
-  const HERO_EDGES = { off: 'Off', subtle: 'Subtle', medium: 'Medium', rough: 'Rough' };
-  let activeHeroEdge = pick(HERO_EDGES, urlParams && urlParams.get('edge'), readStored('alcove_theme_hero_edge'), draftDefaults.heroEdge, SITE_DEFAULTS.heroEdge) || 'off';
 
   const FILM_GRAINS = { off: 'Off', subtle: 'Subtle', medium: 'Medium', high: 'High' };
   let activeFilm = pick(FILM_GRAINS, urlParams && urlParams.get('film'), readStored('alcove_theme_film'), draftDefaults.filmGrain, SITE_DEFAULTS.filmGrain) || 'off';
@@ -185,7 +183,6 @@
     root.dataset.film = activeFilm;
     root.dataset.cursorShadow = activeCursor;
     root.dataset.halation = activeHalation;
-    root.dataset.heroEdge = activeHeroEdge;
     root.dataset.scheme = activePalette.endsWith('-dark') ? 'dark' : 'light';
     const pVars = (PALETTES[activePalette] || PALETTES['seth-olive-orange']).vars;
     const fVars = (FONTS[activeFont] || FONTS['retro-display']).vars;
@@ -209,9 +206,6 @@
     document.querySelectorAll('[data-halation-btn]').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.halationBtn === activeHalation ? 'true' : 'false');
     });
-    document.querySelectorAll('[data-hero-edge-btn]').forEach(btn => {
-      btn.setAttribute('aria-pressed', btn.dataset.heroEdgeBtn === activeHeroEdge ? 'true' : 'false');
-    });
     document.querySelectorAll('[data-film-btn]').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.filmBtn === activeFilm ? 'true' : 'false');
     });
@@ -224,7 +218,7 @@
   }
 
   // Option definitions shared with the admin panel (admin.js), so they are never duplicated there.
-  const BUILTIN = { palette: 'seth-olive-orange', font: 'retro-display', surface: 'metal', gradient: 'full', heroGrain: 'off', halation: 'off', heroEdge: 'off', filmGrain: 'off', cursorShadow: 'off' };
+  const BUILTIN = { palette: 'seth-olive-orange', font: 'retro-display', surface: 'metal', gradient: 'full', heroGrain: 'off', halation: 'off', filmGrain: 'off', cursorShadow: 'off' };
   const OPTIONS = {
     palette: { label: 'Color palette', values: Object.fromEntries(Object.entries(PALETTES).map(([k, p]) => [k, p.name])) },
     font: { label: 'Typography', values: Object.fromEntries(Object.entries(FONTS).map(([k, f]) => [k, f.name])) },
@@ -232,7 +226,6 @@
     gradient: { label: 'Gradient', values: GRADIENTS },
     heroGrain: { label: 'Hero grain', values: HERO_GRAINS },
     halation: { label: 'Hero halation', values: HALATIONS },
-    heroEdge: { label: 'Hero edge roughness', values: HERO_EDGES },
     filmGrain: { label: 'Film grain', values: FILM_GRAINS },
     cursorShadow: { label: 'Cursor shadow', values: CURSOR_SHADOWS }
   };
@@ -240,7 +233,7 @@
     options: OPTIONS,
     // Values every visitor gets today: the saved Site Defaults over the built-in look (no URL, no draft).
     saved: () => Object.fromEntries(Object.keys(OPTIONS).map(k => [k, pick(OPTIONS[k].values, SITE_DEFAULTS[k]) || BUILTIN[k]])),
-    get: () => ({ palette: activePalette, font: activeFont, surface: activeSurface, gradient: activeGradient, heroGrain: activeHeroGrain, halation: activeHalation, heroEdge: activeHeroEdge, filmGrain: activeFilm, cursorShadow: activeCursor }),
+    get: () => ({ palette: activePalette, font: activeFont, surface: activeSurface, gradient: activeGradient, heroGrain: activeHeroGrain, halation: activeHalation, filmGrain: activeFilm, cursorShadow: activeCursor }),
     // Live preview only; nothing is stored here.
     set(name, value) {
       if (!OPTIONS[name] || !Object.prototype.hasOwnProperty.call(OPTIONS[name].values, value)) return false;
@@ -251,7 +244,6 @@
       else if (name === 'filmGrain') activeFilm = value;
       else if (name === 'cursorShadow') activeCursor = value;
       else if (name === 'halation') activeHalation = value;
-      else if (name === 'heroEdge') activeHeroEdge = value;
       else activeHeroGrain = value;
       applyTheme();
       return true;
@@ -273,7 +265,6 @@
     lines.push(`/* Cursor shadow: set <html data-cursor-shadow="${activeCursor}"> (off | soft | strong; off is the default) */`);
     lines.push(`/* Hero grain: set <html data-hero-grain="${activeHeroGrain}"> (off | soft | strong; off is the default) */`);
     lines.push(`/* Hero halation: set <html data-halation="${activeHalation}"> (off | soft | strong; off is the default) */`);
-    lines.push(`/* Hero edge roughness: set <html data-hero-edge="${activeHeroEdge}"> (off | subtle | medium | rough; off is the default) */`);
     lines.push(`/* Scheme: set <html data-scheme="${activePalette.endsWith('-dark') ? 'dark' : 'light'}"> */`);
     return lines.join('\n');
   }
@@ -351,16 +342,6 @@
           <div class="theme-option-grid" role="toolbar" aria-label="Hero Halation">
             ${Object.entries(HALATIONS).map(([k, label]) => `
               <button type="button" class="theme-btn" data-halation-btn="${k}" aria-pressed="${k === activeHalation}">
-                <span>${label}</span>
-              </button>
-            `).join('')}
-          </div>
-        </div>
-        <div class="theme-section">
-          <div class="theme-section-title">Hero Edge</div>
-          <div class="theme-option-grid" role="toolbar" aria-label="Hero Edge Roughness">
-            ${Object.entries(HERO_EDGES).map(([k, label]) => `
-              <button type="button" class="theme-btn" data-hero-edge-btn="${k}" aria-pressed="${k === activeHeroEdge}">
                 <span>${label}</span>
               </button>
             `).join('')}
@@ -453,13 +434,6 @@
       if (halBtn) {
         activeHalation = halBtn.dataset.halationBtn;
         try { localStorage.setItem('alcove_theme_halation', activeHalation); } catch (err) { /* ignore */ }
-        applyTheme();
-        return;
-      }
-      const edgeBtn = e.target.closest('[data-hero-edge-btn]');
-      if (edgeBtn) {
-        activeHeroEdge = edgeBtn.dataset.heroEdgeBtn;
-        try { localStorage.setItem('alcove_theme_hero_edge', activeHeroEdge); } catch (err) { /* ignore */ }
         applyTheme();
         return;
       }

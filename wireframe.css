@@ -1,4 +1,18 @@
-/* Default fonts (Fraunces + Shrikhand) are linked from each page's <head> with preconnect, not @import (which waited for this file first). */
+/* Default fonts (Fraunces + Shrikhand) are self-hosted in fonts/ (perf pass 4, 2026-11-20: no Google Fonts connections
+   before first paint). Latin + Latin Extended subsets of the Google Fonts files (SIL OFL 1.1, fonts/LICENSES.md). No preload:
+   in tests it took bandwidth from the render-blocking CSS and delayed first paint. Fraunces is one variable file (wght 100-900, opsz auto). */
+@font-face { font-family: "Fraunces"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("fonts/fraunces-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Fraunces"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("fonts/fraunces-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Shrikhand"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("fonts/shrikhand-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Shrikhand"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("fonts/shrikhand-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 
 /* Wireframe Prototype Styles - Alcove Recording */
 :root {
@@ -1169,7 +1183,8 @@ html.has-fader::-webkit-scrollbar { display: none; }
   inset-inline: 0.55rem;
   top: 0;
   block-size: var(--cap-h);
-  transform: translateY(var(--fader-y, 0px));
+  /* moved by fader.js through its own transform */
+  will-change: transform;
   border-radius: 0.3rem;
   border: 1px solid #111;
   background:
@@ -1534,58 +1549,81 @@ html.has-fader::-webkit-scrollbar { display: none; }
   margin-inline: auto;
 }
 .deck-top { display: grid; grid-template-columns: minmax(0, 1fr); }
-/* The player sits straight on the page surface (no panel, no frame): a top-down plan view with a soft contact shadow.
-   The three.js canvas is transparent; the SVG is the fallback drawing in the same top-down pose. */
+/* The player sits straight on the page surface (no panel, no frame): a top-down plan view built from Blender renders
+   (assets-src/cassette-player/render_layers.py). Every full-size layer shares the 16 x 13.5 canvas; positions are % of it
+   (images/cassette/layout.json). Bottom to top: deck, tape packs, reels, cassette shell, label text, door, flip strip (only while turning), LED.
+   ab-compare.js only writes `scale` on the packs, `rotate` on the reels and `translate` on the door strip (compositor-only). */
 .cassette-stage {
   position: relative;
-  display: grid;
   min-inline-size: 0;
   aspect-ratio: 16 / 13.5;
+  container-type: inline-size;
 }
-.cassette-stage > canvas { grid-area: 1 / 1; inline-size: 100%; block-size: 100%; }
-.cassette-svg { grid-area: 1 / 1; display: block; inline-size: 100%; block-size: 100%; }
-/* display: none, not visibility: hidden: a hidden SVG still restyles and lays out its flip/reel animations every frame
-   under the 3D canvas. The stage keeps its size from aspect-ratio. */
-.cassette-stage[data-webgl] .cassette-svg { display: none; }
-.cassette-face { transform-box: fill-box; transform-origin: center; }
-/* Fallback player drawing (the 3D model is the real thing) */
-.pl-shadow { fill: #000; opacity: 0.38; }
-.pl-body { fill: color-mix(in srgb, var(--text-main) 30%, var(--bg-surface)); stroke: rgb(0 0 0 / 0.3); stroke-width: 2; }
-.pl-bay { fill: color-mix(in srgb, #000 85%, var(--bg-accent)); stroke: rgb(0 0 0 / 0.4); stroke-width: 2; }
-.cs-tape { fill: none; stroke: #3b2d21; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.cs-notch { fill: rgb(0 0 0 / 0.55); }
-.cs-guide { fill: #8e8870; }
-.pl-slots rect { fill: rgb(0 0 0 / 0.55); }
-.pl-door { fill: none; stroke: color-mix(in srgb, #000 78%, var(--bg-accent)); stroke-width: 10; }
-.pl-glass { fill: rgb(255 255 255 / 0.07); stroke: rgb(0 0 0 / 0.25); }
-.pl-latch { fill: color-mix(in srgb, #000 78%, var(--bg-accent)); }
-.pl-keys rect { fill: color-mix(in srgb, #000 72%, var(--bg-accent)); }
-.pl-glyph { fill: #e6dfc9; }
-.pl-glyph .pl-glyph-play { fill: #d8692b; }
-.pl-screw { fill: color-mix(in srgb, var(--text-main) 40%, var(--bg-surface)); }
-/* Cassette drawn from palette tokens; the paper label stays light in both themes */
-.cs-shell { fill: color-mix(in srgb, var(--text-main) 22%, var(--bg-surface)); stroke: rgb(0 0 0 / 0.25); stroke-width: 2; }
-.cs-paper { fill: var(--tape-paper); }
-.cs-stripe { fill: var(--text-muted); }
-.ab-compare[data-version="master"] .cs-stripe { fill: var(--accent-primary); }
-.cs-stripe-text { fill: var(--bg-surface); font-family: var(--font-mono); }
-.cs-hand { fill: var(--tape-ink); font-family: "Bradley Hand", "Segoe Print", cursive; }
-.cs-rule { stroke: color-mix(in srgb, var(--tape-ink) 30%, transparent); }
-.cs-window { fill: color-mix(in srgb, #000 80%, var(--accent-tertiary)); }
-.cs-window-inner { fill: color-mix(in srgb, #fff 18%, var(--deck-well)); opacity: 0.55; }
-.cs-pack { fill: color-mix(in srgb, var(--accent-tertiary) 55%, #000); }
-.cs-hub { fill: color-mix(in srgb, #fff 90%, var(--bg-accent)); }
-.cs-hole { fill: color-mix(in srgb, #000 90%, var(--accent-tertiary)); }
-.cs-spoke { fill: color-mix(in srgb, #fff 90%, var(--bg-accent)); }
-.cs-foot { fill: rgb(0 0 0 / 0.14); }
-.cs-screw { fill: color-mix(in srgb, var(--text-main) 40%, var(--bg-surface)); }
-/* Reels turn through --reel (ab-compare.js sets an angle such as 40deg); pack sizes are the circles' r attribute */
-.cs-reel { transform-box: fill-box; transform-origin: center; transform: rotate(var(--reel, 0deg)); }
-.cs-side { display: none; }
+.cassette-stage img { display: block; user-select: none; -webkit-user-drag: none; }
+.cd-deck, .cd-cassette, .cd-shell { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
+.cd-pack, .cd-reel { position: absolute; aspect-ratio: 1; translate: -50% -50%; }
+.cd-pack { inline-size: 13.75%; inset-block-start: 55.704%; scale: 0.7; }
+.cd-reel { inline-size: 10%; inset-block-start: 55.704%; }
+.cd-pack-l, .cd-reel-l { inset-inline-start: 41.25%; }
+.cd-pack-r, .cd-reel-r { inset-inline-start: 58.75%; }
+.cd-pack-l, .cd-pack-r { scale: 0.7; } /* fixed size: the packs no longer grow or shrink with progress */
+/* Paper label: HTML text on the blank rendered label, so palette changes and Admin edits apply without redrawing anything */
+.cd-label {
+  position: absolute;
+  inset-inline-start: 23.75%; inset-block-start: 25.185%;
+  inline-size: 52.5%; block-size: 21.852%;
+  overflow: hidden;
+  background: var(--tape-paper);
+  background-image: repeating-linear-gradient(transparent 0 6.4cqi, color-mix(in srgb, var(--tape-ink) 28%, transparent) 6.4cqi calc(6.4cqi + 1px));
+  background-position: 0 1.4cqi;
+}
+.cd-label::after {   /* retro label lines along the bottom edge */
+  content: ""; position: absolute; inset-inline: 0; inset-block-end: 1.4cqi; block-size: 5.2cqi; pointer-events: none;
+  background: linear-gradient(#FF7A2B 0 22%, transparent 22% 34%, #FFC93C 34% 56%, transparent 56% 68%, #8C9A1E 68% 90%, transparent 90%);
+}
+.cd-label .cs-side { display: none; margin: 0; }
 .ab-compare[data-version="memo"] .cs-side[data-version="memo"],
-.ab-compare[data-version="master"] .cs-side[data-version="master"] { display: inline; }
+.ab-compare[data-version="master"] .cs-side[data-version="master"] { display: block; }
+.cd-stripe {
+  display: flex; align-items: center; gap: 1.6cqi;
+  block-size: 4.4cqi; padding-inline: 1.4cqi;
+  background: var(--text-muted); color: var(--bg-surface);
+  font-family: var(--font-mono); font-size: 2.1cqi; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+}
+.ab-compare[data-version="master"] .cd-stripe { background: #B03A5B; color: #FFFBF2; }   /* Side B header: Sage & Coral plum */
+.cd-stripe b { font-size: 2.8cqi; }
+.cd-title { flex: 1; text-align: center; padding-inline-end: 3cqi; overflow: hidden; text-overflow: ellipsis; }
+.cd-label .cs-hand {
+  display: block; padding: 1cqi 1.8cqi 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  color: var(--tape-ink); font-family: "Bradley Hand", "Segoe Print", cursive; font-size: 2.9cqi; line-height: 1.3;
+}
+/* Door: a Blender strip of 10 frames (shut on top -> open at the bottom, render_layers.py ONLY=door + make-door-sheet.mjs).
+   The box clips to one frame; ab-compare.js steps `translate` through the strip to swing it open and shut. */
+.cd-door { position: absolute; inset-inline-start: 12.5%; inset-block-start: 9.259%; inline-size: 75%; block-size: 68.519%; overflow: hidden; }
+.cd-door-strip { inline-size: 100%; block-size: 1000%; max-inline-size: none; }
+.cd-under { position: absolute; inset: 0; transform-origin: 50% 45.556%; }   /* packs + reels; ab-compare.js scales it with the turning shell */
+/* Flip strip: the shell only, 15 Blender frames of it lifting, turning over and settling (render_layers.py ONLY=flip). It replaces .cd-shell while turning. */
+.cd-flip { position: absolute; inset-inline-start: 14.375%; inset-block-start: 18.148%; inline-size: 71.25%; block-size: 54.815%; overflow: hidden; visibility: hidden; pointer-events: none; }
+.cd-flip-strip { display: block; inline-size: 100%; block-size: 1500%; max-inline-size: none; }
+.ab-compare[data-turn] .cd-shell { visibility: hidden; }
+/* Two faces: Side A (warm bands) and Side B (cool bars) are separate renders; show the one for the side facing up. */
+.cd-shell-b { visibility: hidden; }
+.ab-compare[data-version="master"] .cd-shell:not(.cd-shell-b) { visibility: hidden; }
+.ab-compare[data-version="master"]:not([data-turn]) .cd-shell-b { visibility: visible; }
+.ab-compare[data-version="master"] .cd-label::after { background: linear-gradient(#B03A5B 0 22%, transparent 22% 34%, #FF5E4D 34% 56%, transparent 56% 68%, #B6D98B 68% 90%, transparent 90%); }
+.ab-compare[data-turn] .cd-flip { visibility: visible; }
+.cd-label { transform-origin: 50% 93.22%; }                  /* the turn axis: the cassette's centre */
 /* Readout: side name, side lamps, counter digits */
-.deck-readout { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 1rem; }
+.deck-readout {
+  position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1.25rem;
+  padding: 1.1rem 1.6rem 1.3rem;
+  border-radius: 0.6rem; border: 1px solid #0b0b0c;
+  background: linear-gradient(180deg, #2f2f33, #232326 45%, #1a1a1d);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), inset 0 -2px 0 rgb(0 0 0 / 0.4), 0 6px 0 #0d0d0e, 0 12px 14px rgb(0 0 0 / 0.35);
+}
+.deck-readout .deck-label { box-sizing: border-box; inline-size: min(100%, 17.5em); font-size: 0.85rem; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* a fixed window: the side name never resizes the readout */ padding: 0.45rem 0.7rem; border-radius: 0.25rem; background: #1a1d18; color: #ff9a3c; box-shadow: inset 0 2px 5px #000, 0 1px 0 rgb(255 255 255 / 0.12); }
+.deck-readout .side-lamps { color: rgb(255 255 255 / 0.85); }
+.deck-readout .side-lamp { color: rgb(255 255 255 / 0.85); } /* text never changes; only the lamp lights */
 .deck-readout p { margin: 0; }
 .deck-label { color: var(--text-main); font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 .side-lamps { display: flex; gap: 0.9rem; font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -1598,12 +1636,11 @@ html.has-fader::-webkit-scrollbar { display: none; }
   margin-inline-end: 0.35rem;
   border-radius: 50%;
   vertical-align: 0.05em;
-  background: color-mix(in srgb, var(--text-muted) 40%, transparent);
+  background: #0d0e0c;
+  box-shadow: inset 0 1px 2px #000, 0 1px 0 rgb(255 255 255 / 0.12);
 }
-.ab-compare[data-version="memo"] .side-lamp[data-version="memo"],
-.ab-compare[data-version="master"] .side-lamp[data-version="master"] { color: var(--text-main); }
 .ab-compare[data-version="memo"] .side-lamp[data-version="memo"]::before,
-.ab-compare[data-version="master"] .side-lamp[data-version="master"]::before { background: var(--accent-secondary); }
+.ab-compare[data-version="master"] .side-lamp[data-version="master"]::before { background: var(--accent-secondary); box-shadow: 0 0 6px 1px var(--accent-secondary); }
 .deck-counter { display: flex; gap: 0.4rem; }
 .deck-digits {
   padding: 0.15rem 0.5rem;
@@ -1615,20 +1652,20 @@ html.has-fader::-webkit-scrollbar { display: none; }
   font-size: 1.05rem;
   letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
+  box-sizing: content-box; inline-size: 4ch; text-align: center; white-space: nowrap; /* fits 0:00: the digits never resize the box */
 }
 /* Mechanical keys: matte, solid edge, press down and latch */
-/* Transport keys: transparent buttons laid over the keys drawn on the player (3D or SVG). Default positions match the SVG
-   plan view (480 x 405 units); cassette-3d.js overwrites --kx / --ky from the projected 3D keys. */
+/* Transport keys: transparent buttons laid over the keys in the deck render (centres from images/cassette/layout.json). */
 .deck-top { position: relative; }
 .deck-keys { position: absolute; inset: 0; pointer-events: none; }
 .deck-key {
-  --kx: 21.875%; --ky: 81.11%;
+  --kx: 21.875%; --ky: 79.259%;
   position: absolute;
   inset-inline-start: var(--kx);
   inset-block-start: var(--ky);
-  inline-size: 16.9%;
+  inline-size: 16.874%;
   min-inline-size: 2.75rem;
-  block-size: 8.2%;
+  block-size: 8.148%;
   min-block-size: 2.75rem;
   translate: -50% -50%;
   padding: 0;
@@ -1645,12 +1682,9 @@ html.has-fader::-webkit-scrollbar { display: none; }
 .deck-key[data-key="stop"] { --kx: 59.375%; }
 .deck-key[data-key="flip"] { --kx: 78.125%; }
 .deck-key:focus-visible { outline: 2px solid var(--border-focus); outline-offset: -2px; }
-/* SVG fallback keys react through :has() (the 3D keys react in cassette-3d.js) */
-.pl-keys rect { transition: fill 0.12s; }
-.deck-top:has(#ab-key-play:hover) .pl-key-play, .deck-top:has(#ab-key-pause:hover) .pl-key-pause,
-.deck-top:has(#ab-key-stop:hover) .pl-key-stop, .deck-top:has(#ab-key-flip:hover) .pl-key-flip { fill: color-mix(in srgb, var(--accent-secondary) 30%, #000 70%); }
-.deck-top:has(#ab-key-play[aria-pressed="true"]) .pl-key-play { transform: translateY(2px); fill: color-mix(in srgb, #000 82%, var(--bg-accent)); }
-.deck-top:has(.deck-key:active) .pl-keys rect { transition: none; }
+/* Hover lightens the key cap a touch; pressing (and Play while it runs) sinks it into shadow */
+.deck-key { transition: background-color 0.12s, box-shadow 0.12s; }
+.deck-key:active, .deck-key[aria-pressed="true"] { background: rgb(0 0 0 / 0.1); }   /* flat dim only: the rendered keys already carry all light and shadow */
 .ab-hint { margin: 0; text-align: center; font-size: 0.8rem; color: var(--text-muted); }
 /* Label-maker strips for the J-card's row names */
 .ab-strip {
@@ -1695,7 +1729,7 @@ html.has-fader::-webkit-scrollbar { display: none; }
   .ab-specs :is(th, td) { padding-inline: 0.35rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ab-specs td[data-version], .pl-keys rect { transition: none; }
+  .ab-specs td[data-version], .deck-key { transition: none; }
 }
 @media (forced-colors: active) {
   .jcard { border: 1px solid CanvasText; }
@@ -1870,6 +1904,16 @@ html.has-fader::-webkit-scrollbar { display: none; }
   }
 }
 
+/* Phones and touch screens (2026-11-18, for frame rate): cards and the hero photo stop reacting.
+   No tilt, lift, press or scroll-in settle on cards, and no hero parallax; buttons keep their press. */
+@media (max-width: 640px), (hover: none) {
+  .card, .roadmap-step { transform: var(--place, none); transition: none; translate: none; }
+  .card:active, .roadmap-step:active { translate: none; }
+  .media-box.has-photo:not(.has-video) { transition: none; }
+  .grid-cards > *, .showcase-side-cards > *, .roadmap-step { animation: none; }
+  .hero-media { animation: none; transform: none !important; will-change: auto; }
+}
+
 /* ===== Real buttons: raised matte keys with a thick side wall, top-edge highlight and a soft shadow on the metal ===== */
 .btn-placeholder,
 .btn-sm {
@@ -2007,3 +2051,139 @@ html[data-content-pending] body { visibility: hidden; }
 .closing-note { border-top: 1px solid var(--border-color); padding-top: 2.5rem; }
 .closing-note h2 { margin-bottom: 0.5rem; }
 
+
+/* ===== Nav (2026-11-20): native-app bar. Recessed track, compact inset pills, raised keycap for the active page.
+   Spec grays are derived from palette tokens (--text-main over --bg-surface), so every palette works. ===== */
+.site-header .nav-links {
+  --pill-r: 7px;
+  --track-pad: 3px;
+  align-items: center;
+  gap: 4px;
+  padding: var(--track-pad);
+  border: 1px solid color-mix(in srgb, var(--text-main) 5%, transparent);
+  border-radius: calc(var(--pill-r) + var(--track-pad));
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  box-shadow: none;
+}
+.site-header .nav-links a {
+  box-sizing: border-box;
+  min-block-size: 0;
+  block-size: 30px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--pill-r);
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.site-header .nav-links a:hover:not(.active):not([aria-current="page"]) {
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  color: color-mix(in srgb, var(--text-main) 80%, var(--text-muted));
+}
+.site-header .nav-links a.active,
+.site-header .nav-links a[aria-current="page"] {
+  font-weight: 500;
+  color: var(--text-main);
+}
+/* The sliding thumb is the raised keycap behind the active label */
+.nav-thumb {
+  inset-block: var(--track-pad, 3px);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--text-main) 9%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, var(--text-main) 7%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-main) 6%, transparent);
+  outline: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-header .nav-links a { transition: none; }
+}
+@media (max-width: 640px) {
+  .site-header nav {
+    background: color-mix(in srgb, var(--bg-surface) 85%, transparent);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid color-mix(in srgb, var(--text-main) 6%, transparent);
+  }
+  .site-header .nav-links a { block-size: 34px; }
+  /* Older phone tab-bar rules (1.. above) out-rank the pill sizing on :hover/.active, so a hovered or current tab jumped to 44px. Same pill in every state. */
+  .site-header .nav-links a:is(:hover, .active, [aria-current="page"]) {
+    min-height: 0;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: var(--pill-r);
+  }
+}
+@media (min-width: 641px) {
+  .site-header { padding-block: 0.1rem; }
+}
+
+/* ===== Buttons (2026-11-20): same native-app keycap as the nav pills. Secondary = tonal keycap, primary = accent fill. ===== */
+.btn-placeholder,
+.btn-sm {
+  min-block-size: 36px;
+  margin-block-end: 0;
+  padding-inline: 16px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 7%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--text-main) 9%, var(--bg-surface));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-main) 6%, transparent);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 120ms ease, color 120ms ease, transform 80ms ease;
+}
+.btn-placeholder:hover, .btn-sm:hover {
+  background: color-mix(in srgb, var(--text-main) 13%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--text-main) 7%, transparent);
+}
+.btn-placeholder:active, .btn-sm:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+.btn-primary,
+.btn-placeholder.btn-primary {
+  border-color: color-mix(in srgb, var(--accent-primary) 70%, #000);
+  background: var(--accent-primary);
+  color: var(--on-accent, var(--bg-surface));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+.btn-primary:hover, .btn-placeholder.btn-primary:hover {
+  background: color-mix(in srgb, #fff 10%, var(--accent-primary));
+  border-color: color-mix(in srgb, var(--accent-primary) 70%, #000);
+  color: var(--on-accent, var(--bg-surface));
+}
+.btn-primary:active, .btn-placeholder.btn-primary:active { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  .btn-placeholder, .btn-sm { transition: none; }
+}
+
+/* ===== Stronger keycap effect (2026-11-20): clearer track, border, highlight and depth on nav + buttons ===== */
+.btn-placeholder, .btn-sm {
+  background: color-mix(in srgb, var(--text-main) 20%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--text-main) 28%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text-main) 30%, transparent),
+    0 2px 0 rgb(0 0 0 / 0.45),
+    0 4px 8px rgb(0 0 0 / 0.3);
+}
+.btn-placeholder:hover, .btn-sm:hover {
+  background: color-mix(in srgb, var(--text-main) 27%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--text-main) 34%, transparent);
+}
+.btn-placeholder:active, .btn-sm:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-main) 20%, transparent), 0 0 0 rgb(0 0 0 / 0);
+}
+.btn-primary, .btn-placeholder.btn-primary {
+  border-color: color-mix(in srgb, var(--accent-primary) 55%, #000);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.4),
+    0 2px 0 color-mix(in srgb, var(--accent-primary) 50%, #000),
+    0 4px 10px rgb(0 0 0 / 0.35);
+}
+.btn-primary:active, .btn-placeholder.btn-primary:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 0 0 rgb(0 0 0 / 0);
+}

@@ -1,7 +1,10 @@
 # Glossary
 
 - **Fader**: custom console-style scroll bar control that mirrors page scroll, is draggable and keyboard operable (slider semantics).
-- **Gear treatment**: the stylized hardware look (gradients, bevels, highlights, pressed states) applied to the audio player, buttons, navigation and photo captions. The booking form's pickers stay plain.
+- **Gear treatment**: the stylized hardware look (gradients, bevels, highlights, pressed states) applied to the audio player, buttons, navigation and photo captions. The booking form is fitted out as a Faceplate (decided 2026-11-24, replacing the earlier plain-pickers rule).
+- **Faceplate**: the screwed-on metal panel the booking form sits on; its controls are recessed text slots, Push keys (Session Type and Experience Level), a Demo slot with jack and a Send key, each with an etched label and a status LED.
+- **Push key**: a latching key in a row where one stays lit; used for Session Type and Experience Level; each row is a real radio group underneath.
+- **Status LED**: the small lamp beside a form control: dark idle, green valid, red invalid. Never the only signal; the text message stays.
 - **Photo slot**: a taped or polaroid frame with a label-maker caption; placeholder slots keep real aspect ratios and are marked for Seth to replace.
 - **Grain**: scanned film grain over the page (`body::after`, set in `textures.css`, with an SVG-noise fallback); scaled by `--tex-strength` and disabled under `prefers-reduced-transparency`.
 - **Tactile texture**: a small CC0 scanned tile (paper, tape, label stock, film grain) layered per surface through `textures.css`, switched Off / Quiet / Bold in the Theme Preview Toolbar. Decorative only; never over text. _Avoid_: photo background, overlay image.

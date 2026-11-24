@@ -216,20 +216,16 @@ body::after {
    Off by default. Removed under reduced transparency / increased contrast (see the fallback below). */
 :root[data-halation="soft"] { --hero-halation-filter: url(#hero-halation-soft); }
 :root[data-halation="strong"] { --hero-halation-filter: url(#hero-halation-strong); }
-/* Hero edge roughness (toolbar "Hero Edge", html[data-hero-edge], ?edge=, Site Defaults key heroEdge): an SVG
-   filter (#hero-edge-*, inline in index.html) displaces the wordmark's edges with fractal noise, like ink on
-   rough stock. Wordmark only; static. Runs before halation so the glow follows the rough shape. Off by default. */
-:root[data-hero-edge="subtle"] { --hero-edge-filter: url(#hero-edge-subtle); }
-:root[data-hero-edge="medium"] { --hero-edge-filter: url(#hero-edge-medium); }
-:root[data-hero-edge="rough"] { --hero-edge-filter: url(#hero-edge-rough); }
-/* Both unset -> empty value -> invalid at computed time -> filter: none. */
-:root:is([data-halation="soft"], [data-halation="strong"], [data-hero-edge="subtle"], [data-hero-edge="medium"], [data-hero-edge="rough"]) h1.studio-wordmark {
-  filter: var(--hero-edge-filter, ) var(--hero-halation-filter, );
+:root:is([data-halation="soft"], [data-halation="strong"]) h1.studio-wordmark {
+  filter: var(--hero-halation-filter, );
 }
 /* Film grain (toolbar "Film grain", html[data-film], ?film=): a faint, animated grain over the whole site.
    One fixed layer on html::after, so no page markup changes. The grain is the film-grain alpha tile as a single
-   mask tinted by a palette token. The layer is larger than the viewport and jumps between offsets in steps(), so
-   only a transform animates (no repaint). Off by default; static under reduced motion. */
+   mask tinted by a palette token. The layer is the viewport plus one grain tile up and left, and jumps between
+   eight offsets inside one tile in steps(): the tile repeats, so each offset is a fresh-looking frame and the
+   viewport is always covered. Only a transform animates (no repaint), and the layer is about half the area it
+   was at inset -50% (perf pass 4, 2026-11-20: 751x1624 -> 631x1068 CSS px on a 375x812 phone). Off by default;
+   static under reduced motion. */
 :root { --film-alpha: 0; --film-size: 256px; }
 :root[data-film="subtle"] { --film-alpha: 0.05; }
 :root[data-film="medium"] { --film-alpha: 0.075; --film-size: 288px; }
@@ -237,7 +233,7 @@ body::after {
 :root[data-film="subtle"]::after, :root[data-film="medium"]::after, :root[data-film="high"]::after {
   content: "";
   position: fixed;
-  inset: -50%;
+  inset: calc(-1 * var(--film-size)) 0 0 calc(-1 * var(--film-size));
   z-index: 9000;
   pointer-events: none;
   background-color: var(--text-main);
@@ -248,14 +244,15 @@ body::after {
 }
 @keyframes film-jitter {
   0%   { transform: translate(0, 0); }
-  12%  { transform: translate(-7%, 4%); }
-  25%  { transform: translate(5%, -9%); }
-  37%  { transform: translate(-11%, -3%); }
-  50%  { transform: translate(8%, 10%); }
-  62%  { transform: translate(-4%, 7%); }
-  75%  { transform: translate(10%, -5%); }
-  87%  { transform: translate(-9%, -10%); }
+  12%  { transform: translate(calc(var(--film-size) * 0.43), calc(var(--film-size) * 0.71)); }
+  25%  { transform: translate(calc(var(--film-size) * 0.81), calc(var(--film-size) * 0.17)); }
+  37%  { transform: translate(calc(var(--film-size) * 0.12), calc(var(--film-size) * 0.48)); }
+  50%  { transform: translate(calc(var(--film-size) * 0.66), calc(var(--film-size) * 0.93)); }
+  62%  { transform: translate(calc(var(--film-size) * 0.29), calc(var(--film-size) * 0.06)); }
+  75%  { transform: translate(calc(var(--film-size) * 0.94), calc(var(--film-size) * 0.59)); }
+  87%  { transform: translate(calc(var(--film-size) * 0.55), calc(var(--film-size) * 0.34)); }
 }
+
 @media (prefers-reduced-motion: reduce) {
   :root[data-film]::after { animation: none; }
 }
@@ -291,7 +288,7 @@ body::after {
 }
 :root[data-scheme="dark"] {
   --etch-dark: rgb(0 0 0 / 0.6);
-  --etch-light: rgb(255 255 255 / 0.1);
+  --etch-light: rgb(255 255 255 / 0.22);
 }
 /* Bar edges where the header / phone tab bar meet the metal, and the footer's top rule */
 .site-header, .site-footer { border-image: none; }
@@ -314,12 +311,12 @@ body::after {
    metal (soft halo) and is a touch thinner than flat colour. Tokens are per scheme, like the etched
    lines. Not applied to paper things (J-card, polaroid frames), buttons or the hero wordmark. */
 :root {
-  --etch-cut: rgb(40 20 10 / 0.42);
-  --ink-bleed: 0 0 0.6px color-mix(in srgb, currentColor 55%, transparent);
+  --etch-cut: rgb(40 20 10 / 0.8);
+  --ink-bleed: 0 -0.5px 0 var(--etch-cut), 0 0.75px 0 var(--etch-light);
   --type-etch: 0 -1px 0 var(--etch-cut), 0 1px 0 var(--etch-light);
 }
-:root[data-scheme="dark"] { --etch-cut: rgb(0 0 0 / 0.7); }
-:is(h1:not(.studio-wordmark), h2, h3, h4, .nav-links a, .site-footer, .filter-pill, .hero-wordmark-subline) {
+:root[data-scheme="dark"] { --etch-cut: rgb(0 0 0 / 0.85); }
+:is(h1:not(.studio-wordmark), h2, h3, h4, .nav-links a, .site-footer, .filter-pill, .hero-wordmark-subline, .faq-summary) {
   text-shadow: var(--type-etch);
 }
 :is(p, li, dd, label, .page-intro):not(:is(.jcard, .media-box, .btn-placeholder, .site-footer) *) {
@@ -329,12 +326,12 @@ body::after {
 :is(.hero-nav .nav-links a, .hero-wordmark-subline, .hero-wordmark-viewport .scroll-cue):is(a, p, span, div, button) { text-shadow: none; }
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
-  :is(h1, h2, h3, h4, .nav-links a, .site-footer, .filter-pill, .hero-wordmark-subline, p, li, dd, label, .page-intro) { text-shadow: none; }
-  body::before, body::after, :is(.card, .roadmap-step)::before, :is(h1, h2)::after, :root[data-film]::after { display: none; }
+  :is(h1, h2, h3, h4, .nav-links a, .site-footer, .filter-pill, .hero-wordmark-subline, .faq-summary, p, li, dd, label, .page-intro) { text-shadow: none; }
+  body::before, body::after, :is(.card, .roadmap-step, .btn-placeholder, .btn-sm)::before, :is(h1, h2)::after, :root[data-film]::after { display: none; }
   h1.studio-wordmark { filter: none; }
   .hero-wordmark-viewport { box-shadow: none; }
   .logo-mark--hero::after { display: none; }
-  :root[data-halation] h1.studio-wordmark, :root[data-hero-edge] h1.studio-wordmark { filter: none; }
+  :root[data-halation] h1.studio-wordmark { filter: none; }
   .media-box.has-photo:not(.has-video)::before { background-image: none; -webkit-mask-image: none; mask-image: none; }
   .media-box.has-photo:not(.has-video) { background-image: none; }
   .site-header, .site-footer, .site-header nav, .page-header, .closing-note, .filter-pill.active, .media-box.has-video { box-shadow: none; }
@@ -399,8 +396,269 @@ body::after {
 
 /* Lite mode (html[data-lite], set by content-loader.js on weak devices or ?lite): the metal sheet and photos stay,
    the layers that cost frames go: the fixed sheen, film grain and the hero's SVG filters. Parallax, card tilt and
-   card settle are switched off in wireframe.css; the 3D cassette falls back to the SVG one (cassette-3d.js). */
+   card settle are switched off in wireframe.css. */
 :root[data-lite] body::after { display: none; }
 :root[data-lite]::after { content: none !important; animation: none !important; }
-:root[data-lite] { --hero-halation-filter: initial; --hero-edge-filter: initial; }
+:root[data-lite] { --hero-halation-filter: initial; }
 :root[data-lite] h1.studio-wordmark { filter: none !important; }
+
+/* Button metal (2026-11-20, user request): the same brushed-metal tile as the page, brighter, on the buttons. One alpha mask; the
+   pseudo-element sits behind the label inside an isolated stacking context. Off in the reduced-transparency / contrast fallback above. */
+.btn-placeholder, .btn-sm { position: relative; isolation: isolate; overflow: hidden; }
+.btn-placeholder::before, .btn-sm::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background-color: var(--tex-metal-color);
+  opacity: 0.55;
+  -webkit-mask-image: var(--tex-metal-img);
+  mask-image: var(--tex-metal-img);
+  -webkit-mask-size: 256px 128px;
+  mask-size: 256px 128px;
+}
+.btn-primary::before, .btn-placeholder.btn-primary::before { background-color: #fff; opacity: 0.28; }
+
+/* Buttons match the page (2026-11-20, user request): the face is the page colour with the page's own metal tint, so a secondary
+   button reads as a raised plate of the same metal. Primary keeps its accent fill. */
+.btn-placeholder:not(.btn-primary), .btn-sm:not(.btn-primary) {
+  background: color-mix(in srgb, var(--text-main) 4%, var(--bg-page));
+}
+.btn-placeholder:not(.btn-primary):hover, .btn-sm:not(.btn-primary):hover {
+  background: color-mix(in srgb, var(--text-main) 9%, var(--bg-page));
+}
+.btn-placeholder:not(.btn-primary)::before, .btn-sm:not(.btn-primary)::before { opacity: 0.3; }
+
+/* Primary buttons (2026-11-20, user request): no orange. A lighter, more saturated version of the page colour, same metal tint. */
+.btn-primary, .btn-placeholder.btn-primary {
+  --btn-hi: color-mix(in srgb, var(--bg-page) 70%, var(--accent-tertiary));
+  --btn-hi: oklch(from var(--bg-page) calc(l + 0.16) calc(c * 2.2) h);
+  background: var(--btn-hi);
+  border-color: color-mix(in srgb, var(--text-main) 28%, transparent);
+  color: var(--text-main);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--text-main) 30%, transparent),
+    0 2px 0 rgb(0 0 0 / 0.45),
+    0 4px 8px rgb(0 0 0 / 0.3);
+}
+.btn-primary:hover, .btn-placeholder.btn-primary:hover {
+  background: color-mix(in srgb, var(--text-main) 8%, var(--btn-hi));
+  border-color: color-mix(in srgb, var(--text-main) 34%, transparent);
+  color: var(--text-main);
+}
+.btn-primary:active, .btn-placeholder.btn-primary:active {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-main) 20%, transparent);
+}
+.btn-primary::before, .btn-placeholder.btn-primary::before { background-color: var(--tex-metal-color); opacity: 0.3; }
+
+/* ===== Booking form Faceplate (booking-form-tactile ticket 01) ===== */
+.faceplate {
+  position: relative;
+  padding: 2.5rem 1.5rem 1.5rem;
+  border: 1px solid var(--etch-dark);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg-accent) 45%, var(--bg-surface));
+  box-shadow: inset 0 1px 0 var(--etch-light), 0 8px 18px -6px rgb(0 0 0 / 0.3);
+  --fp-metal: color-mix(in srgb, var(--text-main) 30%, var(--bg-surface));
+}
+.fp-screw {
+  position: absolute;
+  inline-size: 0.8rem;
+  block-size: 0.8rem;
+  border-radius: 50%;
+  /* Countersunk Phillips head: domed metal, recessed cross, a dark seat in the panel */
+  --sc-hi: color-mix(in srgb, var(--text-main) 62%, var(--bg-surface));
+  --sc-mid: color-mix(in srgb, var(--text-main) 38%, var(--bg-surface));
+  --sc-lo: color-mix(in srgb, var(--text-main) 16%, var(--bg-surface));
+  background:
+    linear-gradient(#000a, #000a) center / 58% 2px no-repeat,
+    linear-gradient(#000a, #000a) center / 2px 58% no-repeat,
+    radial-gradient(circle at 32% 28%, var(--sc-hi), var(--sc-mid) 55%, var(--sc-lo));
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.18),
+    inset 0 -1px 2px rgb(0 0 0 / 0.45),
+    0 0 0 1.5px rgb(0 0 0 / 0.55),
+    0 1.5px 0 1.5px var(--etch-light);
+}
+.fp-screw:nth-of-type(1) { inset: 0.75rem auto auto 0.75rem; transform: rotate(20deg); }
+.fp-screw:nth-of-type(2) { inset: 0.75rem 0.75rem auto auto; transform: rotate(75deg); }
+.fp-screw:nth-of-type(3) { inset: auto auto 0.75rem 0.75rem; transform: rotate(-10deg); }
+.fp-screw:nth-of-type(4) { inset: auto 0.75rem 0.75rem auto; transform: rotate(50deg); }
+.fp-title {
+  margin: 0 0 0.25rem;
+  padding-block-end: 0.6rem;
+  border-bottom: 1px solid var(--etch-dark);
+  box-shadow: var(--etch-groove);
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-main) 82%, transparent);
+  text-shadow: 0 1px 0 var(--etch-light);
+}
+.faceplate .field-group > label { color: color-mix(in srgb, var(--text-main) 82%, transparent); text-shadow: 0 1px 0 var(--etch-light); }
+
+/* Recessed slot: the wrapper carries the depth, the native field sits flat inside it */
+.faceplate .slot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-inline-end: 0.75rem;
+  border: 1px solid var(--etch-dark);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--text-main) 9%, var(--bg-surface));
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.28), 0 1px 0 var(--etch-light);
+}
+.faceplate .field-group .slot :is(input, textarea) {
+  flex: 1;
+  min-inline-size: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  outline: none;
+}
+/* Focus: lit edge and a thicker lip, so it is not colour alone */
+.faceplate .slot:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.28), 0 0 0 2px var(--border-focus), 0 0 10px color-mix(in srgb, var(--border-focus) 55%, transparent);
+}
+.faceplate .slot:has(:user-invalid) { border-color: var(--color-error); }
+
+/* Status LED: dark until the person has interacted, then green or red (red is a triangle) */
+.led {
+  flex: none;
+  inline-size: 0.7rem;
+  block-size: 0.7rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-main) 35%, black);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.6), 0 1px 0 var(--etch-light);
+}
+.slot:has(:user-valid:not(:placeholder-shown)) .led {
+  background: var(--color-valid);
+  box-shadow: 0 0 0 1px var(--etch-dark), 0 0 8px var(--color-valid);
+}
+.slot:has(:user-invalid) .led {
+  inline-size: 0.85rem;
+  block-size: 0.8rem;
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  background: var(--color-error);
+  box-shadow: none;
+}
+.faceplate .field-group:has(:user-invalid) .error-msg { display: block; }
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .faceplate, .faceplate .slot, .faceplate .slot:focus-within, .led, .fp-screw, .fp-title { box-shadow: none; text-shadow: none; }
+  .faceplate, .faceplate .slot { border-color: var(--text-main); }
+  .faceplate .slot { background: var(--bg-surface); }
+}
+@media (forced-colors: active) {
+  .faceplate, .faceplate .slot { border-color: CanvasText; background: Canvas; box-shadow: none; }
+  .faceplate .slot:focus-within { outline: 3px solid Highlight; }
+  .led { background: GrayText; forced-color-adjust: none; }
+  .slot:has(:user-valid:not(:placeholder-shown)) .led { background: Highlight; }
+  .slot:has(:user-invalid) .led { background: CanvasText; }
+}
+
+/* ===== Push keys + Slide switch (booking-form-tactile ticket 02) ===== */
+.faceplate fieldset.fp-group { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
+.faceplate .fp-group legend { padding: 0; margin-block-end: 0.25rem; font-weight: 600; font-size: 0.9rem; color: color-mix(in srgb, var(--text-main) 82%, transparent); text-shadow: 0 1px 0 var(--etch-light); }
+.fp-row { display: flex; align-items: center; gap: 0.6rem; }
+.fp-row > .push-keys { flex: 1; min-inline-size: 0; }
+.faceplate .field-group .fp-opt { position: relative; display: flex; align-items: center; justify-content: center; margin: 0; min-block-size: 2.75rem; cursor: var(--cursor-pointer, pointer); text-align: center; }
+.fp-opt input { position: absolute; inline-size: 1px; block-size: 1px; margin: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.fp-opt-text { position: relative; z-index: 1; padding: 0.4rem 0.6rem; font-size: 0.95rem; font-weight: 600; line-height: 1.25; text-wrap: balance; letter-spacing: normal; text-transform: none; }
+/* The two key rows get the full faceplate width so labels read on one or two natural lines */
+.faceplate .form-grid > .fp-group { grid-column: 1 / -1; }
+
+/* Push keys: latching, one down at a time; the pressed key sits lower with an inset edge and a lit bar */
+.push-keys { display: flex; gap: 0.6rem; padding: 0.3rem 0.3rem 0.5rem; }
+.push-keys .fp-opt { flex: 1; border: 1px solid var(--etch-dark); border-radius: 5px; color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 6%, var(--bg-surface));
+  box-shadow: 0 3px 0 var(--etch-dark), 0 4px 3px rgb(0 0 0 / 0.25), inset 0 1px 0 var(--etch-light);
+  transition: transform 90ms, box-shadow 90ms; }
+.push-keys .fp-opt:has(:checked) { transform: translateY(3px); background: color-mix(in srgb, var(--text-main) 14%, var(--bg-surface));
+  box-shadow: 0 0 0 var(--etch-dark), inset 0 3px 6px rgb(0 0 0 / 0.45), inset 0 0 0 1px var(--etch-dark); }
+.push-keys .fp-opt:has(:checked) .fp-opt-text { font-weight: 700; }
+.push-keys .fp-opt:has(:focus-visible) { outline: 3px solid var(--border-focus); outline-offset: 2px; }
+
+/* Status LED per group (same lamp as the slots) */
+.fp-group:has(:checked) .led { background: var(--color-valid); box-shadow: 0 0 0 1px var(--etch-dark), 0 0 8px var(--color-valid); }
+.fp-group:has(:user-invalid) .led { inline-size: 0.85rem; block-size: 0.8rem; border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: var(--color-error); box-shadow: none; }
+.fp-group:has(:user-invalid) .push-keys .fp-opt:not(:has(:checked)) { border-color: var(--color-error); }
+
+@media (max-width: 640px) {
+  .push-keys { flex-direction: column; gap: 0.5rem; }
+  .push-keys .fp-opt { inline-size: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .push-keys .fp-opt { transition: none; }
+  .push-keys .fp-opt:has(:checked) { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .push-keys .fp-opt { box-shadow: none; border-color: var(--text-main); }
+}
+@media (forced-colors: active) {
+  .push-keys .fp-opt { border-color: CanvasText; box-shadow: none; }
+  .push-keys .fp-opt:has(:checked) { background: Highlight; color: HighlightText; forced-color-adjust: none; }
+  .fp-group .led { background: GrayText; forced-color-adjust: none; }
+  .fp-group:has(:checked) .led { background: Highlight; }
+  .fp-group:has(:user-invalid) .led { background: CanvasText; }
+}
+
+/* ---- Demo slot and Send key (booking-form-tactile ticket 03) ---- */
+.faceplate .demo-drop { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; min-block-size: 5rem; padding: 1rem 1rem 1rem 4.5rem;
+  border: 1px solid var(--etch-dark); border-radius: 5px; color: color-mix(in srgb, white 82%, var(--text-main));
+  background: color-mix(in srgb, black 82%, var(--text-main)); box-shadow: inset 0 3px 6px rgb(0 0 0 / 0.6), 0 1px 0 var(--etch-light);
+  transition: box-shadow 120ms, border-color 120ms; }
+/* Jack socket: dark ring with a deep hole and a lit rim lip */
+.faceplate .demo-drop::before { content: ""; position: absolute; inset-inline-start: 1.1rem; inset-block-start: 50%; inline-size: 2.2rem; block-size: 2.2rem; margin-block-start: -1.1rem; border-radius: 50%;
+  background: radial-gradient(circle, black 0 28%, color-mix(in srgb, black 60%, var(--text-main)) 30% 52%, black 54% 62%, color-mix(in srgb, var(--text-main) 40%, black) 64% 100%);
+  box-shadow: 0 1px 0 var(--etch-light), inset 0 0 0 1px rgb(0 0 0 / 0.6); }
+.faceplate .demo-drop.is-dragover { border-color: var(--color-valid); box-shadow: inset 0 3px 6px rgb(0 0 0 / 0.6), 0 0 0 2px var(--color-valid), 0 0 14px var(--color-valid); }
+.faceplate .demo-drop.is-dragover::before { box-shadow: 0 0 10px 2px var(--color-valid), inset 0 0 0 2px var(--color-valid); }
+.faceplate .demo-drop .btn-placeholder { min-block-size: 2.75rem; min-inline-size: 2.75rem; padding: 0.5rem 1.25rem; font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--text-main);
+  border: 1px solid var(--etch-dark); border-radius: 5px; background: color-mix(in srgb, var(--text-main) 8%, var(--bg-surface));
+  box-shadow: 0 3px 0 var(--etch-dark), inset 0 1px 0 var(--etch-light); transform: none; transition: transform 90ms, box-shadow 90ms; }
+.faceplate .demo-drop .btn-placeholder:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.3); }
+.faceplate .demo-drop .btn-placeholder:focus-visible { outline: 3px solid var(--border-focus); outline-offset: 2px; }
+.faceplate .demo-list { display: grid; gap: 0.4rem; margin-block-start: 0.6rem; }
+/* Label strip: a label-maker tape with name, size and a remove control */
+.faceplate .demo-list li { padding: 0.15rem 0.25rem 0.15rem 0.75rem; border: 1px solid var(--etch-dark); border-radius: 3px; align-items: center;
+  background: color-mix(in srgb, var(--bg-surface) 88%, white); color: var(--text-main); box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), inset 0 1px 0 var(--etch-light); }
+.faceplate .demo-remove { text-decoration: none; border-radius: 3px; border: 1px solid var(--etch-dark); min-block-size: 2.75rem; padding-inline: 0.75rem; }
+/* Lit progress bar */
+.faceplate .demo-progress { block-size: 0.7rem; margin-block-start: 0.6rem; border: 1px solid var(--etch-dark); border-radius: 4px; overflow: hidden; background: black; box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.7); }
+.faceplate .demo-progress::-webkit-progress-bar { background: black; }
+.faceplate .demo-progress::-webkit-progress-value { background: var(--color-valid); box-shadow: 0 0 8px var(--color-valid); transition: inline-size 150ms; }
+.faceplate .demo-progress::-moz-progress-bar { background: var(--color-valid); }
+/* Send key: big key, visible press travel, lamp lit while sending (aria-busy) */
+.faceplate .send-key { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 0.75rem; min-block-size: 3.5rem; padding: 0.75rem 1.75rem; inline-size: 100%; max-inline-size: 26rem;
+  border: 1px solid var(--etch-dark); border-radius: 6px; font-weight: 700; font-size: 1.05rem; color: var(--on-accent, var(--bg-surface)); background: var(--accent-primary);
+  box-shadow: 0 6px 0 var(--etch-dark), 0 8px 6px rgb(0 0 0 / 0.3), inset 0 1px 0 var(--etch-light); transform: translateY(0); transition: transform 90ms, box-shadow 90ms; }
+.faceplate .send-key::before { content: ""; flex: none; inline-size: 0.8rem; block-size: 0.8rem; border-radius: 50%; background: color-mix(in srgb, black 55%, var(--accent-primary)); box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.6), 0 0 0 1px var(--etch-dark); }
+.faceplate .send-key:hover:not(:disabled) { transform: translateY(0); }
+.faceplate .send-key:active:not(:disabled), .faceplate .send-key[aria-busy="true"] { transform: translateY(5px); box-shadow: 0 1px 0 var(--etch-dark), inset 0 2px 5px rgb(0 0 0 / 0.35); }
+.faceplate .send-key[aria-busy="true"]::before { background: var(--color-valid); box-shadow: 0 0 0 1px var(--etch-dark), 0 0 10px 2px var(--color-valid); }
+.faceplate .send-key:disabled { opacity: 0.8; cursor: not-allowed; }
+.faceplate .send-key:focus-visible { outline: 3px solid var(--border-focus); outline-offset: 4px; }
+.faceplate .button-group { padding-block-end: 0.5rem; }
+@media (prefers-reduced-motion: reduce) {
+  .faceplate .demo-drop, .faceplate .demo-drop .btn-placeholder, .faceplate .send-key, .faceplate .demo-progress::-webkit-progress-value { transition: none; }
+  .faceplate .send-key:active:not(:disabled), .faceplate .send-key[aria-busy="true"], .faceplate .demo-drop .btn-placeholder:active:not(:disabled) { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .faceplate .demo-drop, .faceplate .demo-list li, .faceplate .send-key, .faceplate .demo-drop .btn-placeholder, .faceplate .demo-progress { box-shadow: none; border-color: var(--text-main); }
+  .faceplate .demo-progress::-webkit-progress-value { box-shadow: none; }
+  .faceplate .send-key[aria-busy="true"]::before, .faceplate .demo-drop.is-dragover::before { box-shadow: none; }
+}
+@media (forced-colors: active) {
+  .faceplate .demo-drop, .faceplate .demo-list li, .faceplate .send-key, .faceplate .demo-drop .btn-placeholder, .faceplate .demo-progress { border: 1px solid CanvasText; background: Canvas; color: CanvasText; box-shadow: none; }
+  .faceplate .demo-drop::before, .faceplate .send-key::before { background: GrayText; box-shadow: none; forced-color-adjust: none; }
+  .faceplate .send-key[aria-busy="true"]::before, .faceplate .demo-drop.is-dragover::before { background: Highlight; }
+  .faceplate .demo-drop.is-dragover { outline: 3px solid Highlight; }
+  .faceplate .demo-progress::-webkit-progress-value, .faceplate .demo-progress::-moz-progress-bar { background: Highlight; box-shadow: none; }
+}

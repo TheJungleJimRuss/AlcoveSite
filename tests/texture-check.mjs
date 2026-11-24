@@ -271,32 +271,5 @@ const pagePaper = page => page.evaluate(() => { const c = getComputedStyle(docum
   await ctx.close();
 }
 
-// Hero edge roughness: off by default; Subtle/Medium/Rough put a displacement filter on the wordmark only,
-// and it chains with halation (edge first, then glow).
-{
-  const edge = page => page.evaluate(() => ({ attr: document.documentElement.dataset.heroEdge,
-    word: getComputedStyle(document.querySelector('h1.studio-wordmark')).filter,
-    photo: getComputedStyle(document.querySelector('.hero-media')).filter,
-    defs: ['subtle', 'medium', 'rough'].every(k => document.querySelector('#hero-edge-' + k + ' feDisplacementMap')) }));
-  let { ctx, page } = await open('?devtoolbar', {}, 'index.html');
-  let e = await edge(page);
-  check(e.attr === 'off' && e.word === 'none' && e.defs, 'hero edge is off by default', JSON.stringify(e));
-  await page.locator('[data-hero-edge-btn="medium"]').evaluate(b => b.click()); await page.waitForTimeout(100);
-  e = await edge(page);
-  check(e.attr === 'medium' && /#hero-edge-medium/.test(e.word) && e.photo === 'none', 'Medium: wordmark gets the edge filter, photo untouched', JSON.stringify(e));
-  await page.locator('[data-halation-btn="soft"]').evaluate(b => b.click()); await page.waitForTimeout(100);
-  e = await edge(page);
-  check(/#hero-edge-medium.*#hero-halation-soft/.test(e.word), 'edge and halation chain (edge first)', JSON.stringify(e));
-  await ctx.close();
-  ({ ctx, page } = await open('?edge=rough', {}, 'index.html'));
-  e = await edge(page);
-  check(e.attr === 'rough' && /#hero-edge-rough/.test(e.word), '?edge= works', JSON.stringify(e));
-  const cdp = await ctx.newCDPSession(page);
-  await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-contrast', value: 'more' }] });
-  e = await edge(page);
-  check(e.word === 'none', 'increased contrast: no edge roughness', JSON.stringify(e));
-  await ctx.close();
-}
-
 await browser.close(); server.close();
 process.exit(failures ? 1 : 0);

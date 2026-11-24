@@ -68,8 +68,8 @@ const fx = page => page.evaluate(() => {
   await page.goto(base + '/work.html');
   await page.evaluate(() => document.getElementById('cassette-stage').scrollIntoView({ block: 'center' }));
   await page.waitForTimeout(800);
-  const c = await page.evaluate(() => ({ err: window.__cassette3d && window.__cassette3d.error, gl: document.getElementById('cassette-stage').hasAttribute('data-webgl'), svg: getComputedStyle(document.getElementById('cassette-svg')).display }));
-  check(c.err === 'lite' && !c.gl && c.svg !== 'none', 'lite: Work shows the SVG cassette, three.js is never loaded', JSON.stringify(c));
+  const c = await page.evaluate(() => ({ deck: getComputedStyle(document.querySelector('.cd-deck')).display, canvas: !!document.querySelector('#cassette-stage canvas') }));
+  check(c.deck !== 'none' && !c.canvas, 'lite: Work shows the image cassette deck', JSON.stringify(c));
   const three = await page.evaluate(() => performance.getEntriesByType('resource').some(r => /three|\.glb/.test(r.name)));
   check(!three, 'lite: no three.js or GLB requests');
   await page.goto(base + '/index.html?lite=0');

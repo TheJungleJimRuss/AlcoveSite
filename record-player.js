@@ -233,7 +233,7 @@
   fader.setAttribute('aria-label', 'Browse records');
   fader.setAttribute('aria-orientation', 'horizontal');
   fader.innerHTML = '<span class="rp-fader-plate" aria-hidden="true"></span><span class="rp-fader-slot" aria-hidden="true"></span><span class="rp-fader-cap" aria-hidden="true"></span>';
-  crate.querySelector('.rp-crate-nav').after(fader);
+  root.querySelector('.rp-bay').append(fader);
   let fdrag = null;
   function syncFader(i, n) {
     fader.hidden = n < 2;
@@ -252,10 +252,13 @@
     const cap = fader.querySelector('.rp-fader-cap'), cr = cap.getBoundingClientRect();
     fdrag = { id: e.pointerId, grab: e.target === cap ? e.clientX - cr.left : cr.width / 2 };
     fader.setPointerCapture(e.pointerId);
-    e.preventDefault(); fader.focus({ preventScroll: true });
+    e.preventDefault(); fader.dataset.ptr = '1'; fader.focus({ preventScroll: true }); delete fader.dataset.ptr;
     fader.classList.add('is-dragging');
     fader.dispatchEvent(new PointerEvent('pointermove', { pointerId: e.pointerId, clientX: e.clientX, bubbles: false }));
   });
+  fader.addEventListener('focus', () => { if (!fader.dataset.ptr) fader.classList.add('is-keyboard'); });
+  fader.addEventListener('keydown', () => fader.classList.add('is-keyboard'));
+  fader.addEventListener('blur', () => fader.classList.remove('is-keyboard'));
   fader.addEventListener('pointermove', e => {
     if (!fdrag || fdrag.id !== e.pointerId) return;
     const list = visible(), n = list.length, p = faderRatio(e);
@@ -348,7 +351,7 @@
       if (!current || !duration() || phase === 'loading' || e.button > 0) return;
       e.preventDefault();
       interrupt();
-      el.focus({ preventScroll: true });
+      el.focus({ preventScroll: true, focusVisible: false });
       el.setPointerCapture(e.pointerId);
       drag = { id: e.pointerId, t: toTime(e) };
       update();
