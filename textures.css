@@ -191,34 +191,6 @@ body::after {
 /* Text distress and edge grain removed (2026-11-13): headings and the hero wordmark render clean. */
 .svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 
-/* Hero grain: film grain on the Home hero wordmark only, not the photo (toolbar "Hero Grain",
-   html[data-hero-grain]). The logo is mask-image'd, so a child layer is clipped to the letters.
-   One alpha tile as a single mask, tinted by a palette token. Off by default. */
-:root { --hero-grain-alpha: 0; --hero-grain-size: 256px; }
-:root[data-hero-grain="soft"] { --hero-grain-alpha: 0.12; --hero-grain-size: 256px; }
-:root[data-hero-grain="strong"] { --hero-grain-alpha: 0.3; --hero-grain-size: 384px; }
-.logo-mark--hero { position: relative; }
-.logo-mark--hero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-color: var(--text-main);
-  -webkit-mask: var(--tex-film-img) 0 0 / var(--hero-grain-size) var(--hero-grain-size) repeat;
-  mask: var(--tex-film-img) 0 0 / var(--hero-grain-size) var(--hero-grain-size) repeat;
-  opacity: var(--hero-grain-alpha);
-}
-:root:not([data-hero-grain="soft"], [data-hero-grain="strong"]) .logo-mark--hero::after { display: none; }
-/* Hero halation (toolbar "Hero Halation", html[data-halation], ?halation=): the bloom film gets around bright
-   things, on the Home hero WORDMARK only (never the photo behind it). An SVG filter (#hero-halation-*, inline in
-   index.html) lays a very soft, wide blur of the wordmark itself under it, so the glow is the hero gradient's own
-   colours and follows the palette and the Gradient option, and softens the letters slightly.
-   Off by default. Removed under reduced transparency / increased contrast (see the fallback below). */
-:root[data-halation="soft"] { --hero-halation-filter: url(#hero-halation-soft); }
-:root[data-halation="strong"] { --hero-halation-filter: url(#hero-halation-strong); }
-:root:is([data-halation="soft"], [data-halation="strong"]) h1.studio-wordmark {
-  filter: var(--hero-halation-filter, );
-}
 /* Film grain (toolbar "Film grain", html[data-film], ?film=): a faint, animated grain over the whole site.
    One fixed layer on html::after, so no page markup changes. The grain is the film-grain alpha tile as a single
    mask tinted by a palette token. The layer is the viewport plus one grain tile up and left, and jumps between
@@ -328,10 +300,7 @@ body::after {
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
   :is(h1, h2, h3, h4, .nav-links a, .site-footer, .filter-pill, .hero-wordmark-subline, .faq-summary, p, li, dd, label, .page-intro) { text-shadow: none; }
   body::before, body::after, :is(.card, .roadmap-step, .btn-placeholder, .btn-sm)::before, :is(h1, h2)::after, :root[data-film]::after { display: none; }
-  h1.studio-wordmark { filter: none; }
   .hero-wordmark-viewport { box-shadow: none; }
-  .logo-mark--hero::after { display: none; }
-  :root[data-halation] h1.studio-wordmark { filter: none; }
   .media-box.has-photo:not(.has-video)::before { background-image: none; -webkit-mask-image: none; mask-image: none; }
   .media-box.has-photo:not(.has-video) { background-image: none; }
   .site-header, .site-footer, .site-header nav, .page-header, .closing-note, .filter-pill.active, .media-box.has-video { box-shadow: none; }
@@ -399,8 +368,6 @@ body::after {
    card settle are switched off in wireframe.css. */
 :root[data-lite] body::after { display: none; }
 :root[data-lite]::after { content: none !important; animation: none !important; }
-:root[data-lite] { --hero-halation-filter: initial; }
-:root[data-lite] h1.studio-wordmark { filter: none !important; }
 
 /* Button metal (2026-11-20, user request): the same brushed-metal tile as the page, brighter, on the buttons. One alpha mask; the
    pseudo-element sits behind the label inside an isolated stacking context. Off in the reduced-transparency / contrast fallback above. */

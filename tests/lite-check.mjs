@@ -42,21 +42,20 @@ const fx = page => page.evaluate(() => {
 });
 
 { // default under automation: off, effects as authored (film grain follows Site Defaults, forced on here)
-  const { ctx, page, errors } = await open('index.html?film=subtle&halation=soft');
+  const { ctx, page, errors } = await open('index.html?film=subtle');
   const f = await fx(page);
   check(await lite(page) === null, 'off by default (probe never runs under automation)');
-  check(f.sheen !== 'none' && f.film === '""' && /url/.test(f.word), 'without lite: sheen, film grain and hero filter are on', JSON.stringify(f));
+  check(f.sheen !== 'none' && f.film === '""', 'without lite: sheen and film grain are on', JSON.stringify(f));
   check(errors.length === 0, 'no page errors', errors.join(' | '));
   await ctx.close();
 }
 { // ?lite turns everything heavy off, and carries to the next page
-  const { ctx, page, errors } = await open('index.html?lite&film=subtle&halation=soft');
+  const { ctx, page, errors } = await open('index.html?lite&film=subtle');
   const f = await fx(page);
   check(await lite(page) === 'url', '?lite switches it on');
   check(f.sheen === 'none', 'lite: fixed metal sheen is gone', f.sheen);
   check(f.film === 'none', 'lite: film grain layer is gone even when Site Defaults turn it on', f.film);
   check(f.hero === 'none', 'lite: hero parallax animation is off', f.hero);
-  check(f.word === 'none', 'lite: hero SVG filters are off', f.word);
   await page.goto(base + '/about.html');
   check(await lite(page) === 'url', 'lite carries to the next page for the visit');
   await page.mouse.move(300, 300);
