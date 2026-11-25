@@ -102,7 +102,8 @@
     "work.p.putting-the-finishing-touches-on-a": "urine",
     "work.h2.have-a-song-you-want-to": "Like what you hear?",
     "work.p.send-me-your-rough-demo-or": "Book a session when you're ready!",
-    "work.a.start-your-project": "Book a Session"
+    "work.a.start-your-project": "Book a Session",
+    "work.p.slide-the-switch-while-it-plays": "Flip the tape around to hear the difference!"
   },
   "defaults": {
     "palette": "seth-olive-orange-dark",
@@ -125,7 +126,9 @@
     "about.photo.portrait": "images/img-4694-d3c4807a.jpg",
     "about.photo.the-live-room-where-bands": "images/img-6034-6dbce370.jpg",
     "about.photo.the-relaxed-acoustic-room-with": "images/img-5212-05f950a1.jpg",
-    "about.photo.the-piano-and-desk-area": "images/img-4337-28fa35b1.jpg"
+    "about.photo.the-piano-and-desk-area": "images/img-4337-28fa35b1.jpg",
+    "work.ab.memo": "media/voice-memo-demo-1-f5232b01.m4a",
+    "work.ab.master": "media/demowhatever1-d3de0b30.wav"
   },
   "songs": [
     {
