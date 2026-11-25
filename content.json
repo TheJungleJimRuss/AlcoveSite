@@ -85,7 +85,9 @@
     "contact.h3.email": "My Email",
     "contact.p.prefer-to-skip-the-form-email": "Have any questions? Don't hesitate to reach out!",
     "contact.h3.visiting-the-studio": "Studio Tours / Internships",
-    "contact.p.want-to-see-the-room-first": "Want to check out the studio before your session? Or are you looking to get experience as an intern? Go ahead and send me an email! I'll get back to you ASAP."
+    "contact.p.want-to-see-the-room-first": "Want to check out the studio before your session? Or are you looking to get experience as an intern? Go ahead and send me an email! I'll get back to you ASAP.",
+    "work.p.a-few-things-made-at-alcove": "Here's a few projects I have worked on at the Alcove!",
+    "work.h2.recent-recordings": "Play a Few Demos!"
   },
   "defaults": {
     "palette": "seth-olive-orange-dark",
@@ -109,5 +111,22 @@
     "about.photo.the-live-room-where-bands": "images/img-6034-6dbce370.jpg",
     "about.photo.the-relaxed-acoustic-room-with": "images/img-5212-05f950a1.jpg",
     "about.photo.the-piano-and-desk-area": "images/img-4337-28fa35b1.jpg"
-  }
+  },
+  "songs": [
+    {
+      "title": "Demo 01 - Gwynn Teasdale",
+      "file": "media/alcovedemo2-gwynn-b85b9fb9.wav",
+      "cover": "images/cover-gwynndemoart-81d8b657.jpg"
+    },
+    {
+      "title": "Demo 02 - Samuel Rich",
+      "file": "media/alcovedemo1-sam-rich-88af73c3.wav",
+      "cover": "images/cover-samdemoart-d3ba4786.jpg"
+    },
+    {
+      "title": "Demo 03 - MF DOOM Re-production",
+      "file": "media/alcovedemo3-doom-745d557e.wav",
+      "cover": "images/cover-doomdemoart-a470ece9.jpg"
+    }
+  ]
 }
