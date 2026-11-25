@@ -35,7 +35,35 @@
     "index.h2.ready-to-record-your-first-track": "Ready to Record?",
     "index.a.start-a-conversation": "Book a Session",
     "index.a.explore-songs-demos-session-photos": "Come Listen!",
-    "index.p.you-don-t-need-any-experience": "Don't feel rushed! When you're ready, go ahead and fill out the form and I'll get back to you ASAP."
+    "index.p.you-don-t-need-any-experience": "Don't feel rushed! When you're ready, go ahead and fill out the form and I'll get back to you ASAP.",
+    "about.h1.about-alcove": "About the Alcove",
+    "about.p.hi-i-m-seth-i-make": "It's important to research the studio before you book a session!",
+    "about.h2.hey-i-m-seth": "Hey, I'm Seth!",
+    "about.p.i-produce-record-and-mix-music": "I'm the owner of the Alcove! I'm also the engineer you will be working with if you book a session. My goal is to make sure you are as comfortable as possible, and that everything goes smoothly and sounds great. I have tons of experience recording both professionals and total newbies- so no matter how skilled you are, I can guarantee that you will talk out of the studio with something you are proud of. I'm a skilled multi-instrumentalist, so I can easily fill in on other instruments when needed as well- so you can save money by not hiring a session musician. And in the rare case that a session musician is needed for a certain project, I have a large network of incredible musicians and producers who are ready to record whatever is needed.",
+    "about.p.i-care-more-about-how-a": "I'm a Junior at Timpview High School. Along with running the Alcove, I also work as an Assistant Engineer at June Audio Recording Studios- a legendary world-class recording studio that has seen several famous clients, such as Post Malone, Benson Boone, The Killers, John Legend, iDKHOW, and many, many more. Working with such incredible engineers, artists, and musicians has taught me much of what I know today. In short, I know how to make a record sound professional-You're in good hands!",
+    "about.h4.what-i-believe": "\"Can I bring in my own engineer?\"",
+    "about.p.making-music-should-be-fun-if": "Of course! I'd be there to help the engineer get acclimated to the studio and make sure everything goes smoothly. Let me know if you'd like to bring someone in!",
+    "about.h2.the-space": "My Experience",
+    "about.h3.the-tracking-area": "Jazz Multi-Instrumentalist",
+    "about.h3.the-chill-lounge": "Studio Engineer",
+    "about.h3.the-creative-desk": "Live Engineer",
+    "about.p.a-relaxed-open-room-where-you": "I get a lot of unique requests for specific projects, and I'm always down for all of it! Here's what I specialize in:",
+    "about.p.this-is-where-the-playing-happens": "I work as a professional musician around Utah. I play Drums, Keys, Trumpet, and Guitar!",
+    "about.p.a-spot-for-bandmates-friends-or": "My main passion is studio engineering. I have lots of experience with lots of different clients!",
+    "about.p.where-we-listen-back-together-tweak": "When needed, I also help out with concerts, gigs, and other A/V needs. Let me know if you need my help!",
+    "about.h2.how-i-work": "Rules I Follow",
+    "about.p.patience-encouragement-and-no-ego-that": "The last thing you need is an engineer that is hard to work with. Heres what I do to make your job easier:",
+    "about.h3.mentorship-not-gatekeeping": "I'm not the artist, you are.",
+    "about.p.i-m-here-to-help-you": "I'm here to record your music, not mine. I will help guide you along the process, but you will always retain full creative control. You deserve full ownership and royalties once the project is finished!",
+    "about.h3.a-safe-place-to-try-things": "Honesty makes good records.",
+    "about.p.warm-up-experiment-and-mess-up": "I will always be honest, no matter what. Whether I love it or hate it, I will always be clear and constructive with my opinions and ideas. You should always be proud of what you make!",
+    "about.h3.fair-for-student-artists": "You need more than an engineer.",
+    "about.p.i-want-recording-to-be-within": "You deserve an engineer does more than just their job! I promise that I will always strive to be a friend of all my clients, and someone you can trust with more than just your music.",
+    "about.h2.first-timer-questions": "Frequently Asked Questions",
+    "about.p.everything-people-usually-wonder-about-before": "Lets get these out of the way so you aren't left wondering.",
+    "about.summary.do-i-need-to-be-totally": "How good do I need to be to record?",
+    "about.summary.how-long-until-i-hear-the": "How long does a session take?",
+    "about.a.get-in-touch": "Contact me! :)"
   },
   "defaults": {
     "palette": "seth-olive-orange-dark",
@@ -54,6 +82,10 @@
     "index.photo.the-piano-in-the-studio-2": "images/img-8543-206a1273.jpg",
     "index.photo.the-acoustic-room": "images/streetlight-96fc062a.jpg",
     "index.photo.microphones-and-gear-set-up": "images/retro-3521fbab-99d6-4cd2-883a-b1b5759ece-fcab9292.jpg",
-    "index.photo.the-live-room-ready-for": "images/img-2597-bb4f168c.jpg"
+    "index.photo.the-live-room-ready-for": "images/img-2597-bb4f168c.jpg",
+    "about.photo.portrait": "images/img-4694-d3c4807a.jpg",
+    "about.photo.the-live-room-where-bands": "images/img-6034-6dbce370.jpg",
+    "about.photo.the-relaxed-acoustic-room-with": "images/img-5212-05f950a1.jpg",
+    "about.photo.the-piano-and-desk-area": "images/img-4337-28fa35b1.jpg"
   }
 }
