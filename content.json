@@ -63,7 +63,13 @@
     "about.p.everything-people-usually-wonder-about-before": "Lets get these out of the way so you aren't left wondering.",
     "about.summary.do-i-need-to-be-totally": "How good do I need to be to record?",
     "about.summary.how-long-until-i-hear-the": "How long does a session take?",
-    "about.a.get-in-touch": "Contact me! :)"
+    "about.a.get-in-touch": "Contact me! :)",
+    "about.p.not-at-all-rough-demos-and": "If you're a solo artist looking to make a song from the ground up, then I can work with you no matter what. However, if you are a band or musician who is looking to record a pre-written song, make sure you are confident in your abilities before booking. The more takes we have to do, the longer the session will be- which is just going to make it more expensive for you. I don't want to empty your wallet! When you submit a demo, I will take a listen and let you know my thoughts before we book a session.",
+    "about.p.absolutely-there-s-room-for-bandmates": "Of course! Anyone is welcome- friends, family, session musicians, etc. Free of charge!",
+    "about.p.your-instrument-if-you-d-like": "You only need to bring what we might not have here at the studio. If you prefer the sound of your guitar, or you really want a hydraulophone on your record, feel free to bring it!",
+    "about.p.we-ll-talk-timing-before-we": "It depends on the session. Some projects are naturally more complex than others- and some ideas might take a while. We'll talk about timing when booking the session!",
+    "about.h2.still-have-questions": "Any More Questions?",
+    "about.p.want-to-say-hi-ask-something": "If you want to book a free studio tour beforehand, or just want to say hi, feel free to reach out!"
   },
   "defaults": {
     "palette": "seth-olive-orange-dark",
