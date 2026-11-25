@@ -91,7 +91,7 @@
     "palette": "seth-olive-orange-dark",
     "gradient": "flat",
     "filmGrain": "subtle",
-    "cursorShadow": "strong"
+    "cursorShadow": "soft"
   },
   "media": {
     "index.photo.hero": "images/img-7485-fc2521e4.jpg",
