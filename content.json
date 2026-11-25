@@ -87,7 +87,9 @@
     "contact.h3.visiting-the-studio": "Studio Tours / Internships",
     "contact.p.want-to-see-the-room-first": "Want to check out the studio before your session? Or are you looking to get experience as an intern? Go ahead and send me an email! I'll get back to you ASAP.",
     "work.p.a-few-things-made-at-alcove": "Here's a few projects I have worked on at the Alcove!",
-    "work.h2.recent-recordings": "Play a Few Demos!"
+    "work.h2.recent-recordings": "Play a Few Demos!",
+    "work.p.from-rough-bedroom-voice-memos-to": "Pick a record from the pile and place it on the record player! Use the slider above to cycle through the records.",
+    "work.p.flip-the-switch-and-hear-what": "Here's the before and after of what it's like to turn an idea into a finished song!"
   },
   "defaults": {
     "palette": "seth-olive-orange-dark",
