@@ -1154,11 +1154,17 @@ html.has-fader::-webkit-scrollbar { display: none; }
   outline: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.3s;
+  transition: opacity 0.3s, visibility 0s;
 }
-.fader.is-away { opacity: 0; pointer-events: none; }
+.fader.is-away { opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 0.3s, visibility 0s linear 0.3s; } /* hidden: no fixed layer near the Home hero's screen edges */
 .fader.is-idle { opacity: 0; } /* phones only; a touch here scrolls the page (fader.js ignores it) and wakes it */
 .fader-cap { touch-action: none; }
+/* Touch screens: the strip is click-through (a swipe there scrolls the page); only the visible cap can be grabbed
+   (touch drag in fader.js). */
+@media (pointer: coarse) {
+  .fader { pointer-events: none; }
+  .fader:not(.is-idle):not(.is-away) .fader-cap { pointer-events: auto; }
+}
 .fader[hidden] { display: none; }
 
 /* Faceplate: dark anodised plate with bevel and light tick scales either side of the slot */
@@ -2162,8 +2168,29 @@ html[data-content-pending] body { visibility: hidden; }
      until the reader scrolls (index.html adds .site-header--visible after a few px). Keyboard focus brings it up. */
   .hero-wordmark-viewport { min-block-size: 100lvh; padding-bottom: 2rem; }
   .hero-wordmark-viewport .scroll-cue { inset-block-end: calc(100lvh - 100svh + 1.5rem); }
-  .site-header--smart nav { transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
-  .site-header--smart:not(.site-header--visible):not(:focus-within) nav { transform: translateY(calc(100% + 12rem)); }
+  /* Hidden = moved off-screen AND visibility: hidden (after the slide), so Safari 26 finds no fixed layer at the
+     screen edges and shows the hero photo through its status-bar and home-indicator areas (user 2026-11-24). */
+  /* Leaving = fade out in place, then hide (user 2026-11-24: sliding it down made it vanish at once, as Safari 26
+     stops drawing fixed elements that move under its bottom controls). Arriving = slide up + fade in. */
+  .site-header--smart nav { transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out, visibility 0s; }
+  .site-header--smart:not(.site-header--visible):not(:focus-within) nav {
+    transform: translateY(1.5rem);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.45s ease-in, opacity 0.45s ease-in, visibility 0s linear 0.45s;
+  }
+  /* Same for the full-screen film grain and sheen while the hero fills the screen; they return with the tab bar
+     (hidden after the bar's slide, so nothing pops while it leaves). */
+  :root:has(.site-header--smart:not(.site-header--visible))::after,
+  :root:has(.site-header--smart:not(.site-header--visible)) body::after {
+    visibility: hidden;
+    transition: visibility 0s linear 0.45s;
+  }
+  /* Safari 26 tints the screen edges from the page (root) background when no fixed layer sits there; the hidden
+     bar, grain and sheen above leave the edges to the hero photo (user 2026-11-24: photo from the camera cut-out to
+     the home indicator). The root takes the photo scrim's dark brown meanwhile, so any tint blends into the photo
+     instead of drawing a light band. */
+  :root:has(.site-header--smart:not(.site-header--visible)) { background-color: rgb(28 14 8); }
 }
 @media (max-width: 640px) and (prefers-reduced-motion: reduce) {
   .site-header--smart nav { transition: none; }
@@ -2253,4 +2280,14 @@ html[data-content-pending] body { visibility: hidden; }
   background:
     linear-gradient(to bottom, transparent 60%, var(--bg-page)),
     rgb(28 14 8 / 0.55);
+}
+
+/* Phones: the hero photo reaches the screen's bottom edge (user 2026-11-24: "the image doesn't reach far enough");
+   the fade to the page colour only covers the last few percent instead of the bottom 40%. */
+@media (max-width: 640px) {
+  .hero-media::after {
+    background:
+      linear-gradient(to bottom, transparent 92%, var(--bg-page)),
+      rgb(28 14 8 / 0.55);
+  }
 }

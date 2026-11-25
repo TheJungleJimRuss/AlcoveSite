@@ -8,13 +8,13 @@
   <!-- content-loader.js first (perf pass 4): its blocking content.json read then overlaps the stylesheet downloads
        instead of waiting for them. It needs no CSS; theme-preview.js below still runs after it. -->
   <script src="content-loader.js"></script>
-  <link rel="stylesheet" href="wireframe.css?v=hero3">
+  <link rel="stylesheet" href="wireframe.css?v=edge5">
   <link rel="stylesheet" href="record-player.css?v=16">
   <link rel="stylesheet" href="theme-preview.css">
   <link rel="stylesheet" href="logo.css">
   <link rel="stylesheet" href="textures.css?v=ios26">
   <script src="theme-preview.js"></script>
-  <script src="fader.js?v=7" defer></script>
+  <script src="fader.js?v=10" defer></script>
   <script src="nav-switch.js" defer></script>
   <script src="ab-compare.js" defer></script>
   <script src="record-player.js" defer></script>
@@ -172,48 +172,6 @@
         <p class="ab-hint" data-edit-key="work.p.slide-the-switch-while-it-plays">Flip the tape while it plays. The song keeps its place.</p>
       </div>
 
-    </section>
-
-    <!-- Section: Studio Video (placeholder) -->
-    <section class="section-block">
-      <h2 data-edit-key="work.h2.a-look-inside">A Look Inside</h2>
-      <p class="placeholder-text" data-edit-key="work.p.a-quick-peek-at-the-room">A quick peek at the room and the vibe.</p>
-      <div class="media-box ratio-16-9 has-photo has-video">
-        <video controls loop muted playsinline preload="metadata" data-media-clip="work.video.session" data-media-poster="work.video.poster" poster="images/studio-live-room-1280.webp" src="media/placeholder-session.webm" aria-label="A short video tour of Alcove Recording"></video>
-      </div>
-    </section>
-
-    <!-- Section 3: In-Studio Sessions (Candid Photo Gallery) -->
-    <section class="section-block">
-      <h2 data-edit-key="work.h2.in-the-room">In the Room</h2>
-      <p class="placeholder-text" data-edit-key="work.p.what-a-session-looks-and-feels">What a session looks and feels like.</p>
-
-      <div class="grid-cards">
-        <article class="card">
-          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-live-room.jpg" srcset="images/studio-live-room-640.webp 640w, images/studio-live-room-1280.webp 1280w, images/studio-live-room-2000.webp 2000w" sizes="(max-width: 640px) 100vw, 50vw" alt="The live room at Alcove Recording" data-media-slot="work.photo.the-live-room-at-alcove" class="p-left" loading="lazy" decoding="async"></div>
-          <p class="placeholder-text" data-edit-key="work.p.setting-up-in-the-live-room">Setting up in the live room</p>
-        </article>
-        <article class="card">
-          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-acoustic-room.jpg" srcset="images/studio-acoustic-room-640.webp 640w, images/studio-acoustic-room-1280.webp 1280w, images/studio-acoustic-room-2000.webp 2000w" sizes="(max-width: 640px) 100vw, 50vw" alt="The acoustic room at Alcove Recording" data-media-slot="work.photo.the-acoustic-room-at-alcove" class="p-right" loading="lazy" decoding="async"></div>
-          <p class="placeholder-text" data-edit-key="work.p.getting-comfortable-before-the-first-take">Getting comfortable before the first take</p>
-        </article>
-        <article class="card">
-          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-instruments.jpg" srcset="images/studio-instruments-640.webp 640w, images/studio-instruments-1280.webp 1280w, images/studio-instruments-2000.webp 2000w" sizes="(max-width: 640px) 100vw, 50vw" alt="Instruments and amps in the studio" data-media-slot="work.photo.instruments-and-amps-in-the" class="p-left" loading="lazy" decoding="async"></div>
-          <p class="placeholder-text" data-edit-key="work.p.trying-out-different-sounds">Trying out different sounds</p>
-        </article>
-        <article class="card">
-          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-piano.jpg" srcset="images/studio-piano-640.webp 640w, images/studio-piano-1280.webp 1280w, images/studio-piano-2000.webp 2000w" sizes="(max-width: 640px) 100vw, 50vw" alt="The piano in the studio" data-media-slot="work.photo.the-piano-in-the-studio" class="p-right" loading="lazy" decoding="async"></div>
-          <p class="placeholder-text" data-edit-key="work.p.listening-back-together">Listening back together</p>
-        </article>
-        <article class="card">
-          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-acoustic-room.jpg" srcset="images/studio-acoustic-room-640.webp 640w, images/studio-acoustic-room-1280.webp 1280w, images/studio-acoustic-room-2000.webp 2000w" sizes="(max-width: 640px) 100vw, 50vw" alt="The acoustic room at Alcove Recording" data-media-slot="work.photo.the-acoustic-room-at-alcove-2" class="p-left" loading="lazy" decoding="async"></div>
-          <p class="placeholder-text" data-edit-key="work.p.layering-parts-one-at-a-time">Layering parts, one at a time</p>
-        </article>
-        <article class="card">
-          <div class="media-box ratio-4-3 has-photo"><img src="images/studio-instruments.jpg" srcset="images/studio-instruments-640.webp 640w, images/studio-instruments-1280.webp 1280w, images/studio-instruments-2000.webp 2000w" sizes="(max-width: 640px) 100vw, 50vw" alt="Instruments and amps in the studio" data-media-slot="work.photo.instruments-and-amps-in-the-2" class="p-right" loading="lazy" decoding="async"></div>
-          <p class="placeholder-text" data-edit-key="work.p.putting-the-finishing-touches-on-a">Putting the finishing touches on a mix</p>
-        </article>
-      </div>
     </section>
 
     <!-- Section 4: Invitation -->

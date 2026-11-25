@@ -1,42 +1,83 @@
-# Handoff: cassette deck realism pass (2026-11-20)
+# Handoff: iPhone 15 / iOS 26 Safari phone fixes, round 2 (2026-11-24)
 
-## Goal
-User wants the Work-page cassette deck (Blender image layers in `images/cassette/`) to look real, not like a flat 3D model: screws, base, buttons, then door and cassette. Follow-up requests, all mid-task:
-- Lighting looked flat.
-- Remove the playing-indicator light on the base.
-- Door handle must not go over the buttons.
-- Cassette image at rest and during the flip must match.
+Project context: `.agents/PROJECT_NOTES.md` (the Status lines dated 2026-11-24 cover the earlier work). This folder is NOT a git repo, so there is no diff; changed files are listed below. The user tests on a real iPhone 15 (iOS 26, Safari) via the Mac's LAN dev server at http://192.168.50.46:8790/ (launch config `alcove-site-alt`, port 8790). github.io is NOT updated from this folder. NOTHING below is verified on the device.
 
-## Done (not yet verified in the browser)
-- `assets-src/cassette-player/refine_deck.py` (new, re-runnable) patches `cassette-player.blend`:
-  - Deck: countersunk domed Phillips screws, rolled base edge, satin dished keys with raised glyphs.
-  - LED objects `led` and `led_ring` removed.
-  - Door: satin frame, 4 corner screws, grip ribs, handle moved onto the frame's front edge (`latch.location.y = -DD + 0.05`), glass with a soft diagonal glare.
-  - Cassette: Phillips screws in wells (4 per face), clear window pane with glare, light clear coat on `bone_plastic`.
-  - Re-run only from the original blend (backup below), because earlier steps are not fully idempotent.
-- `render_layers.py`:
-  - World is now the studio HDRI (`assets-src/record-player/tex/pav_studio_03_2k.hdr`, strength 0.55, rotation 200). Lights are a low raking sun (5 degree angle) plus a dim fill and rim.
-  - Flip render no longer softens the key light, so flip frames use the same lights as the resting shell.
-  - `CLOSE="cx,cy,w,h,px,out.png"` renders a close-up of the deck. `CLOSE_SHOW=all` adds the cassette and door.
-  - `layout.json` no longer has a `led` entry.
-- Site: removed `<span class="cd-led">` from `work.html` and the `.cd-led` CSS from `wireframe.css`.
-- Fixed a bug where the glass colour ramp's last stop was white, which turned the glass and window pane opaque.
+## Where things stand
 
-## In flight
-A full re-render was started in the background (task `blfjkegmq`): `render_layers.py`, then `ONLY=shellb`, then `ONLY=flip`, then `node scripts/make-door-sheet.mjs`, then `SHEET=flip node scripts/make-door-sheet.mjs`. Check that `images/cassette/*.webp` and `layout.json` have fresh timestamps and that `/tmp/r?.log` has no Traceback. If it died, re-run the same sequence.
+### 1. Fader touch drag (`fader.js`, now `?v=10`)
+History of user reports:
+- First: "Scroll fader just doesn't work."
+- After the touch drag landed: "The scroll issue is back."
+- User's theory: when you pull the fader cap down, the page also scrolls natively the opposite way, and the two fight.
 
-## Still to do
-1. Check flip frame 0 (`renders/flip_00.png`) against `renders/shell.png`, and the last flip frame against `renders/shell-b.png`. They should look the same (screws, window glare, colours); the previous check was done before the glass fix.
-2. Check the page in the browser (`work.html`) at 375, 768 and 1200 wide: deck, door open and shut, flip, Side B. Confirm the HTML packs, reels and label still line up with the new shell. Run `node tests/ab-check.mjs` and `node tests/cassette-perf.mjs`. Serve with `scripts/dev-server.py` and cache-bust `wireframe.css`.
-3. Check image sizes against `PROJECT_NOTES.md` (flip sheets were 160/466 KB; the new ones were about 143/450 KB).
-4. Update `.agents/PROJECT_NOTES.md` (Status plus Cassette notes: no LED, refined deck, HDRI lighting, `refine_deck.py`), and add a dated entry to `NOTES_ARCHIVE.md`.
-5. Tidy up: the HDRI is now used by the cassette render, so add it to `assets-src/cassette-player/LICENSES.md` (CC0, Poly Haven).
+Current design:
+- Only the visible cap takes touches. CSS sets `@media (pointer: coarse)`: `.fader` has `pointer-events: none`, and the cap gets `pointer-events: auto` only when it is neither idle nor away.
+- The cap moves by relative per-touchmove deltas. Any step over 90px is dropped.
+- Scrolling is applied once per rAF.
+
+Added this turn, to address the user's theory. Not yet confirmed on the device; it may or may not be the real cause:
+- If `touchstart` is not cancelable, the fader ignores the touch. That happens when Safari already owns the gesture as a page scroll.
+- If a `touchmove` is not cancelable, the drag aborts (`abortTouch`).
+- In the rAF, if `scrollY` is more than 4px away from the last value we set (`lastSet`), something else scrolled the page and the drag aborts.
+
+Tests:
+- `tests/fader-check.mjs` has a CDP touch-drag test (scrolls down, never backwards, no throw to the end).
+- It also has a synthetic-TouchEvent test: a non-cancelable `touchmove` makes the fader let go.
+- Note: a test that calls `scrollTo` mid-drag doesn't work in Chromium. The touch gesture restores the scroll position, so that path is only covered by the cancelable test.
+
+If the jump persists on the device, consider:
+- Re-adding an on-screen scroll log (the old `scroll-debug.js` was deleted; see the PROJECT_NOTES history).
+- Locking native scroll during a drag.
+- Making the phone fader display-only again. That was the user's complaint earlier, so ask first.
+
+### 2. Hero photo edge to edge on Home: camera cut-out to home indicator (`wireframe.css`, end-of-file phone block)
+The user asked twice: "the image doesn't reach far enough", then "should fill all the way from the mic to the camera cutout".
+
+Done while the hero fills the screen (`.site-header--smart:not(.site-header--visible)`):
+- The tab bar is hidden.
+- `html::after` (film grain) and `body::after` (fixed sheen) are `visibility: hidden` after a 0.45s delay.
+- `.fader.is-away` is `visibility: hidden`.
+- The phone scrim's fade to page colour starts at 92%, not 60%. This is the `.hero-media::after` override at the end of the file.
+
+Background from Ben Frain's Safari 26 article (see References):
+- Safari 26 tints the screen edges from the page background colour when no fixed layer sits there.
+- It uses a fixed element's background colour when one does sit there.
+
+Last edit (WRITTEN, but tests not re-run after it):
+- `:root:has(.site-header--smart:not(.site-header--visible)) { background-color: rgb(28 14 8); }` sets the photo scrim's dark brown on the root while the hero shows. Any tint then blends into the photo instead of drawing a cream band.
+- `body` has no background of its own; `html` supplies it. On phones that is `--bg-surface` (~line 914).
+- A fully transparent root was tried and dropped, because Safari might fall back to white.
+- Unknown: whether Safari draws the photo itself under the status bar or a solid tint. Ask the user for a screenshot.
+
+### 3. Navbar "suddenly disappears when you scroll back up" (user's answer: only back at the top of Home)
+- Cause, guessed: the bar slid down off-screen, and Safari 26 stops drawing fixed elements that move under its bottom controls.
+- Now the hidden state fades out in place: `opacity 0`, `translateY(1.5rem)`, 0.45s ease-in, then `visibility: hidden`. Arriving slides up and fades in.
+- In `index.html`, phones show the bar past 8px and hide it only at `scrollY <= 1`. The gap stops momentum flicker near the top.
+- Headless check passed: opacity is 0.87 at 150ms and the bar is hidden at 650ms.
+
+## Next steps
+1. Run the checks after the last edit:
+   - `node tests/fader-check.mjs`
+   - `node tests/browser-check.mjs`
+   - `node tests/contrast-check.mjs`
+
+   All three passed just before the dark-root edit.
+2. Ask the user to reload http://192.168.50.46:8790/ on the iPhone and report on:
+   - the fader jump,
+   - the photo at the edges (ask for a screenshot),
+   - the bar fade at the top.
+3. Update `.agents/PROJECT_NOTES.md` Status with items 2 and 3 (item 1 is partly there: the touch drag line, but not the cancelable/abort guard).
+4. Cache-bust strings in all 4 pages: `wireframe.css?v=edge5`, `textures.css?v=ios26`, `fader.js?v=10`. Bump them after any edit.
 
 ## Gotchas
-- The project is not a git repo. Backups of the original blend, `render_layers.py` and `images/cassette` are in the session scratchpad: `/private/tmp/claude-503/-Users-alex--claude-spares-spare-H0ySmO/cc8538cf-bbd3-4a20-ab8a-8d50a7e7683f/scratchpad/backup/`.
-- `rm` commands were blocked by the harness. Avoid them, and avoid `pkill` inside background commands, which makes the task report exit code 144.
-- BSD `sed -i` needs `''`; use python for edits.
-- The cassette's retro stripes and screws are children of the `cassette` object, so the shell and flip renders pick them up automatically.
+- The in-app browser pane throttles rAF and transitions when in the background (1 frame per 500ms), so transitions look frozen there. Check animation timing with headless Playwright scripts placed in `tests/`; `playwright` only resolves from inside the project.
+- `.site-header--smart` exists only on Home, so the edge and fade rules affect Home only.
+
+## References
+- Safari 26 tinting: https://benfrain.com/ios26-safari-theme-color-tab-tinting-with-fixed-position-elements/ (WebKit bug 300965, possibly fixed in iOS 26.2)
+- Fixed elements not drawn under iOS 26 controls: https://developer.apple.com/forums/thread/800798
 
 ## Suggested skills
-`web-runtime-verification` (final browser check), `blender-asset-pipeline` (any further Blender changes), `diagnosing-bugs` if the flip and rest images still differ, `writing-for-agents` if editing the notes.
+- `diagnosing-bugs`: if the fader jump persists (build an on-device log before guessing again).
+- `web-runtime-verification`: after layout changes (375/768/1200).
+- `modern-web-guidance`: before more viewport, safe-area or scroll CSS.

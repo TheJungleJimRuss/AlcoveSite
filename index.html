@@ -8,12 +8,12 @@
   <!-- content-loader.js first (perf pass 4): its blocking content.json read then overlaps the stylesheet downloads
        instead of waiting for them. It needs no CSS; theme-preview.js below still runs after it. -->
   <script src="content-loader.js"></script>
-  <link rel="stylesheet" href="wireframe.css?v=hero3">
+  <link rel="stylesheet" href="wireframe.css?v=edge5">
   <link rel="stylesheet" href="theme-preview.css">
   <link rel="stylesheet" href="logo.css">
   <link rel="stylesheet" href="textures.css?v=ios26">
   <script src="theme-preview.js"></script>
-  <script src="fader.js?v=7" defer></script>
+  <script src="fader.js?v=10" defer></script>
   <script src="nav-switch.js" defer></script>
   <script src="now-playing.js" defer></script>
   <script src="cards-tilt.js" defer></script>
@@ -195,9 +195,11 @@
         // (phones: the bottom tab bar comes up as soon as the reader scrolls)
         const threshold = window.matchMedia('(max-width: 640px)').matches ? 8 : hero.offsetHeight * 0.45;
 
+        // Phones: show past 8px, hide only back at the very top (a gap, so momentum near the top cannot flicker it)
+        const phoneBar = window.matchMedia('(max-width: 640px)').matches;
         if (currentScrollY > threshold) {
           header.classList.add('site-header--visible');
-        } else {
+        } else if (!phoneBar || currentScrollY <= 1) {
           header.classList.remove('site-header--visible');
         }
 

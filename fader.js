@@ -1,6 +1,4 @@
 // Console-style scroll fader: mirrors page scroll, draggable, keyboard operable. Without JS the native scrollbar stays.
-// Dev probe for the iPhone scroll jump: ?scrolldebug loads scroll-debug.js (an on-screen log).
-if (/[?&]scrolldebug\b/.test(location.search)) document.head.append(Object.assign(document.createElement('script'), { src: 'scroll-debug.js' }));
 (() => {
   const root = document.documentElement;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
@@ -67,9 +65,9 @@ if (/[?&]scrolldebug\b/.test(location.search)) document.head.append(Object.assig
 
   fader.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
-    // Touch/pen: only a grab on the visible cap drags. A thumb swiping near the right edge used to land on the
-    // (invisible) strip and jump the page to that spot, fighting the native scroll (iPhone "jumps back" bug).
-    if (e.pointerType !== 'mouse' && (e.target !== cap || fader.classList.contains('is-idle'))) { wake(); return; }
+    // Touch/pen use the touch handlers below: with absolute pointer positions, iOS 26 threw the page between the top
+    // and the end mid-drag (caught with an on-device scroll log, 2026-11-24).
+    if (e.pointerType !== 'mouse') { wake(); return; }
     dragging = true;
     fader.setPointerCapture(e.pointerId);
     e.preventDefault(); // no focus ring or text selection from a click
@@ -93,6 +91,59 @@ if (/[?&]scrolldebug\b/.test(location.search)) document.head.append(Object.assig
   const end = () => { dragging = false; root.style.scrollBehavior = ''; schedule(); drive(false, 200); wake(); };
   fader.addEventListener('pointerup', end);
   fader.addEventListener('pointercancel', end);
+
+  // Touch drag (phones): only the visible cap grabs (CSS makes the strip click-through, so a swipe there scrolls the
+  // page). The cap moves by the finger's step-to-step travel, never by absolute positions, and a step that implies a
+  // leap is dropped: while the page scrolls under the finger iOS can report a coordinate from the scrolled frame,
+  // and one such value used to send the page to an end. Scrolling is applied once per frame.
+  const MAX_STEP = 90; // px of finger travel in one touchmove; anything bigger is a bogus coordinate
+  let touchId = null, lastTouchY = 0, frame = 0, lastSet = -1;
+  // iOS: once Safari owns a touch as a page scroll (e.g. the thumb lands while the page still coasts), it ignores
+  // preventDefault, so the page scrolls one way under the finger while the fader drives it the other (the "jump").
+  // The fader only drives while it truly owns the touch, and gives up the moment the page moves on its own.
+  const abortTouch = () => {
+    if (touchId === null) return;
+    touchId = null; lastSet = -1;
+    if (frame) { cancelAnimationFrame(frame); frame = 0; }
+    end();
+  };
+  cap.addEventListener('touchstart', (e) => {
+    if (!e.cancelable) return; // Safari is already scrolling the page: let it have this touch
+    if (touchId !== null || e.touches.length > 1 || fader.classList.contains('is-idle') || fader.classList.contains('is-away')) return;
+    const t = e.changedTouches[0];
+    touchId = t.identifier; lastTouchY = t.clientY;
+    dragMax = maxScroll(); dragTravel = travel();
+    dragRatio = dragMax ? Math.min(1, Math.max(0, scrollY / dragMax)) : 0;
+    dragging = true;
+    root.style.scrollBehavior = 'auto';
+    drive(true); wake();
+    e.preventDefault();
+  }, { passive: false });
+  fader.addEventListener('touchmove', (e) => {
+    if (touchId === null) return;
+    const t = [...e.changedTouches].find((x) => x.identifier === touchId);
+    if (!t) return;
+    if (!e.cancelable) { abortTouch(); return; } // native scroll took over mid-drag
+    e.preventDefault();
+    const dy = t.clientY - lastTouchY;
+    lastTouchY = t.clientY;
+    if (Math.abs(dy) > MAX_STEP) return;
+    dragRatio = Math.min(1, Math.max(0, dragRatio + dy / dragTravel));
+    if (!frame) frame = requestAnimationFrame(() => {
+      frame = 0;
+      if (lastSet >= 0 && Math.abs(scrollY - lastSet) > 4) { abortTouch(); return; } // something else scrolled the page
+      const target = Math.round(dragRatio * dragMax);
+      scrollToY(target, false); lastSet = Math.min(Math.max(0, target), maxScroll()); update();
+    });
+  }, { passive: false });
+  const touchEnd = (e) => {
+    if (touchId === null || ![...e.changedTouches].some((x) => x.identifier === touchId)) return;
+    if (frame) { cancelAnimationFrame(frame); frame = 0; scrollToY(dragRatio * dragMax, false); }
+    touchId = null; lastSet = -1;
+    end();
+  };
+  fader.addEventListener('touchend', touchEnd);
+  fader.addEventListener('touchcancel', touchEnd);
 
   fader.addEventListener('keydown', (e) => {
     const page = innerHeight * 0.9;
