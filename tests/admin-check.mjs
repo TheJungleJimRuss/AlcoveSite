@@ -758,12 +758,13 @@ const contentPuts = gh => puts(gh).filter(c => c.path === '/contents/content.jso
 const mediaErr = '#alcove-admin .admin-media-error';
 {
   // every photo has a stable, unique key; the booking page has none
-  for (const [p, n] of [['index.html', 11], ['work.html', 6], ['about.html', 4]]) {
+  for (const [p, n] of [['index.html', 11], ['about.html', 4]]) {
     const { ctx, page } = await open(p);
     const keys = await page.$$eval('[data-media-slot]', e => e.map(x => x.dataset.mediaSlot));
     check(`${p}: ${n} photo Media slots with unique keys`, keys.length === n && new Set(keys).size === n && keys.every(k => k.startsWith(p.replace('.html', '') + '.photo.')), JSON.stringify(keys));
     await ctx.close();
   }
+  { const w = await open('work.html'); check('work.html: no photo Media slots', (await w.page.locator('[data-media-slot]').count()) === 0); await w.ctx.close(); }
   const c = await open('contact.html', { token: TOKEN, edit: true }); await c.page.waitForSelector('#alcove-admin');
   check('contact: no Media slots, no Replace controls (booking form untouched)', (await c.page.locator('[data-media-slot], .admin-replace, input.admin-replace-input').count()) === 0);
   await c.ctx.close();
@@ -990,7 +991,7 @@ const mediaErr = '#alcove-admin .admin-media-error';
 }
 
 // --- Admin media, ticket 02: replace audio and video slots ---------------------------------------------------
-const VIDEO = 'work.video.session', POSTER = 'work.video.poster', MEMO = 'work.ab.memo', MASTER = 'work.ab.master';
+const MEMO = 'work.ab.memo', MASTER = 'work.ab.master';
 const clipEl = k => `[data-media-clip="${k}"]`;
 const wavBytes = (seconds, rate = 8000, freq = 440) => {
   const n = Math.round(seconds * rate), b = Buffer.alloc(44 + n);
@@ -1002,8 +1003,6 @@ const wavBytes = (seconds, rate = 8000, freq = 440) => {
 const memoWav = wavBytes(1.0, 8000, 300), masterWav = wavBytes(1.5, 8000, 600);
 const memoFile = { name: 'My Rough Memo!!.WAV', mimeType: 'audio/wav', buffer: memoWav };
 const masterFile = { name: 'final-mix.wav', mimeType: 'audio/x-wav', buffer: masterWav };
-const videoBytes = await readFile(join(root, 'media', 'placeholder-session.webm'));
-const videoFile = { name: 'Session Tour.webm', mimeType: 'video/webm', buffer: videoBytes };
 const mediaFileCalls = gh => puts(gh).filter(c => c.path.startsWith('/contents/media/'));
 const savedContent = gh => JSON.parse(Buffer.from(JSON.parse(contentPuts(gh).at(-1).body).content, 'base64').toString('utf8'));
 const saveDone = page => page.waitForFunction(s => /Saved/.test(document.querySelector(s)?.textContent || ''), note);
@@ -1013,9 +1012,8 @@ const deckReady = (page, k) => page.waitForFunction(s => { const a = document.qu
   const { ctx, page } = await open('work.html');
   const clips = await page.$$eval('[data-media-clip]', e => e.map(x => [x.dataset.mediaClip, x.tagName]));
   const posters = await page.$$eval('[data-media-poster]', e => e.map(x => [x.dataset.mediaPoster, x.tagName]));
-  check('work: session video, A/B memo and A/B master are clip slots', JSON.stringify(clips.sort()) === JSON.stringify([[MASTER, 'AUDIO'], [MEMO, 'AUDIO'], [VIDEO, 'VIDEO']].sort()), JSON.stringify(clips));
-  check('work: video poster is its own slot', JSON.stringify(posters) === JSON.stringify([[POSTER, 'VIDEO']]), JSON.stringify(posters));
-  check('work: the six photo slots are unchanged', (await page.locator('[data-media-slot]').count()) === 6);
+  check('work: A/B memo and A/B master are the clip slots', JSON.stringify(clips.sort()) === JSON.stringify([[MASTER, 'AUDIO'], [MEMO, 'AUDIO']].sort()), JSON.stringify(clips));
+  check('work: no video, poster or photo slots', posters.length === 0 && (await page.locator('[data-media-slot]').count()) === 0, JSON.stringify(posters));
   await ctx.close();
   for (const p of ['index.html', 'about.html', 'contact.html']) {
     const o = await open(p);
@@ -1026,17 +1024,17 @@ const deckReady = (page, k) => page.waitForFunction(s => { const a = document.qu
 {
   // Replace controls follow Edit mode; labelled; 44px on phones
   const off = await open('work.html', { token: TOKEN, edit: false }); await off.page.waitForSelector('#alcove-admin');
-  check('Edit mode off: no clip Replace controls', (await off.page.locator('input.admin-replace-input[data-for^="work.video"], input.admin-replace-input[data-for^="work.ab"]').count()) === 0);
+  check('Edit mode off: no clip Replace controls', (await off.page.locator('input.admin-replace-input[data-for^="work.ab"]').count()) === 0);
   await off.page.click('#alcove-admin .admin-edit-switch');
   const labels = {};
-  for (const k of [VIDEO, POSTER, MEMO, MASTER]) labels[k] = await off.page.getAttribute(`button.admin-replace[data-for="${k}"]`, 'aria-label');
-  check('Edit mode on: a labelled Replace button for video, poster, memo and master', [VIDEO, POSTER, MEMO, MASTER].every(k => /replace/i.test(labels[k] || '')) && new Set(Object.values(labels)).size === 4, JSON.stringify(labels));
-  check('clip file inputs accept only their types', /mp4/.test(await off.page.getAttribute(input(VIDEO), 'accept')) && !/audio/.test(await off.page.getAttribute(input(VIDEO), 'accept')) && /mp3|mpeg/.test(await off.page.getAttribute(input(MEMO), 'accept')) && !/video\/mp4/.test(await off.page.getAttribute(input(MEMO), 'accept')) && /image/.test(await off.page.getAttribute(input(POSTER), 'accept')));
+  for (const k of [MEMO, MASTER]) labels[k] = await off.page.getAttribute(`button.admin-replace[data-for="${k}"]`, 'aria-label');
+  check('Edit mode on: a labelled Replace button for memo and master', [MEMO, MASTER].every(k => /replace/i.test(labels[k] || '')) && new Set(Object.values(labels)).size === 2, JSON.stringify(labels));
+  check('clip file inputs accept only their types', /mp3|mpeg/.test(await off.page.getAttribute(input(MEMO), 'accept')) && !/video\/mp4/.test(await off.page.getAttribute(input(MEMO), 'accept')));
   await off.page.click('#alcove-admin .admin-edit-switch');
   check('Edit mode switched off removes clip controls', (await off.page.locator('.admin-replace').count()) === 0);
   await off.ctx.close();
   const ph = await unlocked('work.html', { width: 375, height: 800 });
-  check('phone: clip Replace buttons are 44px targets', (await ph.page.$$eval('button.admin-replace[data-for^="work.video"], button.admin-replace[data-for^="work.ab"]', b => b.length === 4 && b.every(x => x.getBoundingClientRect().height >= 44 && x.getBoundingClientRect().width >= 44))));
+  check('phone: clip Replace buttons are 44px targets', (await ph.page.$$eval('button.admin-replace[data-for^="work.ab"]', b => b.length === 2 && b.every(x => x.getBoundingClientRect().height >= 44 && x.getBoundingClientRect().width >= 44))));
   await ph.ctx.close();
 }
 {
@@ -1106,39 +1104,6 @@ const deckReady = (page, k) => page.waitForFunction(s => { const a = document.qu
   delete extra['/' + memoRel]; delete extra['/' + masterRel];
 }
 {
-  // session video + poster: stage, preview, Save, visitor
-  const gh = { file: { ...BRANCH_FILE } };
-  const { ctx, page, errors } = await unlocked('work.html', { gh });
-  const posterBefore = await page.getAttribute(clipEl(VIDEO), 'poster');
-  await page.setInputFiles(input(VIDEO), videoFile);
-  await page.waitForFunction(s => { const v = document.querySelector(s); return v.src.startsWith('blob:') && v.readyState >= 1 && v.videoWidth > 0; }, clipEl(VIDEO), { timeout: 8000 });
-  check('staged video previews in place (blob source, metadata loaded)', true);
-  await page.evaluate(s => { const v = document.querySelector(s); v.muted = true; return v.play(); }, clipEl(VIDEO));
-  await page.waitForFunction(s => document.querySelector(s).currentTime > 0.2, clipEl(VIDEO), { timeout: 8000 });
-  check('staged video plays in place before Save', true);
-  await page.setInputFiles(input(POSTER), jpegFile);
-  await page.waitForFunction(s => (document.querySelector(s).getAttribute('poster') || '').startsWith('blob:'), clipEl(VIDEO));
-  check('staged poster shows in place', (await page.getAttribute(clipEl(VIDEO), 'poster')) !== posterBefore && (await page.textContent(saveBtn)).includes('2 changes'));
-  await openPanel(page);
-  check('panel lists video and poster', (await page.locator('#alcove-admin .admin-changes li').count()) === 2);
-  await page.click(saveBtn); await saveDone(page);
-  const fc = gh.calls.filter(c => c.method === 'PUT').map(c => c.path);
-  check('Save: video (media/) and poster (images/) first, content.json last', fc.length === 3 && fc[2] === '/contents/content.json' && fc.slice(0, 2).some(p => /^\/contents\/media\/session-tour-[0-9a-f]{8}\.webm$/.test(p)) && fc.slice(0, 2).some(p => /^\/contents\/images\/seth-portrait-[0-9a-f]{8}\.jpg$/.test(p)), JSON.stringify(fc));
-  const up = Object.entries(gh.files);
-  check('video uploaded unchanged; poster shrunk like a photo', up.some(([p, x]) => /session-tour/.test(p) && x.equals(videoBytes)) && (await dims(up.find(([p]) => /images/.test(p))[1])).join() === '2000,1000');
-  const file = savedContent(gh);
-  check('content.json maps video and poster keys', /^media\/session-tour-[0-9a-f]{8}\.webm$/.test(file.media[VIDEO]) && /^images\/.+\.jpg$/.test(file.media[POSTER]), JSON.stringify(file.media));
-  check('no console errors', errors.length === 0, errors.join(' | '));
-  await ctx.close();
-  for (const [p, x] of up) extra['/' + p.replace('/contents/', '')] = x;
-  const v = await open('work.html', { override: gh.file.text });
-  check('visitor: video src and poster are the saved files', (await v.page.getAttribute(clipEl(VIDEO), 'src')) === file.media[VIDEO] && (await v.page.getAttribute(clipEl(VIDEO), 'poster')) === file.media[POSTER]);
-  await v.page.waitForFunction(s => document.querySelector(s).readyState >= 1, clipEl(VIDEO), { timeout: 8000 });
-  check('visitor: saved video loads; no console errors', v.errors.length === 0, v.errors.join(' | '));
-  await v.ctx.close();
-  for (const [p] of up) delete extra['/' + p.replace('/contents/', '')];
-}
-{
   // big clip: uploaded intact through the chunked encoder
   const big = Buffer.alloc(2 * 1024 * 1024 + 12345); for (let i = 0; i < big.length; i++) big[i] = (i * 31 + (i >> 8)) & 255;
   Buffer.from(wavBytes(0.2).subarray(0, 44)).copy(big, 0);
@@ -1159,16 +1124,11 @@ const deckReady = (page, k) => page.waitForFunction(s => { const a = document.qu
   await writeFile(hugePath, ''); await truncate(hugePath, 90 * 1024 * 1024 + 1);
   const bad = [
     [MEMO, 'over the size cap (audio)', hugePath, /too large|90 ?MB/i],
-    [VIDEO, 'over the size cap (video)', join(tmp, 'huge.mp4'), /too large|90 ?MB/i],
     [MEMO, 'text file as audio', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') }, /audio|MP3|type/i],
     [MEMO, 'photo as audio', { name: 'pic.jpg', mimeType: 'image/jpeg', buffer: Buffer.alloc(50) }, /audio|MP3|type/i],
     [MASTER, 'mp4 video as audio', { name: 'clip.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(50) }, /audio|MP3|type/i],
     [MASTER, 'extension lies about audio (exe)', { name: 'song.exe', mimeType: 'audio/mpeg', buffer: Buffer.alloc(50) }, /audio|MP3|type/i],
-    [VIDEO, 'mp3 as video', { name: 'song.mp3', mimeType: 'audio/mpeg', buffer: Buffer.alloc(50) }, /video|MP4|WebM|type/i],
-    [VIDEO, 'photo as video', { name: 'pic.png', mimeType: 'image/png', buffer: Buffer.alloc(50) }, /video|MP4|WebM|type/i],
-    [POSTER, 'video as poster', { name: 'clip.webm', mimeType: 'video/webm', buffer: Buffer.alloc(50) }, /photo|image|type/i],
   ];
-  await writeFile(join(tmp, 'huge.mp4'), ''); await truncate(join(tmp, 'huge.mp4'), 90 * 1024 * 1024 + 1);
   for (const [k, label, f, re] of bad) {
     const before = await page.evaluate(s => document.querySelector(s).getAttribute('data-src') || document.querySelector(s).getAttribute('src') || document.querySelector(s).getAttribute('poster'), clipEl(k) + ',[data-media-poster="' + k + '"]');
     await page.setInputFiles(input(k), f);
@@ -1242,16 +1202,16 @@ const deckReady = (page, k) => page.waitForFunction(s => { const a = document.qu
 }
 {
   // loader: bad clip paths fall back to the authored files
-  const orig = { [VIDEO]: 'media/placeholder-session.webm', [MEMO]: 'media/voice-memo-rough.mp3' };
+  const orig = { [MEMO]: 'media/voice-memo-rough.mp3' };
   for (const [label, media] of [
     ['traversal', { [MEMO]: 'media/../content.json' }], ['dotdot inside name', { [MEMO]: 'media/a..b-12345678.wav' }],
     ['external URL', { [MEMO]: 'https://evil.example/x.wav' }], ['protocol-relative', { [MEMO]: '//evil.example/x.wav' }],
     ['disallowed extension', { [MEMO]: 'media/run-12345678.exe' }], ['wrong folder', { [MEMO]: 'images/x-12345678.wav' }],
-    ['image path in a clip slot', { [VIDEO]: 'images/x-12345678.jpg' }], ['non-string', { [MEMO]: 7 }], ['file not found', { [MEMO]: 'media/gone-12345678.wav' }]]) {
+    ['image path in a clip slot', { [MEMO]: 'images/x-12345678.jpg' }], ['non-string', { [MEMO]: 7 }], ['file not found', { [MEMO]: 'media/gone-12345678.wav' }]]) {
     const { ctx, page } = await open('work.html', { override: JSON.stringify({ version: 1, text: {}, defaults: {}, media }) });
     await page.waitForTimeout(150);
-    const m = await page.getAttribute(clipEl(MEMO), 'data-src'), vsrc = await page.getAttribute(clipEl(VIDEO), 'src');
-    check(`bad clip media (${label}): authored files stay`, vsrc === orig[VIDEO] && m === orig[MEMO] || (label === 'file not found' && m === 'media/gone-12345678.wav'), `${m} ${vsrc}`);
+    const m = await page.getAttribute(clipEl(MEMO), 'data-src');
+    check(`bad clip media (${label}): authored files stay`, m === orig[MEMO] || (label === 'file not found' && m === 'media/gone-12345678.wav'), `${m}`);
     check(`bad clip media (${label}): page visible`, (await page.evaluate(() => getComputedStyle(document.body).visibility)) === 'visible');
     await ctx.close();
   }

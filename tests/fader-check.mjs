@@ -51,7 +51,40 @@ for (const [label, vp, mobile] of [['desktop', { width: 1280, height: 800 }, fal
   await page.mouse.down();
   await page.mouse.move(cb.x + cb.width / 2, fb.y + fb.height - 2, { steps: 8 });
   await page.mouse.up(); await page.waitForTimeout(300);
-  t(`${label}: dragging cap to bottom scrolls page to bottom`, await y() >= await max() - 2, `y=${await y()} max=${await max()}`);
+  if (mobile) {
+    // Touch screens: the mouse path is ignored; only a touch on the visible cap drags, by relative steps.
+    t('phone: strip is click-through, only the cap is grabbable', await page.evaluate(() => getComputedStyle(document.querySelector('.fader')).pointerEvents === 'none'));
+    await pastHero(); await page.waitForTimeout(400);
+    await page.evaluate(() => document.querySelector('.fader').dispatchEvent(new Event('focus')));
+    const c = await cap.boundingBox(); const cx = c.x + c.width / 2; let cy = c.y + c.height / 2;
+    const cdp = await ctx.newCDPSession(page);
+    const touch = (type, yy) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: cx, y: yy, id: 1 }] });
+    const start = await y(); await touch('touchStart', cy);
+    const seen = [start]; let back = 0;
+    for (let i = 0; i < 20; i++) { cy += 6; await touch('touchMove', cy); await page.waitForTimeout(32); const v = await y(); if (v < seen.at(-1) - 1) back++; seen.push(v); }
+    await touch('touchEnd'); await page.waitForTimeout(200);
+    const moved = seen.at(-1) - start;
+    t('phone: touch-dragging the cap scrolls the page down', moved > 50, `start=${start} end=${seen.at(-1)}`);
+    t('phone: touch drag never scrolls backwards', back === 0, `back=${back}`);
+    t('phone: touch drag does not throw the page to the end', seen.at(-1) < await max() - 50, `end=${seen.at(-1)} max=${await max()}`);
+    // iOS taking the gesture as a page scroll (touchmove no longer cancelable): the fader must let go at once.
+    await pastHero(); await page.waitForTimeout(400);
+    const r = await page.evaluate(async () => {
+      const f = document.querySelector('.fader'), cap = f.querySelector('.fader-cap'); f.dispatchEvent(new Event('focus'));
+      const b = cap.getBoundingClientRect(); let cy = b.top + b.height / 2; const x = b.left + b.width / 2;
+      const fire = (type, cancelable) => { const t = new Touch({ identifier: 7, target: cap, clientX: x, clientY: cy });
+        cap.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable, touches: type === 'touchend' ? [] : [t], changedTouches: [t] })); };
+      const frame = () => new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+      fire('touchstart', true);
+      for (let i = 0; i < 3; i++) { cy += 6; fire('touchmove', true); await frame(); }
+      cy += 6; fire('touchmove', false); await frame();
+      const before = scrollY;
+      for (let i = 0; i < 5; i++) { cy += 6; fire('touchmove', true); await frame(); }
+      fire('touchend', true); await frame();
+      return { before, after: scrollY };
+    });
+    t('phone: fader lets go when Safari takes the touch as a page scroll', Math.abs(r.after - r.before) < 2, JSON.stringify(r));
+  } else t(`${label}: dragging cap to bottom scrolls page to bottom`, await y() >= await max() - 2, `y=${await y()} max=${await max()}`);
   // jitter: dragging across the home fold must not change page height or make the cap move backwards
   await pastHero(); await page.waitForTimeout(400);
   const cb2 = await cap.boundingBox(); const x = cb2.x + cb2.width / 2;
