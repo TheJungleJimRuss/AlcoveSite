@@ -18,7 +18,7 @@
   const maxScroll = () => Math.max(0, root.scrollHeight - root.clientHeight);
   const travel = () => Math.max(1, fader.clientHeight - cap.offsetHeight);
   let dragging = false, dragRatio = 0, dragMax = 0, dragTravel = 1, dragOffset = 0, driveTimer, idleTimer;
-  // Phones: fade the fader out after a short idle; scroll, touch or focus brings it back.
+  // Phones: dim the fader after a short idle (it stays grabbable); scroll, touch or focus brings it back.
   const phone = matchMedia('(max-width: 640px)');
   function wake() {
     fader.classList.remove('is-idle');
@@ -59,8 +59,10 @@
   let queued = false;
   const schedule = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; update(); }); } };
 
+  // Phone Home rests at --hero-top (index.html opens and settles there), so the fader stops there too.
+  const minY = () => (hero && phone.matches ? parseFloat(getComputedStyle(hero).getPropertyValue('--hero-top')) || 0 : 0);
   function scrollToY(y, smooth) {
-    scrollTo({ top: Math.min(maxScroll(), Math.max(0, y)), behavior: smooth && !reduce.matches ? 'smooth' : 'instant' });
+    scrollTo({ top: Math.min(maxScroll(), Math.max(minY(), y)), behavior: smooth && !reduce.matches ? 'smooth' : 'instant' });
   }
 
   fader.addEventListener('pointerdown', (e) => {
@@ -87,10 +89,13 @@
     scrollToY(dragRatio * dragMax, false);
     schedule();
   }
-  fader.addEventListener('pointermove', (e) => { if (dragging) move(e); });
+  // Mouse only, like pointerdown: during a touch drag `dragging` is also true, and a touch pointermove here jumped the
+  // page to an absolute position, fought the touch path below and made it let go (iPhone 16 Simulator log, 2026-11-27).
+  fader.addEventListener('pointermove', (e) => { if (dragging && e.pointerType === 'mouse') move(e); });
   const end = () => { dragging = false; root.style.scrollBehavior = ''; schedule(); drive(false, 200); wake(); };
-  fader.addEventListener('pointerup', end);
-  fader.addEventListener('pointercancel', end);
+  const mouseEnd = (e) => { if (e.pointerType === 'mouse') end(); };
+  fader.addEventListener('pointerup', mouseEnd);
+  fader.addEventListener('pointercancel', mouseEnd);
 
   // Touch drag (phones): only the visible cap grabs (CSS makes the strip click-through, so a swipe there scrolls the
   // page). The cap moves by the finger's step-to-step travel, never by absolute positions, and a step that implies a
@@ -109,7 +114,8 @@
   };
   cap.addEventListener('touchstart', (e) => {
     if (!e.cancelable) return; // Safari is already scrolling the page: let it have this touch
-    if (touchId !== null || e.touches.length > 1 || fader.classList.contains('is-idle') || fader.classList.contains('is-away')) return;
+    // An idle (dimmed) cap still grabs: letting the touch through scrolled the page against the finger.
+    if (touchId !== null || e.touches.length > 1 || fader.classList.contains('is-away')) return;
     const t = e.changedTouches[0];
     touchId = t.identifier; lastTouchY = t.clientY;
     dragMax = maxScroll(); dragTravel = travel();

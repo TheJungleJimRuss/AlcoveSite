@@ -9,7 +9,15 @@
   wrap.setAttribute('aria-hidden', 'true');
   const canvas = document.createElement('canvas');
   wrap.appendChild(canvas);
-  header.appendChild(wrap);
+  // Phones (<=640px) have no top bar (the header collapses to nothing), so the wave sits in the bottom tab bar's
+  // strip under the tabs instead (user 2026-11-27: it floated in the middle of the page).
+  const phone = matchMedia('(max-width: 640px)');
+  const place = () => {
+    const nav = header.querySelector('nav');
+    const host = phone.matches && nav ? nav : header;
+    if (wrap.parentNode !== host) host.appendChild(wrap);
+  };
+  place();
   const g = canvas.getContext('2d');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const canAnalyse = /^https?:$/.test(location.protocol) && (window.AudioContext || window.webkitAudioContext);
@@ -19,6 +27,7 @@
 
   // Stretch the wave across the free space between the logo and the nav, centered, up to a cap.
   const fit = () => {
+    if (phone.matches) { wrap.style.insetInlineStart = wrap.style.inlineSize = ''; return; } // CSS sizes it in the bar
     const h = header.getBoundingClientRect(), cx = h.left + h.width / 2, gap = 24;
     const logo = header.querySelector('.logo-placeholder');
     const nav = header.querySelector('.nav-links');
@@ -115,6 +124,7 @@
   }, true);
   ['pause', 'ended', 'emptied', 'volumechange'].forEach(ev => document.addEventListener(ev, update, true));
   window.addEventListener('resize', () => { if (current) size(); });
+  phone.addEventListener('change', () => { place(); if (current) size(); });
   // Re-fit when the logo or nav changes width (late web fonts, nav-switch layout).
   if ('ResizeObserver' in window) {
     const ro = new ResizeObserver(() => { if (current) size(); });

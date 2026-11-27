@@ -364,9 +364,7 @@ p {
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(to bottom, transparent 60%, var(--bg-page)),
-    color-mix(in srgb, var(--bg-page) 74%, transparent);
+  background: color-mix(in srgb, var(--bg-page) 74%, transparent);
 }
 
 @keyframes hero-drift {
@@ -1154,16 +1152,21 @@ html.has-fader::-webkit-scrollbar { display: none; }
   outline: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.3s, visibility 0s;
+  transition: opacity 0.3s, visibility 0s, transform 0.3s ease;
 }
 .fader.is-away { opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 0.3s, visibility 0s linear 0.3s; } /* hidden: no fixed layer near the Home hero's screen edges */
-.fader.is-idle { opacity: 0; } /* phones only; a touch here scrolls the page (fader.js ignores it) and wakes it */
+/* Phones only. Dimmed, not gone (2026-11-27, iPhone 16 Simulator log): a fully faded cap ignored touches, so a
+   drag on it fell through to the page and scrolled it the opposite way ("jump", "fader won't drag"). */
+/* Idle tuck (user 2026-11-27): on phones an idle fader slides mostly off the right edge, leaving a slim tab of the
+   cap to pull; scroll, touch or focus slides it back (fader.js wake). */
+.fader.is-idle { opacity: 0.6; transform: translateX(1.5rem); }
 .fader-cap { touch-action: none; }
-/* Touch screens: the strip is click-through (a swipe there scrolls the page); only the visible cap can be grabbed
-   (touch drag in fader.js). */
+/* Touch screens: the strip is click-through (a swipe there scrolls the page); only the cap can be grabbed, idle or
+   not (touch drag in fader.js). The ::before pad widens its touch target to the fader's 44px. */
 @media (pointer: coarse) {
   .fader { pointer-events: none; }
-  .fader:not(.is-idle):not(.is-away) .fader-cap { pointer-events: auto; }
+  .fader:not(.is-away) .fader-cap { pointer-events: auto; }
+  .fader-cap::before { content: ""; position: absolute; inset: -0.3rem -0.6rem; }
 }
 .fader[hidden] { display: none; }
 
@@ -1511,7 +1514,10 @@ html.has-fader::-webkit-scrollbar { display: none; }
   /* pivot at the taped top edge always, so hover doesn't shift the photo or the tape */
   transform-origin: 50% 0;
 }
-.media-box.has-photo:not(.has-video) img { border-radius: 1px; }
+/* Whole photo, no crop (user 2026-11-27): the frame takes the photo's own shape. Chromium already grew the 16:9 box
+   to fit the photo (overflow: visible makes min-height content-sized), but Safari kept 16:9 and cropped the photo. */
+.media-box.has-photo:not(.has-video) { aspect-ratio: auto; }
+.media-box.has-photo:not(.has-video) img { border-radius: 1px; height: auto; }
 .media-box.has-photo:not(.has-video)::before {
   content: "";
   position: absolute;
@@ -1780,6 +1786,18 @@ html.has-fader::-webkit-scrollbar { display: none; }
 .nav-wave.is-on { opacity: 1; scale: 1; }
 .nav-wave canvas { display: block; inline-size: 100%; block-size: 100%; }
 @media (prefers-reduced-motion: reduce) { .nav-wave { transition: none; scale: 1; } }
+/* Phones: the header has no top bar, so now-playing.js puts the wave in the tab bar's bottom strip, under the tabs
+   (user 2026-11-27). The nav is fixed, so it is the wave's containing block. */
+@media (max-width: 640px) {
+  .site-header nav > .nav-wave {
+    inset: auto 1.75rem 0.1rem;
+    inline-size: auto;
+    block-size: calc(0.5rem + var(--home-inset));
+    translate: none;
+    scale: 1 0.4;
+  }
+  .site-header nav > .nav-wave.is-on { scale: 1; }
+}
 
 /* ===== Home hero: nav is plain text; all hero text follows the wordmark gradient ===== */
 .hero-wordmark-subline,
@@ -2166,8 +2184,16 @@ html[data-content-pending] body { visibility: hidden; }
   /* Home (user 2026-11-24): the hero photo fills the whole screen, edge to edge under Safari's bars (lvh is
      constant, so nothing resizes while Safari's toolbar animates), and the tab bar stays hidden below the screen
      until the reader scrolls (index.html adds .site-header--visible after a few px). Keyboard focus brings it up. */
-  .hero-wordmark-viewport { min-block-size: 100lvh; padding-bottom: 2rem; }
-  .hero-wordmark-viewport .scroll-cue { inset-block-end: calc(100lvh - 100svh + 1.5rem); }
+  /* Bleed (user 2026-11-25, iPhone 16 Simulator): at scroll 0 Safari 26 starts the page below the status bar, so a
+     100lvh hero ended ~60px above the screen's bottom edge and the next heading showed under the floating toolbar.
+     The extra length sits below the screen; the padding keeps the wordmark and scroll cue where they were. */
+  .hero-wordmark-viewport { --hero-bleed: 5rem; min-block-size: calc(100lvh + var(--hero-bleed)); padding-bottom: calc(2rem + var(--hero-bleed)); }
+  .hero-wordmark-viewport .scroll-cue { inset-block-end: calc(100lvh - 100svh + 1.5rem + var(--hero-bleed)); }
+  /* Top bleed (user 2026-11-27, iPhone 16 Simulator): Safari draws the page under the status bar and camera cutout
+     only once the page is scrolled by about the status-bar height (~60pt); at scroll 0 it paints a solid strip. So
+     the hero is --hero-top taller at the top and index.html opens Home scrolled by --hero-top (px: the script reads
+     it): the photo fills the cutout area and the wordmark sits where it did. Pulling past the top shows the strip. */
+  .hero-wordmark-viewport { --hero-top: 64px; min-block-size: calc(100lvh + var(--hero-bleed) + var(--hero-top)); padding-top: calc(2rem + var(--hero-top)); }
   /* Hidden = moved off-screen AND visibility: hidden (after the slide), so Safari 26 finds no fixed layer at the
      screen edges and shows the hero photo through its status-bar and home-indicator areas (user 2026-11-24). */
   /* Leaving = fade out in place, then hide (user 2026-11-24: sliding it down made it vanish at once, as Safari 26
@@ -2190,7 +2216,26 @@ html[data-content-pending] body { visibility: hidden; }
      bar, grain and sheen above leave the edges to the hero photo (user 2026-11-24: photo from the camera cut-out to
      the home indicator). The root takes the photo scrim's dark brown meanwhile, so any tint blends into the photo
      instead of drawing a light band. */
-  :root:has(.site-header--smart:not(.site-header--visible)) { background-color: rgb(28 14 8); }
+  /* 2026-11-25 (iPhone 16 Simulator): at scroll 0 Safari 26 never draws the page under the status bar (not even after
+     a script scroll); it paints that strip in this colour. rgb(98 76 66) = the scrimmed photo's top edge, measured
+     on screen, so the strip reads as part of the photo. Re-measure if the hero photo or its scrim changes. */
+  /* 2026-11-27 (user): the ceiling colour on Home at all times, not only while the tab bar is hidden: scrolling back up,
+     the bar is still up when the page reaches the top, and the page colour flashed brown in the strip. Safari only
+     paints the root colour there at scroll 0 (the page fills it once scrolled), so other sections are unaffected. */
+  :root:has(.site-header--smart), :root:has(.hero-wordmark-viewport) { background-color: rgb(97 77 68); }
+  /* The root colour also showed through behind the metal on all of Home (user 2026-11-27: "less green"). The page
+     itself gets the usual phone base as a root background IMAGE (painted over the page), so only the strip Safari
+     paints outside the page uses the ceiling colour. Not a body background: that covered the metal (body::before,
+     z-index -1, paints under in-flow backgrounds). */
+  :root:has(.hero-wordmark-viewport) { background-image: linear-gradient(var(--bg-surface), var(--bg-surface)); }
+  /* Keyboard open (user 2026-11-25): iOS Safari lifts the fixed tab bar onto the keyboard, where it covered most of
+     the booking form. Hide it while a text field has focus; it returns on blur. Push keys (radios) and the Demo
+     picker do not open the keyboard, so they keep the bar. */
+  body:has(:is(input:not([type="checkbox"], [type="radio"], [type="file"], [type="submit"], [type="button"], [type="range"]), textarea, select):focus) .site-header nav {
+    visibility: hidden;
+    opacity: 0;
+    transition: none;
+  }
 }
 @media (max-width: 640px) and (prefers-reduced-motion: reduce) {
   .site-header--smart nav { transition: none; }
@@ -2277,17 +2322,7 @@ html[data-content-pending] body { visibility: hidden; }
 }
 .hero-nav .nav-links a::after { background: var(--hero-cream); }
 .hero-media::after {
-  background:
-    linear-gradient(to bottom, transparent 60%, var(--bg-page)),
-    rgb(28 14 8 / 0.55);
+  /* even dark tint only; no bottom fade (user 2026-11-27: remove the shadow on the hero image) */
+  background: rgb(28 14 8 / 0.55);
 }
 
-/* Phones: the hero photo reaches the screen's bottom edge (user 2026-11-24: "the image doesn't reach far enough");
-   the fade to the page colour only covers the last few percent instead of the bottom 40%. */
-@media (max-width: 640px) {
-  .hero-media::after {
-    background:
-      linear-gradient(to bottom, transparent 92%, var(--bg-page)),
-      rgb(28 14 8 / 0.55);
-  }
-}

@@ -12,10 +12,16 @@ const atEnd = pg => Promise.all([pg.getAttribute('.rp-fader', 'aria-valuenow'), 
 
 const root = join(fileURLToPath(import.meta.url), '..', '..');
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.mp3': 'audio/mpeg', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.json': 'application/json' };
-const mk = range => createServer(async (req, res) => {
+// These checks use the four authored placeholder songs in work.html, so content.json is served without its saved
+// `songs` list and A/B clips (Seth's real songs replace the authored Crate); `saved` serves it unchanged for the one check of that.
+const mk = (range, saved = false) => createServer(async (req, res) => {
   try {
     const path = new URL(req.url, 'http://x').pathname;
-    const body = await readFile(join(root, decodeURIComponent(path)));
+    let body = await readFile(join(root, decodeURIComponent(path)));
+    if (path === '/content.json' && !saved) { // and the saved A/B clips: the memo is AAC, which Playwright's Chromium cannot play
+      const j = JSON.parse(body); delete j.songs; if (j.media) { delete j.media['work.ab.memo']; delete j.media['work.ab.master']; }
+      body = Buffer.from(JSON.stringify(j));
+    }
     const type = types[extname(path)] || 'application/octet-stream';
     const m = /bytes=(\d*)-(\d*)/.exec(req.headers.range || ''); // like GitHub Pages: Range support gives audio a finite duration
     if (m && range) {
@@ -27,7 +33,7 @@ const mk = range => createServer(async (req, res) => {
     res.end(body);
   } catch { res.writeHead(404); res.end(); }
 }).listen(0);
-const server = mk(true), plain = mk(false); // plain = like python http.server: no Range, no 206
+const server = mk(true), plain = mk(false), savedSrv = mk(true, true); // plain = like python http.server: no Range, no 206
 const url = `http://localhost:${server.address().port}/work.html`;
 
 const browser = await chromium.launch();
@@ -158,11 +164,12 @@ await page.keyboard.press('Home'); await settle();
   await page.evaluate(() => document.querySelector('.sleeve[data-src*="track-2"]').click()); await settle();
   check((await front()) === 'pop' && (await page.evaluate(() => document.getElementById('audio-player').dataset.track)).includes('punk'), 'clicking a tipped sleeve flips back to it without loading it');
 }
-// The loaded record is marked even when it is not in front (punk is on the platter)
+// The loaded record is marked even when it is not in front (punk is on the platter). The visible "on the platter" tab
+// is switched off in CSS (display: none !important), so this checks the marker class it hangs on.
 {
-  const mk = () => page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.sleeve')].map(x => [__g(x), getComputedStyle(x.querySelector('.sleeve-tab')).display])));
+  const mk = () => page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.sleeve')].map(x => [__g(x), x.classList.contains('is-current') ? 'block' : 'none'])));
   const mkd = await mk();
-  check(mkd.punk === 'block' && mkd.indie === 'none' && mkd.pop === 'none' && mkd.acoustic === 'none' && (await front()) === 'pop', 'the "on the platter" tab shows on the loaded sleeve (punk) while another one is in front');
+  check(mkd.punk === 'block' && mkd.indie === 'none' && mkd.pop === 'none' && mkd.acoustic === 'none' && (await front()) === 'pop', 'the loaded sleeve (punk) stays marked is-current while another one is in front');
 }
 // Selecting a flipped-to record: lift, disc travels, sleeve drops back, then the arm swings in
 await page.click(S('pop'));
@@ -180,7 +187,7 @@ await page.waitForFunction(() => !document.querySelector('.record-player').datas
 }
 await playing();
 {
-  const mk = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.sleeve')].map(x => [__g(x), getComputedStyle(x.querySelector('.sleeve-tab')).display])));
+  const mk = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.sleeve')].map(x => [__g(x), x.classList.contains('is-current') ? 'block' : 'none'])));
   check(mk.pop === 'block' && mk.punk === 'none' && (await st()).src === 'media/track-2-bedroom-pop.mp3' && (await st()).arm === 'on', 'the loaded marker moved to the front sleeve and its record plays');
 }
 await page.click(S('pop'));
@@ -417,5 +424,14 @@ check((await page.evaluate(() => document.documentElement.scrollWidth <= documen
   await cp.close();
 }
 
-await browser.close(); server.close(); plain.close();
+{ // The saved song list in content.json replaces the authored Crate, in order, with its covers
+  const lp = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await lp.goto(`http://localhost:${savedSrv.address().port}/work.html`);
+  const want = JSON.parse(await readFile(join(root, 'content.json'), 'utf8')).songs;
+  const got = await lp.evaluate(() => [...document.querySelectorAll('.sleeve')].map(s => ({ title: s.querySelector('.sleeve-title').textContent.trim(), file: s.dataset.src, cover: s.dataset.cover || null })));
+  check(JSON.stringify(got) === JSON.stringify(want.map(x => ({ title: x.title, file: x.file, cover: x.cover || null }))), `saved songs replace the authored Crate (${got.length} sleeves)`);
+  await lp.close();
+}
+
+await browser.close(); server.close(); plain.close(); savedSrv.close();
 process.exit(fail ? 1 : 0);
