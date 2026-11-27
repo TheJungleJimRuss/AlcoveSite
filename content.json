@@ -103,7 +103,8 @@
     "work.h2.have-a-song-you-want-to": "Like what you hear?",
     "work.p.send-me-your-rough-demo-or": "Book a session when you're ready!",
     "work.a.start-your-project": "Book a Session",
-    "work.p.slide-the-switch-while-it-plays": "Flip the tape around to hear the difference!"
+    "work.p.slide-the-switch-while-it-plays": "Flip the tape around to hear the difference!",
+    "work.h1.listen-in": "Try our music!"
   },
   "defaults": {
     "palette": "seth-olive-orange-dark",
