@@ -215,7 +215,7 @@
     if (hadFocus) front.focus({ preventScroll: true }); // the new front sleeve is the new tab stop
   }
   const flipBy = d => { const list = visible(); flipTo(list[list.indexOf(front) + d]); };
-  crate.addEventListener('keydown', e => {
+  const browseKey = e => {
     if (e.altKey || e.ctrlKey || e.metaKey || e.target.closest('[contenteditable]')) return; // Admin Edit mode: arrows move the caret
     const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key], list = visible();
     if (d !== undefined) flipBy(d);
@@ -223,7 +223,8 @@
     else if (e.key === 'End') flipTo(list[list.length - 1]);
     else return;
     e.preventDefault();
-  });
+  };
+  crate.addEventListener('keydown', browseKey);
   // Fader: a horizontal slider under the pile slides through the records (wheel and swipe no longer move them).
   // Dragging picks the nearest record as the cap passes it; letting go snaps the cap to the front record's notch.
   const fader = document.createElement('div');
@@ -258,6 +259,7 @@
   });
   fader.addEventListener('focus', () => { if (!fader.dataset.ptr) fader.classList.add('is-keyboard'); });
   fader.addEventListener('keydown', () => fader.classList.add('is-keyboard'));
+  fader.addEventListener('keydown', browseKey); // the fader sits in the console, outside the crate's own key handler
   fader.addEventListener('blur', () => fader.classList.remove('is-keyboard'));
   fader.addEventListener('pointermove', e => {
     if (!fdrag || fdrag.id !== e.pointerId) return;

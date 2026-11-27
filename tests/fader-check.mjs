@@ -32,7 +32,9 @@ for (const [label, vp, mobile] of [['desktop', { width: 1280, height: 800 }, fal
   // keyboard
   await page.evaluate(() => document.querySelector('.fader').focus());
   await page.keyboard.press('Home'); await page.waitForTimeout(800);
-  t(`${label}: Home key scrolls to top`, await y() === 0, `y=${await y()}`);
+  // Phone Home rests at --hero-top (64px), where the photo shows under the status bar; it never scrolls above that.
+  const top = mobile ? 64 : 0;
+  t(`${label}: Home key scrolls to top`, Math.abs(await y() - top) < 1, `y=${await y()} want ${top}`);
   await page.keyboard.press('End'); await page.waitForTimeout(1200);
   t(`${label}: End key scrolls to bottom`, Math.abs(await y() - await max()) < 2);
   await page.keyboard.press('PageUp'); await page.waitForTimeout(1200);
@@ -106,7 +108,13 @@ for (const [label, vp, mobile] of [['desktop', { width: 1280, height: 800 }, fal
   t(`${label}: body keeps vertical touch scrolling`, await page.evaluate(() => getComputedStyle(document.body).touchAction !== 'none'));
   if (mobile) {
     await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(2200);
-    t('phone: fader hides when idle', await page.evaluate(() => +getComputedStyle(document.querySelector('.fader')).opacity) === 0);
+    // Idle = dimmed, not gone, and the cap still grabs (2026-11-27: a vanished cap let a drag fall through to the page).
+    const idle = await page.evaluate(() => { const f = document.querySelector('.fader'); return { o: +getComputedStyle(f).opacity, pe: getComputedStyle(f.querySelector('.fader-cap')).pointerEvents }; });
+    t('phone: fader dims when idle but the cap stays grabbable', idle.o > 0 && idle.o < 1 && idle.pe === 'auto', JSON.stringify(idle));
+    // Idle tuck (2026-11-27): most of the fader slides off the right edge, a slim tab of the cap (>= 10px) stays.
+    await page.waitForTimeout(400);
+    const tuck = await page.evaluate(() => { const c = document.querySelector('.fader-cap').getBoundingClientRect(); return { left: c.left, visible: innerWidth - c.left, over: c.right - innerWidth }; });
+    t('phone: idle fader tucks into the right edge, leaving a cap tab', tuck.over > 0 && tuck.visible >= 10 && tuck.visible <= 22, JSON.stringify(tuck));
     const tab = await page.evaluate(() => { const f = document.querySelector('.fader').getBoundingClientRect(), n = document.querySelector('.nav-links').getBoundingClientRect(); return f.bottom <= n.top + 1; });
     t('phone: fader stays above bottom tab bar', tab);
     // A thumb landing on the strip (idle, or off the cap) must not jump the page (iPhone "jumps back" bug).
